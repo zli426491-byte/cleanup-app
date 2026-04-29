@@ -36,14 +36,19 @@ jobs:
         env:
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          CERTIFICATE_PRIVATE_KEY: ${{ secrets.CERTIFICATE_PRIVATE_KEY }}
         run: |
           export APP_STORE_CONNECT_PRIVATE_KEY=$(cat ~/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8)
+
+          # Save certificate private key
+          echo "$CERTIFICATE_PRIVATE_KEY" > ~/private_keys/cert_key.pem
 
           app-store-connect fetch-signing-files "com.cleanupapp.cleaner" \
             --type IOS_APP_STORE \
             --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
             --key-id "$APP_STORE_CONNECT_KEY_ID" \
             --private-key "$APP_STORE_CONNECT_PRIVATE_KEY" \
+            --certificate-key ~/private_keys/cert_key.pem \
             --create
 
           keychain initialize
