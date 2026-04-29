@@ -4,7 +4,6 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   app_links
-  firebase_core
   local_auth_windows
   permission_handler_windows
   share_plus
