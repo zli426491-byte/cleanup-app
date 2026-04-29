@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSContactsUsageDescription</key>
+	<string>此 App 需要存取您的聯絡人以幫助您管理和清理重複的聯絡人資料。</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>此 App 需要存取您的照片圖庫以掃描重複照片、相似照片和螢幕截圖，幫助您釋放儲存空間。</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
