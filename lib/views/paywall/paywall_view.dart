@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/subscription_manager.dart';
 import '../../utils/app_theme.dart';
+import '../home/main_tab_view.dart';
 
 class PaywallView extends StatelessWidget {
-  const PaywallView({super.key});
+  final bool fromOnboarding;
+  const PaywallView({super.key, this.fromOnboarding = false});
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +21,7 @@ class PaywallView extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.close),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => _dismiss(context),
           ),
         ],
       ),
@@ -72,7 +76,7 @@ class PaywallView extends StatelessWidget {
                     if (package != null) {
                       await sub.purchase(package);
                     }
-                    if (context.mounted && sub.isPro) Navigator.pop(context);
+                    if (context.mounted && sub.isPro) _dismiss(context);
                   },
                   child: const Padding(
                     padding: EdgeInsets.symmetric(vertical: 16),
@@ -101,10 +105,10 @@ class PaywallView extends StatelessWidget {
                     onPressed: () => sub.restorePurchases(),
                     child: const Text('恢復購買', style: TextStyle(fontSize: 12))),
                 TextButton(
-                    onPressed: () {},
+                    onPressed: () => launchUrl(Uri.parse('https://zli426491-byte.github.io/cleanup-app/')),
                     child: const Text('隱私政策', style: TextStyle(fontSize: 12))),
                 TextButton(
-                    onPressed: () {},
+                    onPressed: () => launchUrl(Uri.parse('https://zli426491-byte.github.io/cleanup-app/')),
                     child: const Text('使用條款', style: TextStyle(fontSize: 12))),
               ],
             ),
@@ -112,6 +116,22 @@ class PaywallView extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _dismiss(BuildContext context) async {
+    if (fromOnboarding) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('hasCompletedOnboarding', true);
+      if (context.mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const MainTabView()),
+          (route) => false,
+        );
+      }
+    } else {
+      Navigator.pop(context);
+    }
   }
 
   static const _features = [

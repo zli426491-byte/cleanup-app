@@ -1,9 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import '../../utils/app_theme.dart';
-import '../home/main_tab_view.dart';
 import '../paywall/paywall_view.dart';
 
 class OnboardingView extends StatefulWidget {
@@ -287,16 +285,11 @@ class _OnboardingViewState extends State<OnboardingView> with TickerProviderStat
       _controller.nextPage(
           duration: const Duration(milliseconds: 400), curve: Curves.easeOutCubic);
     } else {
-      _completeOnboarding();
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const PaywallView()));
-    }
-  }
-
-  Future<void> _completeOnboarding() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('hasCompletedOnboarding', true);
-    if (mounted) {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MainTabView()));
+      // Navigate to PaywallView; onboarding completion happens when PaywallView is dismissed
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const PaywallView(fromOnboarding: true)),
+      );
     }
   }
 }

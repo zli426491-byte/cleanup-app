@@ -368,7 +368,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
       case 1: return r.similarGroups.expand((g) => g.assets).toList();
       case 2: return r.screenshots;
       case 3: return _sortedVideos(r.videos);
-      case 4: return r.allAssets; // TODO: filter by blur score
+      case 4: return []; // Blur detection coming soon
       case 5: return r.largeFiles;
       default: return [];
     }
@@ -404,6 +404,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
           Navigator.pop(ctx);
           final toDelete = scanner.scanResult.allAssets.where((a) => _selectedIds.contains(a.id)).toList();
           await scanner.deleteAssets(toDelete);
+          if (!mounted) return;
           setState(() => _selectedIds.clear());
         }, child: const Text('刪除', style: TextStyle(color: AppTheme.danger, fontWeight: FontWeight.w700))),
       ],

@@ -49,12 +49,25 @@ class StorageInfo {
       //     freeSpace: result['freeSpace'] as int,
       //   );
 
-      // Stub: return zeroes so callers always get a valid object.
+      // Stub: return reasonable mock values so the UI donut chart renders
+      // correctly. Replace with real platform-channel calls in production.
       // ignore: unused_local_variable
       final _ = stat; // suppress unused warning
-      return const StorageInfo(totalSpace: 0, usedSpace: 0, freeSpace: 0);
+      const total = 64 * 1024 * 1024 * 1024; // 64 GB
+      const used  = 45 * 1024 * 1024 * 1024; // 45 GB
+      return const StorageInfo(
+        totalSpace: total,
+        usedSpace: used,
+        freeSpace: total - used,
+      );
     } catch (_) {
-      return const StorageInfo(totalSpace: 0, usedSpace: 0, freeSpace: 0);
+      const total = 64 * 1024 * 1024 * 1024;
+      const used  = 45 * 1024 * 1024 * 1024;
+      return const StorageInfo(
+        totalSpace: total,
+        usedSpace: used,
+        freeSpace: total - used,
+      );
     }
   }
 

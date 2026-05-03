@@ -195,9 +195,7 @@ class _SecretSpaceViewState extends State<SecretSpaceView> {
             const Text('新增照片和影片來保護你的隱私'),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () {
-                // TODO: Image picker
-              },
+              onPressed: () => _showComingSoon(),
               icon: const Icon(Icons.add),
               label: const Text('新增項目'),
             ),
@@ -214,7 +212,7 @@ class _SecretSpaceViewState extends State<SecretSpaceView> {
       itemBuilder: (ctx, i) {
         if (i == service.items.length) {
           return GestureDetector(
-            onTap: () {},
+            onTap: () => _showComingSoon(),
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
@@ -232,6 +230,23 @@ class _SecretSpaceViewState extends State<SecretSpaceView> {
           child: const Icon(Icons.lock, color: Colors.grey),
         );
       },
+    );
+  }
+
+  void _showComingSoon() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('即將推出'),
+        content: const Text('照片匯入功能即將推出，敬請期待！'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('確定'),
+          ),
+        ],
+      ),
     );
   }
 

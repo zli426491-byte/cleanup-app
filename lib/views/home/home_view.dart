@@ -4,6 +4,9 @@ import 'package:provider/provider.dart';
 import '../../services/photo_scanner_service.dart';
 import '../../models/storage_info.dart';
 import '../../utils/app_theme.dart';
+import '../tools/email_cleanup_view.dart';
+import '../tools/calendar_cleanup_view.dart';
+import '../tools/charging_animation_view.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -310,16 +313,19 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
     decoration: BoxDecoration(color: AppTheme.cardBg, borderRadius: BorderRadius.circular(AppTheme.r12),
       border: Border.all(color: AppTheme.border, width: 0.5)),
     child: Column(children: [
-      _buildQRow(Icons.email_rounded, '清理信箱', '移除垃圾郵件', const Color(0xFF1D9E75)),
+      _buildQRow(Icons.email_rounded, '清理信箱', '移除垃圾郵件', const Color(0xFF1D9E75),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EmailCleanupView()))),
       const Divider(indent: 60),
-      _buildQRow(Icons.calendar_month_rounded, '清理行事曆', '移除過期事件', const Color(0xFFF0997B)),
+      _buildQRow(Icons.calendar_month_rounded, '清理行事曆', '移除過期事件', const Color(0xFFF0997B),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CalendarCleanupView()))),
       const Divider(indent: 60),
-      _buildQRow(Icons.bolt_rounded, '充電動畫', '自訂充電畫面', const Color(0xFFE5A31A)),
+      _buildQRow(Icons.bolt_rounded, '充電動畫', '自訂充電畫面', const Color(0xFFE5A31A),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChargingAnimationView()))),
     ]),
   );
 
-  Widget _buildQRow(IconData ic, String t, String st, Color c) => InkWell(
-    onTap: () {},
+  Widget _buildQRow(IconData ic, String t, String st, Color c, {required VoidCallback onTap}) => InkWell(
+    onTap: onTap,
     borderRadius: BorderRadius.circular(AppTheme.r12),
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppTheme.s14, vertical: AppTheme.s12),
