@@ -163,33 +163,50 @@ class PhotoScannerService extends ChangeNotifier {
       _scanProgress = 0.10;
       notifyListeners();
 
-      // 2. Convert to PhotoAsset & compute perceptual hashes
+      // 2. Convert to PhotoAsset & compute perceptual hashes (batched)
       _currentPhase = ScanPhase.computingHashes;
       notifyListeners();
 
       final List<PhotoAsset> photoAssets = [];
-      for (var i = 0; i < uniqueAssets.length; i++) {
-        final entity = uniqueAssets[i];
-        final size = (await entity.file)?.lengthSync() ?? 0;
+      const batchSize = 20;
+      for (var i = 0; i < uniqueAssets.length; i += batchSize) {
+        final end = (i + batchSize > uniqueAssets.length)
+            ? uniqueAssets.length
+            : i + batchSize;
+        final batch = uniqueAssets.sublist(i, end);
 
-        String? hash;
-        if (entity.type == AssetType.image) {
-          hash = await _computeDHash(entity);
-        }
+        final batchResults = await Future.wait(
+          batch.map((entity) async {
+            int size = 0;
+            try {
+              final file = await entity.file;
+              size = file?.lengthSync() ?? 0;
+            } catch (_) {}
 
-        photoAssets.add(PhotoAsset(
-          id: entity.id,
-          title: entity.title,
-          width: entity.width,
-          height: entity.height,
-          size: size,
-          createDate: entity.createDateTime,
-          type: entity.type,
-          hash: hash,
-        ));
+            String? hash;
+            if (entity.type == AssetType.image) {
+              hash = await _computeDHash(entity);
+            }
 
-        _scanProgress = 0.10 + 0.40 * ((i + 1) / uniqueAssets.length);
+            return PhotoAsset(
+              id: entity.id,
+              title: entity.title,
+              width: entity.width,
+              height: entity.height,
+              size: size,
+              createDate: entity.createDateTime,
+              type: entity.type,
+              hash: hash,
+            );
+          }),
+        );
+
+        photoAssets.addAll(batchResults);
+        _scanProgress = 0.10 + 0.40 * (photoAssets.length / uniqueAssets.length);
         notifyListeners();
+
+        // Yield to UI thread
+        await Future.delayed(Duration.zero);
       }
 
       // 3. Find exact duplicates (identical hash)
@@ -366,13 +383,18 @@ class PhotoScannerService extends ChangeNotifier {
     final List<SimilarGroup> groups = [];
     final Set<String> visited = {};
 
-    for (var i = 0; i < hashed.length; i++) {
+    // Limit comparison to first 500 photos to avoid O(n²) freeze
+    final limit = hashed.length > 500 ? 500 : hashed.length;
+
+    for (var i = 0; i < limit; i++) {
       if (visited.contains(hashed[i].id)) continue;
 
       final List<PhotoAsset> group = [hashed[i]];
       int maxDist = 0;
 
-      for (var j = i + 1; j < hashed.length; j++) {
+      // Only compare nearby photos (within 100 index range) for performance
+      final jEnd = (i + 100 > limit) ? limit : i + 100;
+      for (var j = i + 1; j < jEnd; j++) {
         if (visited.contains(hashed[j].id)) continue;
         final dist = _hammingDistance(hashed[i].hash!, hashed[j].hash!);
         if (dist > 0 && dist <= threshold) {
