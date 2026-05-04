@@ -167,45 +167,47 @@ class PhotoScannerService extends ChangeNotifier {
       _currentPhase = ScanPhase.computingHashes;
       notifyListeners();
 
-      final List<PhotoAsset> photoAssets = [];
-      const batchSize = 20;
-      for (var i = 0; i < uniqueAssets.length; i += batchSize) {
-        final end = (i + batchSize > uniqueAssets.length)
-            ? uniqueAssets.length
+      // First pass: create PhotoAssets quickly without file I/O
+      final List<PhotoAsset> photoAssets = uniqueAssets.map((entity) {
+        // Estimate size from dimensions (avoid slow file I/O)
+        final estimatedSize = entity.width * entity.height * 3; // ~3 bytes/pixel
+        return PhotoAsset(
+          id: entity.id,
+          title: entity.title,
+          width: entity.width,
+          height: entity.height,
+          size: estimatedSize,
+          createDate: entity.createDateTime,
+          type: entity.type,
+          hash: null,
+        );
+      }).toList();
+
+      _scanProgress = 0.20;
+      notifyListeners();
+
+      // Second pass: compute hashes only for images, in batches
+      const batchSize = 50;
+      for (var i = 0; i < photoAssets.length; i += batchSize) {
+        final end = (i + batchSize > photoAssets.length)
+            ? photoAssets.length
             : i + batchSize;
-        final batch = uniqueAssets.sublist(i, end);
 
-        final batchResults = await Future.wait(
-          batch.map((entity) async {
-            int size = 0;
-            try {
-              final file = await entity.file;
-              size = file?.lengthSync() ?? 0;
-            } catch (_) {}
-
-            String? hash;
-            if (entity.type == AssetType.image) {
-              hash = await _computeDHash(entity);
+        await Future.wait(
+          List.generate(end - i, (j) async {
+            final idx = i + j;
+            if (photoAssets[idx].type == AssetType.image) {
+              final entity = uniqueAssets[idx];
+              final hash = await _computeDHash(entity);
+              if (hash != null) {
+                photoAssets[idx] = photoAssets[idx].copyWith(hash: hash);
+              }
             }
-
-            return PhotoAsset(
-              id: entity.id,
-              title: entity.title,
-              width: entity.width,
-              height: entity.height,
-              size: size,
-              createDate: entity.createDateTime,
-              type: entity.type,
-              hash: hash,
-            );
           }),
         );
 
-        photoAssets.addAll(batchResults);
-        _scanProgress = 0.10 + 0.40 * (photoAssets.length / uniqueAssets.length);
+        _scanProgress = 0.20 + 0.30 * ((i + batchSize).clamp(0, photoAssets.length) / photoAssets.length);
         notifyListeners();
-
-        // Yield to UI thread
         await Future.delayed(Duration.zero);
       }
 
