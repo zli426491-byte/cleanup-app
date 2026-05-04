@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,18 +18,42 @@ void main() async {
   await AnalyticsManager.instance.configure();
   final prefs = await SharedPreferences.getInstance();
   final hasCompletedOnboarding = prefs.getBool('hasCompletedOnboarding') ?? false;
-  runApp(CleanupApp(hasCompletedOnboarding: hasCompletedOnboarding));
+
+  // Initialize subscription manager safely (handles placeholder keys)
+  final subscriptionManager = SubscriptionManager();
+  try {
+    await subscriptionManager.init(isIos: Platform.isIOS);
+  } catch (e) {
+    debugPrint('SubscriptionManager init failed (safe): $e');
+  }
+
+  // Request ATT after init (iOS only, safe no-op on other platforms)
+  try {
+    await AnalyticsManager.instance.requestATT();
+  } catch (e) {
+    debugPrint('ATT request failed (safe): $e');
+  }
+
+  runApp(CleanupApp(
+    hasCompletedOnboarding: hasCompletedOnboarding,
+    subscriptionManager: subscriptionManager,
+  ));
 }
 
 class CleanupApp extends StatelessWidget {
   final bool hasCompletedOnboarding;
-  const CleanupApp({super.key, required this.hasCompletedOnboarding});
+  final SubscriptionManager subscriptionManager;
+  const CleanupApp({
+    super.key,
+    required this.hasCompletedOnboarding,
+    required this.subscriptionManager,
+  });
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => SubscriptionManager()),
+        ChangeNotifierProvider.value(value: subscriptionManager),
         ChangeNotifierProvider(create: (_) => PhotoScannerService()),
         ChangeNotifierProvider(create: (_) => ContactsCleanupService()),
         ChangeNotifierProvider(create: (_) => SecretSpaceService()),

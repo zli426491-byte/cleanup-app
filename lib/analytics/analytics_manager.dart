@@ -78,8 +78,7 @@ import 'package:flutter/foundation.dart';
 // TODO: Uncomment when facebook_app_events is added to pubspec.yaml
 // import 'package:facebook_app_events/facebook_app_events.dart';
 
-// TODO: Uncomment when app_tracking_transparency is added to pubspec.yaml
-// import 'package:app_tracking_transparency/app_tracking_transparency.dart';
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 
 // -----------------------------------------------------------------------------
 // Analytics event names
@@ -196,18 +195,19 @@ class AnalyticsManager {
   /// Request App Tracking Transparency permission.
   /// Call this after your custom pre-permission screen.
   Future<void> requestATT() async {
-    // TODO: Uncomment after adding app_tracking_transparency to pubspec.yaml
-    // final status = await AppTrackingTransparency.requestTrackingAuthorization();
-    // _log('ATT status: $status');
-    //
-    // // Forward decision to Adjust
-    // Adjust.requestAppTrackingAuthorization();
-    //
-    // // Forward decision to Facebook
-    // final granted = status == TrackingStatus.authorized;
-    // await _facebookAppEvents.setAdvertiserTracking(enabled: granted);
+    try {
+      final status = await AppTrackingTransparency.requestTrackingAuthorization();
+      _log('ATT status: $status');
 
-    _log('ATT request (stub) -- uncomment when app_tracking_transparency is added');
+      // TODO: Forward decision to Adjust when adjust_sdk is added
+      // Adjust.requestAppTrackingAuthorization();
+
+      // TODO: Forward decision to Facebook when facebook_app_events is added
+      // final granted = status == TrackingStatus.authorized;
+      // await _facebookAppEvents.setAdvertiserTracking(enabled: granted);
+    } catch (e) {
+      _log('ATT request failed: $e');
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -326,7 +326,11 @@ class AnalyticsManager {
   // ---------------------------------------------------------------------------
 
   void _assertConfigured() {
-    assert(_configured, 'Call AnalyticsManager.instance.configure() before tracking events.');
+    if (!_configured) {
+      _log('WARNING: AnalyticsManager.configure() not called yet. '
+          'Ignoring event. Call configure() at app startup.');
+      return;
+    }
   }
 
   /// Print to the debug console only in debug builds.

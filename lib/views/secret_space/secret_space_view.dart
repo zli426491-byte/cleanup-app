@@ -175,6 +175,29 @@ class _SecretSpaceViewState extends State<SecretSpaceView> {
               },
               child: const Text('建立私密空間'),
             ),
+            const SizedBox(height: 24),
+            // Security note
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.warning.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.info_outline, size: 16, color: AppTheme.warning),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '此功能提供便利性隱私保護，檔案經 AES 加密儲存。'
+                      '非軍事級加密，請勿存放極度敏感資料。',
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600], height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),

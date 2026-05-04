@@ -28,16 +28,58 @@ class ContactsCleanupView extends StatelessWidget {
             ],
           ),
         ),
-        body: service.isScanning
-            ? const Center(child: CircularProgressIndicator())
-            : service.duplicateGroups.isEmpty && service.incompleteContacts.isEmpty
-                ? _buildEmptyState(service)
-                : TabBarView(
-                    children: [
-                      _buildDuplicatesList(service),
-                      _buildIncompleteList(service),
-                    ],
-                  ),
+        body: Stack(
+          children: [
+            service.isScanning
+                ? const Center(child: CircularProgressIndicator())
+                : service.duplicateGroups.isEmpty && service.incompleteContacts.isEmpty
+                    ? _buildEmptyState(service)
+                    : TabBarView(
+                        children: [
+                          _buildDuplicatesList(service),
+                          _buildIncompleteList(service),
+                        ],
+                      ),
+            // Coming Soon overlay
+            Positioned(
+              left: 0, right: 0, bottom: 0,
+              child: Container(
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  color: AppTheme.warning.withValues(alpha: 0.95),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.warning.withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.construction_rounded, color: Colors.white, size: 24),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('即將推出',
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
+                          SizedBox(height: 2),
+                          Text('聯絡人清理功能正在開發中，敬請期待',
+                              style: TextStyle(color: Colors.white70, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

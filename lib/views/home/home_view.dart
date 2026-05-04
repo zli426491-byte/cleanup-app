@@ -4,8 +4,6 @@ import 'package:provider/provider.dart';
 import '../../services/photo_scanner_service.dart';
 import '../../models/storage_info.dart';
 import '../../utils/app_theme.dart';
-import '../tools/email_cleanup_view.dart';
-import '../tools/calendar_cleanup_view.dart';
 import '../tools/charging_animation_view.dart';
 
 class HomeView extends StatefulWidget {
@@ -118,7 +116,7 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
           // Info
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(info.usedSpaceFormatted, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: AppTheme.textTitle)),
-            Text('共 ${info.totalSpaceFormatted}', style: AppTheme.caption),
+            Text('共 ${info.totalSpaceFormatted}${info.estimateLabel}', style: AppTheme.caption),
             const SizedBox(height: AppTheme.s12),
             Row(children: [
               _legend(ringColor, '已用'),
@@ -313,11 +311,11 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
     decoration: BoxDecoration(color: AppTheme.cardBg, borderRadius: BorderRadius.circular(AppTheme.r12),
       border: Border.all(color: AppTheme.border, width: 0.5)),
     child: Column(children: [
-      _buildQRow(Icons.email_rounded, '清理信箱', '移除垃圾郵件', const Color(0xFF1D9E75),
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EmailCleanupView()))),
+      _buildQRow(Icons.email_rounded, '清理信箱', '即將推出', const Color(0xFF1D9E75),
+        onTap: () => _showComingSoonDialog('信箱清理')),
       const Divider(indent: 60),
-      _buildQRow(Icons.calendar_month_rounded, '清理行事曆', '移除過期事件', const Color(0xFFF0997B),
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CalendarCleanupView()))),
+      _buildQRow(Icons.calendar_month_rounded, '清理行事曆', '即將推出', const Color(0xFFF0997B),
+        onTap: () => _showComingSoonDialog('行事曆清理')),
       const Divider(indent: 60),
       _buildQRow(Icons.bolt_rounded, '充電動畫', '自訂充電畫面', const Color(0xFFE5A31A),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChargingAnimationView()))),
@@ -342,6 +340,27 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
       ]),
     ),
   );
+
+  void _showComingSoonDialog(String featureName) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(children: [
+          const Icon(Icons.construction_rounded, color: AppTheme.warning, size: 24),
+          const SizedBox(width: 8),
+          const Text('即將推出'),
+        ]),
+        content: Text('「$featureName」功能正在開發中，敬請期待！'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('好的'),
+          ),
+        ],
+      ),
+    );
+  }
 
   String _fmt(int b) {
     if (b < 1024) return '$b B';

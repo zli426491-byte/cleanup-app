@@ -11,14 +11,16 @@ class SubscriptionManager extends ChangeNotifier {
   static const _proEntitlement = 'pro';
 
   bool _isPro = false;
-  List<StoreProduct> _products = [];
   bool _isLoading = false;
   bool _showPaywall = false;
+  bool _isPlaceholder = true;
+  String _statusMessage = '';
 
-  bool get isPro => _isPro;
-  List<StoreProduct> get products => List.unmodifiable(_products);
+  bool get isPro => _isPlaceholder ? false : _isPro;
   bool get isLoading => _isLoading;
   bool get showPaywall => _showPaywall;
+  bool get isPlaceholder => _isPlaceholder;
+  String get statusMessage => _statusMessage;
 
   set showPaywall(bool value) {
     _showPaywall = value;
@@ -29,7 +31,11 @@ class SubscriptionManager extends ChangeNotifier {
   // Initialisation
   // -----------------------------------------------------------------------
 
+  /// Check if the API keys are placeholders (not yet configured).
+  static bool _isPlaceholderKey(String key) => key.startsWith('YOUR_');
+
   /// Configure RevenueCat and check the current entitlement status.
+  /// If API keys are placeholders, skip initialization safely.
   Future<void> init({required bool isIos}) async {
     _isLoading = true;
     notifyListeners();
@@ -37,6 +43,20 @@ class SubscriptionManager extends ChangeNotifier {
     try {
       final apiKey =
           isIos ? _revenueCatApiKeyIos : _revenueCatApiKeyAndroid;
+
+      // Guard: skip RevenueCat if keys are not configured yet
+      if (_isPlaceholderKey(apiKey)) {
+        _isPlaceholder = true;
+        _isPro = false;
+        debugPrint('SubscriptionManager: placeholder API key detected, '
+            'skipping RevenueCat initialization. '
+            'Replace YOUR_REVENUECAT_*_API_KEY with real keys.');
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+
+      _isPlaceholder = false;
 
       final configuration = PurchasesConfiguration(apiKey);
       await Purchases.configure(configuration);
@@ -63,6 +83,8 @@ class SubscriptionManager extends ChangeNotifier {
 
   /// Fetch available products / packages from RevenueCat.
   Future<void> loadProducts() async {
+    if (_isPlaceholder) return;
+
     _isLoading = true;
     notifyListeners();
 
@@ -70,9 +92,8 @@ class SubscriptionManager extends ChangeNotifier {
       final offerings = await Purchases.getOfferings();
       final current = offerings.current;
       if (current != null) {
-        _products = current.availablePackages
-            .map((p) => p.storeProduct)
-            .toList();
+        // Products are available through offerings
+        debugPrint('SubscriptionManager: loaded ${current.availablePackages.length} packages');
       }
     } catch (e) {
       debugPrint('SubscriptionManager.loadProducts error: $e');
@@ -87,7 +108,14 @@ class SubscriptionManager extends ChangeNotifier {
   // -----------------------------------------------------------------------
 
   /// Purchase a specific package. Returns true on success.
+  /// If keys are placeholders, shows a "coming soon" message.
   Future<bool> purchase(Package package) async {
+    if (_isPlaceholder) {
+      _statusMessage = '訂閱功能即將推出 (Subscriptions coming soon)';
+      notifyListeners();
+      return false;
+    }
+
     _isLoading = true;
     notifyListeners();
 
@@ -112,7 +140,14 @@ class SubscriptionManager extends ChangeNotifier {
   }
 
   /// Restore previous purchases. Returns true if the user now has Pro.
+  /// If keys are placeholders, shows a "coming soon" message.
   Future<bool> restorePurchases() async {
+    if (_isPlaceholder) {
+      _statusMessage = '訂閱功能即將推出 (Subscriptions coming soon)';
+      notifyListeners();
+      return false;
+    }
+
     _isLoading = true;
     notifyListeners();
 
@@ -138,6 +173,7 @@ class SubscriptionManager extends ChangeNotifier {
   /// Check whether the user has Pro access. If not, sets [showPaywall] to
   /// true so the UI can present the paywall. Returns true if the user is Pro.
   bool requirePro() {
+    if (_isPlaceholder) return false;
     if (_isPro) return true;
     _showPaywall = true;
     notifyListeners();

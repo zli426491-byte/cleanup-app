@@ -187,28 +187,31 @@ class PhotoScannerService extends ChangeNotifier {
       notifyListeners();
 
       // Second pass: compute hashes only for images, in batches
-      const batchSize = 50;
-      for (var i = 0; i < photoAssets.length; i += batchSize) {
-        final end = (i + batchSize > photoAssets.length)
-            ? photoAssets.length
-            : i + batchSize;
+      if (photoAssets.isNotEmpty) {
+        const batchSize = 50;
+        for (var i = 0; i < photoAssets.length; i += batchSize) {
+          final end = (i + batchSize > photoAssets.length)
+              ? photoAssets.length
+              : i + batchSize;
 
-        await Future.wait(
-          List.generate(end - i, (j) async {
-            final idx = i + j;
-            if (photoAssets[idx].type == AssetType.image) {
-              final entity = uniqueAssets[idx];
-              final hash = await _computeDHash(entity);
-              if (hash != null) {
-                photoAssets[idx] = photoAssets[idx].copyWith(hash: hash);
+          await Future.wait(
+            List.generate(end - i, (j) async {
+              final idx = i + j;
+              if (idx >= photoAssets.length || idx >= uniqueAssets.length) return;
+              if (photoAssets[idx].type == AssetType.image) {
+                final entity = uniqueAssets[idx];
+                final hash = await _computeDHash(entity);
+                if (hash != null) {
+                  photoAssets[idx] = photoAssets[idx].copyWith(hash: hash);
+                }
               }
-            }
-          }),
-        );
+            }),
+          );
 
-        _scanProgress = 0.20 + 0.30 * ((i + batchSize).clamp(0, photoAssets.length) / photoAssets.length);
-        notifyListeners();
-        await Future.delayed(Duration.zero);
+          _scanProgress = 0.20 + 0.30 * ((i + batchSize).clamp(0, photoAssets.length) / photoAssets.length);
+          notifyListeners();
+          await Future.delayed(Duration.zero);
+        }
       }
 
       // 3. Find exact duplicates (identical hash)

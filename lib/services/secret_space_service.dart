@@ -52,8 +52,15 @@ class SecretSpaceService extends ChangeNotifier {
   static const _itemsKey = 'secret_space_items';
   static const _vaultDir = 'secret_vault';
 
-  // Using SharedPreferences instead of FlutterSecureStorage to avoid
-  // Windows ATL dependency. On iOS/Android, switch back to FlutterSecureStorage.
+  // IMPORTANT: Using SharedPreferences as fallback storage because
+  // flutter_secure_storage crashes on Windows (requires ATL dependency).
+  // On iOS/Android production builds, switch back to FlutterSecureStorage
+  // for proper Keychain/Keystore-backed security.
+  //
+  // NOTE: SharedPreferences stores data in PLAIN TEXT on disk.
+  // This is convenience-level storage, NOT military-grade security.
+  // The AES encryption of vault files still applies, but the encryption
+  // key itself is stored in SharedPreferences (unprotected) on this platform.
   SharedPreferences? _prefs;
   final LocalAuthentication _localAuth = LocalAuthentication();
   final Uuid _uuid = const Uuid();
