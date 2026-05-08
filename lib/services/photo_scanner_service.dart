@@ -132,10 +132,10 @@ class ScanResult {
 // ---------------------------------------------------------------------------
 
 class PhotoScannerService extends ChangeNotifier {
-  static const _maxAssetsPerAlbum = 1200;
-  static const _maxImagesToAnalyze = 300;
-  static const _analysisBatchSize = 8;
-  static const _thumbnailTimeout = Duration(milliseconds: 1200);
+  static const _maxAssetsPerAlbum = 900;
+  static const _maxAssetsToScan = 1800;
+  static const _maxImagesToAnalyze = 120;
+  static const _thumbnailTimeout = Duration(milliseconds: 800);
 
   bool _isScanning = false;
   double _scanProgress = 0.0;
@@ -192,8 +192,11 @@ class PhotoScannerService extends ChangeNotifier {
       for (final a in rawAssets) {
         uniqueMap[a.id] = a;
       }
-      final uniqueAssets = uniqueMap.values.toList()
+      final sortedAssets = uniqueMap.values.toList()
         ..sort((a, b) => b.createDateTime.compareTo(a.createDateTime));
+      final uniqueAssets = sortedAssets.length > _maxAssetsToScan
+          ? sortedAssets.take(_maxAssetsToScan).toList()
+          : sortedAssets;
 
       _scanProgress = 0.10;
       notifyListeners();
@@ -232,20 +235,14 @@ class PhotoScannerService extends ChangeNotifier {
       }
 
       if (analysisIndexes.isNotEmpty) {
-        for (var offset = 0; offset < analysisIndexes.length; offset += _analysisBatchSize) {
-          final end = (offset + _analysisBatchSize > analysisIndexes.length)
-              ? analysisIndexes.length
-              : offset + _analysisBatchSize;
-          final batch = analysisIndexes.sublist(offset, end);
-
-          await Future.wait(batch.map((idx) async {
-            final entity = uniqueAssets[idx];
-            final analysis = await _analyzeImage(entity).timeout(
-              _thumbnailTimeout,
-              onTimeout: () => null,
-            );
-            if (analysis == null) return;
-
+        for (var position = 0; position < analysisIndexes.length; position++) {
+          final idx = analysisIndexes[position];
+          final entity = uniqueAssets[idx];
+          final analysis = await _analyzeImage(entity).timeout(
+            _thumbnailTimeout,
+            onTimeout: () => null,
+          );
+          if (analysis != null) {
             photoAssets[idx] = photoAssets[idx].copyWith(
               hash: analysis.hash,
               thumbnail: analysis.thumbnail,
@@ -253,13 +250,17 @@ class PhotoScannerService extends ChangeNotifier {
               isDark: analysis.quality.isDark,
               isOverexposed: analysis.quality.isOverexposed,
             );
-          }));
+          }
 
-          _scanProgress = 0.20 + 0.30 * (end / analysisIndexes.length);
+          _scanProgress = 0.20 + 0.30 * ((position + 1) / analysisIndexes.length);
           notifyListeners();
-          await Future.delayed(Duration.zero);
+          await Future.delayed(const Duration(milliseconds: 1));
         }
       }
+
+      _scanProgress = 0.50;
+      notifyListeners();
+      await Future.delayed(const Duration(milliseconds: 1));
 
       // 3. Find exact duplicates (identical hash)
       _currentPhase = ScanPhase.findingDuplicates;
@@ -417,7 +418,7 @@ class PhotoScannerService extends ChangeNotifier {
   Future<_ImageAnalysis?> _analyzeImage(AssetEntity entity) async {
     try {
       final thumbData = await entity.thumbnailDataWithSize(
-        const ThumbnailSize(256, 256),
+        const ThumbnailSize(160, 160),
         format: ThumbnailFormat.jpeg,
       );
       if (thumbData == null) return null;
@@ -441,11 +442,52 @@ class PhotoScannerService extends ChangeNotifier {
       return _ImageAnalysis(
         hash: hash.toRadixString(16).padLeft(16, '0'),
         thumbnail: thumbData,
-        quality: ImageQualityService.instance.analyzeQuality(thumbData),
+        quality: _analyzeQuality(decoded),
       );
     } catch (_) {
       return null;
     }
+  }
+
+  ImageQuality _analyzeQuality(img.Image image) {
+    final resized = img.copyResize(img.grayscale(image), width: 96);
+    double brightnessTotal = 0;
+    double laplacianTotal = 0;
+    double laplacianTotalSq = 0;
+    var count = 0;
+
+    for (var y = 1; y < resized.height - 1; y++) {
+      for (var x = 1; x < resized.width - 1; x++) {
+        final center = resized.getPixel(x, y).luminance;
+        final top = resized.getPixel(x, y - 1).luminance;
+        final bottom = resized.getPixel(x, y + 1).luminance;
+        final left = resized.getPixel(x - 1, y).luminance;
+        final right = resized.getPixel(x + 1, y).luminance;
+        final laplacian = -4 * center + top + bottom + left + right;
+
+        brightnessTotal += center;
+        laplacianTotal += laplacian;
+        laplacianTotalSq += laplacian * laplacian;
+        count++;
+      }
+    }
+
+    final brightness = count == 0 ? 0.5 : brightnessTotal / count;
+    final mean = count == 0 ? 0.0 : laplacianTotal / count;
+    final blurScore = count == 0
+        ? 999.0
+        : ((laplacianTotalSq / count) - (mean * mean)).abs() * 255 * 255;
+
+    final issues = <QualityIssue>[];
+    if (blurScore < 100) issues.add(QualityIssue.blurry);
+    if (brightness < 0.15) issues.add(QualityIssue.tooDark);
+    if (brightness > 0.85) issues.add(QualityIssue.overexposed);
+
+    return ImageQuality(
+      blurScore: blurScore,
+      brightness: brightness,
+      issues: issues,
+    );
   }
 
   /// Hamming distance between two hex-encoded 64-bit hashes.
