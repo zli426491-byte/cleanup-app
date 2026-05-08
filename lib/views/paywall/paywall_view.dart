@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -23,6 +24,7 @@ class _PaywallViewState extends State<PaywallView> {
   _PlanOption? _selectedPlan;
   bool _isPurchasing = false;
   bool _hasTrackedClose = false;
+  String? _buildNumber;
 
   @override
   void initState() {
@@ -31,6 +33,7 @@ class _PaywallViewState extends State<PaywallView> {
       AnalyticsEvent.paywallShown.name,
       properties: {'source': widget.fromOnboarding ? 'onboarding' : 'in_app'},
     );
+    _loadBuildNumber();
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadPlans());
   }
 
@@ -74,6 +77,14 @@ class _PaywallViewState extends State<PaywallView> {
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
+              if (_buildNumber != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'TestFlight Build $_buildNumber',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                ),
+              ],
               const SizedBox(height: 6),
               Text(
                 '解鎖完整清理工具，快速找出可釋放的照片、影片與檔案空間。',
@@ -176,6 +187,12 @@ class _PaywallViewState extends State<PaywallView> {
     if (plans.isNotEmpty) {
       setState(() => _selectedPlan ??= plans.first);
     }
+  }
+
+  Future<void> _loadBuildNumber() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    if (!mounted) return;
+    setState(() => _buildNumber = packageInfo.buildNumber);
   }
 
   Future<void> _purchase(SubscriptionManager sub) async {
