@@ -134,8 +134,8 @@ class ScanResult {
 class PhotoScannerService extends ChangeNotifier {
   static const _assetPageSize = 250;
   static const _maxAssetsToScan = 2500;
-  static const _enableInlineImageAnalysis = true;
-  static const _maxImagesToAnalyze = 60;
+  static const _enableInlineImageAnalysis = false;
+  static const _maxImagesToAnalyze = 0;
   static const _thumbnailTimeout = Duration(milliseconds: 350);
   static const _assetPageTimeout = Duration(seconds: 4);
   static const _imageAnalysisBudget = Duration(seconds: 8);
@@ -293,7 +293,7 @@ class PhotoScannerService extends ChangeNotifier {
         }
       }
 
-      _scanProgress = 0.50;
+      _scanProgress = 0.45;
       notifyListeners();
       await Future<void>.delayed(Duration.zero);
 
