@@ -4,13 +4,10 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m2
 
-    integrations:
-      app_store_connect: CleanupApp API Key
-
     environment:
+      groups:
+        - appstore_credentials
       vars:
-        APP_STORE_CONNECT_ISSUER_ID: 5325aa4e-8a81-4662-94d3-83961c7e1151
-        APP_STORE_CONNECT_KEY_IDENTIFIER: 5WHQMRJ2GT
         BUNDLE_ID: com.cleanupapp.cleaner
         APP_STORE_APP_ID: 6764532900
       flutter: stable
@@ -23,6 +20,10 @@ workflows:
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
+            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
+            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --private-key "$APP_STORE_CONNECT_PRIVATE_KEY" \
+            --certificate-key "$CERTIFICATE_PRIVATE_KEY" \
             --create
           keychain add-certificates
           xcode-project use-profiles
@@ -54,7 +55,9 @@ workflows:
 
     publishing:
       app_store_connect:
-        auth: integration
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
         submit_to_app_store: false
         beta_groups:
