@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:photo_manager/photo_manager.dart';
@@ -344,6 +345,14 @@ class PhotoScannerService extends ChangeNotifier {
       }
     }
 
+    // Similar groups are review-first suggestions; estimate savings by keeping
+    // the newest item in each group.
+    for (final group in similarGroups) {
+      for (var i = 1; i < group.assets.length; i++) {
+        total += group.assets[i].size;
+      }
+    }
+
     // For large files, estimate 50 % compression savings.
     for (final f in largeFiles) {
       total += f.size ~/ 2;
@@ -482,11 +491,16 @@ class PhotoScannerService extends ChangeNotifier {
           ..sort((a, b) => b.size.compareTo(a.size));
     final videos = photoAssets.where((a) => a.type == AssetType.video).toList()
       ..sort((a, b) => b.size.compareTo(a.size));
+    final duplicateGroups = _findMetadataDuplicates(photoAssets);
+    final duplicateIds = duplicateGroups
+        .expand((group) => group.assets.map((asset) => asset.id))
+        .toSet();
+    final similarGroups = _findMetadataSimilar(photoAssets, duplicateIds);
 
     return ScanResult(
       allAssets: photoAssets,
-      duplicateGroups: const [],
-      similarGroups: const [],
+      duplicateGroups: duplicateGroups,
+      similarGroups: similarGroups,
       screenshots: screenshots,
       largeFiles: largeFiles,
       videos: videos,
@@ -494,12 +508,117 @@ class PhotoScannerService extends ChangeNotifier {
       darkPhotos: const [],
       overexposedPhotos: const [],
       totalSavingsEstimate: _estimateSavings(
-        duplicateGroups: const [],
-        similarGroups: const [],
+        duplicateGroups: duplicateGroups,
+        similarGroups: similarGroups,
         screenshots: screenshots,
         largeFiles: largeFiles,
       ),
     );
+  }
+
+  List<DuplicateGroup> _findMetadataDuplicates(List<PhotoAsset> assets) {
+    const sizeBucketBytes = 512 * 1024;
+    const timeBucket = Duration(minutes: 10);
+    final buckets = <String, List<PhotoAsset>>{};
+
+    for (final asset in assets) {
+      if (asset.type != AssetType.image ||
+          asset.width <= 0 ||
+          asset.height <= 0) {
+        continue;
+      }
+
+      final normalizedWidth = math.max(asset.width, asset.height);
+      final normalizedHeight = math.min(asset.width, asset.height);
+      final createdBucket =
+          asset.createDate.millisecondsSinceEpoch ~/ timeBucket.inMilliseconds;
+      final sizeBucket = asset.size ~/ sizeBucketBytes;
+      final key =
+          '$normalizedWidth:$normalizedHeight:$sizeBucket:$createdBucket';
+      buckets.putIfAbsent(key, () => <PhotoAsset>[]).add(asset);
+    }
+
+    final groups = <DuplicateGroup>[];
+    for (final entry in buckets.entries) {
+      if (entry.value.length < 2) continue;
+      final grouped = List<PhotoAsset>.from(entry.value)
+        ..sort((a, b) => b.createDate.compareTo(a.createDate));
+      groups.add(DuplicateGroup(hash: entry.key, assets: grouped));
+    }
+
+    groups.sort((a, b) => b.assets.length.compareTo(a.assets.length));
+    return groups.take(40).toList();
+  }
+
+  List<SimilarGroup> _findMetadataSimilar(
+    List<PhotoAsset> assets,
+    Set<String> excludedIds,
+  ) {
+    final images =
+        assets
+            .where(
+              (asset) =>
+                  asset.type == AssetType.image &&
+                  asset.width > 0 &&
+                  asset.height > 0 &&
+                  !asset.isScreenshot &&
+                  !excludedIds.contains(asset.id),
+            )
+            .toList()
+          ..sort((a, b) => b.createDate.compareTo(a.createDate));
+
+    final usedIds = <String>{};
+    final groups = <SimilarGroup>[];
+    for (var i = 0; i < images.length; i++) {
+      final base = images[i];
+      if (usedIds.contains(base.id)) continue;
+
+      final group = <PhotoAsset>[base];
+      final compareEnd = math.min(images.length, i + 28);
+      for (var j = i + 1; j < compareEnd && group.length < 8; j++) {
+        final candidate = images[j];
+        if (usedIds.contains(candidate.id)) continue;
+        if (_isMetadataSimilar(base, candidate)) {
+          group.add(candidate);
+        }
+      }
+
+      if (group.length > 1) {
+        for (final asset in group) {
+          usedIds.add(asset.id);
+        }
+        groups.add(SimilarGroup(assets: group, hammingDistance: 0));
+        if (groups.length >= 40) break;
+      }
+    }
+
+    groups.sort((a, b) => b.assets.length.compareTo(a.assets.length));
+    return groups;
+  }
+
+  bool _isMetadataSimilar(PhotoAsset a, PhotoAsset b) {
+    final timeGap = a.createDate.difference(b.createDate).abs();
+    if (timeGap > const Duration(hours: 4)) return false;
+
+    final aspectA = _aspectRatio(a);
+    final aspectB = _aspectRatio(b);
+    if ((aspectA - aspectB).abs() > 0.045) return false;
+
+    final widthA = math.max(a.width, a.height);
+    final widthB = math.max(b.width, b.height);
+    final heightA = math.min(a.width, a.height);
+    final heightB = math.min(b.width, b.height);
+    final widthDelta = (widthA - widthB).abs() / math.max(widthA, widthB);
+    final heightDelta = (heightA - heightB).abs() / math.max(heightA, heightB);
+
+    return widthDelta <= 0.20 && heightDelta <= 0.20;
+  }
+
+  double _aspectRatio(PhotoAsset asset) {
+    final longSide = math.max(asset.width, asset.height);
+    final shortSide = math.min(asset.width, asset.height);
+    if (shortSide <= 0) return 0;
+    return longSide / shortSide;
   }
 
   void _finishScanResult(ScanResult result, {bool timedOut = false}) {
