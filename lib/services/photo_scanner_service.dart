@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:image/image.dart' as img;
@@ -145,6 +147,7 @@ class PhotoScannerService extends ChangeNotifier {
   static const _thumbnailTimeout = Duration(milliseconds: 180);
   static const _assetPageTimeout = Duration(seconds: 4);
   static const _imageAnalysisBudget = Duration(seconds: 8);
+  static const _mainScanWatchdog = Duration(seconds: 12);
   static const _iosScreenshotMediaSubtype = 1 << 2;
 
   bool _isScanning = false;
@@ -152,6 +155,7 @@ class PhotoScannerService extends ChangeNotifier {
   ScanPhase _currentPhase = ScanPhase.idle;
   ScanResult _scanResult = ScanResult.empty;
   String? _lastError;
+  int _scanRunId = 0;
 
   bool get isScanning => _isScanning;
   double get scanProgress => _scanProgress;
@@ -168,14 +172,27 @@ class PhotoScannerService extends ChangeNotifier {
   Future<void> startFullScan() async {
     AnalyticsManager.instance.track(AnalyticsEvent.scanStarted.name);
     _isScanning = true;
+    final runId = ++_scanRunId;
     _scanProgress = 0.0;
     _currentPhase = ScanPhase.fetchingAssets;
     _lastError = null;
     notifyListeners();
 
+    final rawAssets = <AssetEntity>[];
+    final screenshotIds = <String>{};
+    Timer? watchdog;
+    watchdog = Timer(_mainScanWatchdog, () {
+      if (!_isActiveScan(runId)) return;
+      _finishScanResult(
+        _buildQuickResult(rawAssets: rawAssets, screenshotIds: screenshotIds),
+        timedOut: true,
+      );
+    });
+
     try {
       // 1. Request permission & fetch all assets
       final permitted = await PhotoManager.requestPermissionExtend();
+      if (!_isActiveScan(runId)) return;
       if (!permitted.isAuth) {
         _reset();
         return;
@@ -184,10 +201,14 @@ class PhotoScannerService extends ChangeNotifier {
       final albums = await PhotoManager.getAssetPathList(
         type: RequestType.common, // photos + videos
         filterOption: FilterOptionGroup(
-          imageOption: const FilterOption(needTitle: true),
-          videoOption: const FilterOption(needTitle: true),
+          imageOption: const FilterOption(needTitle: false),
+          videoOption: const FilterOption(needTitle: false),
         ),
+      ).timeout(
+        _assetPageTimeout,
+        onTimeout: () => const <AssetPathEntity>[],
       );
+      if (!_isActiveScan(runId)) return;
       if (albums.isEmpty) {
         _reset();
         return;
@@ -197,14 +218,13 @@ class PhotoScannerService extends ChangeNotifier {
       // large phone creates many duplicate reads and can look frozen.
       final scanAlbums = _primaryScanAlbums(albums);
 
-      final List<AssetEntity> rawAssets = [];
-      final Set<String> screenshotIds = {};
       for (final album in scanAlbums) {
         final isScreenshotAlbum = _isScreenshotAlbum(album);
         final count = await album.assetCountAsync.timeout(
           _assetPageTimeout,
           onTimeout: () => 0,
         );
+        if (!_isActiveScan(runId)) return;
         final maxForAlbum =
             isScreenshotAlbum ? _maxScreenshotAssetsToScan : _maxAssetsToScan;
         final cappedCount =
@@ -221,6 +241,7 @@ class PhotoScannerService extends ChangeNotifier {
             _assetPageTimeout,
             onTimeout: () => const <AssetEntity>[],
           );
+          if (!_isActiveScan(runId)) return;
           rawAssets.addAll(assets);
           if (isScreenshotAlbum) {
             screenshotIds.addAll(assets.map((asset) => asset.id));
@@ -230,6 +251,7 @@ class PhotoScannerService extends ChangeNotifier {
               0.02 + 0.08 * (end / cappedCount.clamp(1, _maxAssetsToScan));
           notifyListeners();
           await Future<void>.delayed(Duration.zero);
+          if (!_isActiveScan(runId)) return;
 
           if (rawAssets.length >= _maxAssetsToScan + _maxScreenshotAssetsToScan) {
             break;
@@ -326,8 +348,9 @@ class PhotoScannerService extends ChangeNotifier {
             final entity = uniqueAssets[idx];
             final analysis = await _analyzeImage(entity).timeout(
               _thumbnailTimeout,
-              onTimeout: () => null,
+            onTimeout: () => null,
             );
+            if (!_isActiveScan(runId)) return;
             if (analysis != null) {
               photoAssets[idx] = photoAssets[idx].copyWith(
                 hash: analysis.hash,
@@ -342,6 +365,7 @@ class PhotoScannerService extends ChangeNotifier {
                 0.20 + 0.20 * ((position + 1) / analysisIndexes.length);
             notifyListeners();
             await Future<void>.delayed(Duration.zero);
+            if (!_isActiveScan(runId)) return;
           }
         }
       }
@@ -349,6 +373,7 @@ class PhotoScannerService extends ChangeNotifier {
       _scanProgress = 0.45;
       notifyListeners();
       await Future<void>.delayed(Duration.zero);
+      if (!_isActiveScan(runId)) return;
 
       // 3. Find exact duplicates (identical hash)
       _currentPhase = ScanPhase.findingDuplicates;
@@ -402,41 +427,28 @@ class PhotoScannerService extends ChangeNotifier {
         largeFiles: largeFiles,
       );
 
-      _scanResult = ScanResult(
-        allAssets: photoAssets,
-        duplicateGroups: duplicateGroups,
-        similarGroups: similarGroups,
-        screenshots: screenshots,
-        largeFiles: largeFiles,
-        videos: videos,
-        blurryPhotos: blurryPhotos,
-        darkPhotos: darkPhotos,
-        overexposedPhotos: overexposedPhotos,
-        totalSavingsEstimate: totalSavings,
+      if (!_isActiveScan(runId)) return;
+      _finishScanResult(
+        ScanResult(
+          allAssets: photoAssets,
+          duplicateGroups: duplicateGroups,
+          similarGroups: similarGroups,
+          screenshots: screenshots,
+          largeFiles: largeFiles,
+          videos: videos,
+          blurryPhotos: blurryPhotos,
+          darkPhotos: darkPhotos,
+          overexposedPhotos: overexposedPhotos,
+          totalSavingsEstimate: totalSavings,
+        ),
       );
-
-      _currentPhase = ScanPhase.done;
-      _scanProgress = 1.0;
-      _isScanning = false;
-      AnalyticsManager.instance.track(
-        AnalyticsEvent.scanCompleted.name,
-        properties: {
-          'assets': photoAssets.length,
-          'duplicates': duplicateGroups.length,
-          'similar_groups': similarGroups.length,
-          'screenshots': screenshots.length,
-          'large_files': largeFiles.length,
-          'videos': videos.length,
-          'blurry_photos': blurryPhotos.length,
-          'dark_photos': darkPhotos.length,
-          'estimated_savings_mb': (totalSavings / 1048576).round(),
-        },
-      );
-      notifyListeners();
     } catch (e) {
+      if (!_isActiveScan(runId)) return;
       debugPrint('PhotoScannerService.startFullScan error: $e');
       _lastError = '掃描中斷，請確認照片權限後再試一次。';
       _reset(keepError: true);
+    } finally {
+      watchdog.cancel();
     }
   }
 
@@ -744,6 +756,98 @@ class PhotoScannerService extends ChangeNotifier {
   // -----------------------------------------------------------------------
   // Internal helpers
   // -----------------------------------------------------------------------
+
+  bool _isActiveScan(int runId) => _isScanning && _scanRunId == runId;
+
+  ScanResult _buildQuickResult({
+    required List<AssetEntity> rawAssets,
+    required Set<String> screenshotIds,
+  }) {
+    final uniqueMap = <String, AssetEntity>{};
+    for (final asset in rawAssets) {
+      uniqueMap[asset.id] = asset;
+    }
+    final sortedAssets = uniqueMap.values.toList()
+      ..sort((a, b) => b.createDateTime.compareTo(a.createDateTime));
+
+    final selectedAssets = <String, AssetEntity>{};
+    for (final asset in sortedAssets) {
+      if (screenshotIds.contains(asset.id) || _isScreenshotEntity(asset)) {
+        selectedAssets[asset.id] = asset;
+        if (selectedAssets.length >= _maxScreenshotAssetsToScan) break;
+      }
+    }
+    for (final asset in sortedAssets) {
+      if (selectedAssets.length >= _maxAssetsToScan + _maxScreenshotAssetsToScan) {
+        break;
+      }
+      selectedAssets[asset.id] = asset;
+    }
+
+    final photoAssets = selectedAssets.values.map((entity) {
+      final estimatedSize = entity.width * entity.height * 3;
+      return PhotoAsset(
+        id: entity.id,
+        title: entity.title,
+        width: entity.width,
+        height: entity.height,
+        size: estimatedSize,
+        createDate: entity.createDateTime,
+        type: entity.type,
+        isScreenshot:
+            screenshotIds.contains(entity.id) || _isScreenshotEntity(entity),
+      );
+    }).toList();
+
+    final screenshots = _collectScreenshots(photoAssets, uniqueMap);
+    const largeThreshold = 5 * 1024 * 1024;
+    final largeFiles = photoAssets.where((a) => a.size > largeThreshold).toList()
+      ..sort((a, b) => b.size.compareTo(a.size));
+    final videos = photoAssets.where((a) => a.type == AssetType.video).toList()
+      ..sort((a, b) => b.size.compareTo(a.size));
+
+    return ScanResult(
+      allAssets: photoAssets,
+      duplicateGroups: const [],
+      similarGroups: const [],
+      screenshots: screenshots,
+      largeFiles: largeFiles,
+      videos: videos,
+      blurryPhotos: const [],
+      darkPhotos: const [],
+      overexposedPhotos: const [],
+      totalSavingsEstimate: _estimateSavings(
+        duplicateGroups: const [],
+        similarGroups: const [],
+        screenshots: screenshots,
+        largeFiles: largeFiles,
+      ),
+    );
+  }
+
+  void _finishScanResult(ScanResult result, {bool timedOut = false}) {
+    _scanResult = result;
+    _currentPhase = ScanPhase.done;
+    _scanProgress = 1.0;
+    _isScanning = false;
+    _lastError = timedOut ? '掃描已先完成，部分深度分析已略過。' : null;
+    AnalyticsManager.instance.track(
+      AnalyticsEvent.scanCompleted.name,
+      properties: {
+        'assets': result.allAssets.length,
+        'duplicates': result.duplicateGroups.length,
+        'similar_groups': result.similarGroups.length,
+        'screenshots': result.screenshots.length,
+        'large_files': result.largeFiles.length,
+        'videos': result.videos.length,
+        'blurry_photos': result.blurryPhotos.length,
+        'dark_photos': result.darkPhotos.length,
+        'timed_out': timedOut,
+        'estimated_savings_mb': (result.totalSavingsEstimate / 1048576).round(),
+      },
+    );
+    notifyListeners();
+  }
 
   void _reset({bool keepError = false}) {
     _isScanning = false;
