@@ -12,9 +12,9 @@ class SubscriptionManager extends ChangeNotifier {
   );
   static const _revenueCatApiKeyIos = String.fromEnvironment(
     'REVENUECAT_IOS_API_KEY',
-    defaultValue: _defaultRevenueCatIosApiKey,
+    defaultValue: '',
   );
-  static const _proEntitlement = 'pro';
+  static const _proEntitlements = {'pro', 'Cleanup App Pro'};
   static const _revenueCatTimeout = Duration(seconds: 12);
 
   bool _isPro = false;
@@ -39,13 +39,20 @@ class SubscriptionManager extends ChangeNotifier {
   static bool _isPlaceholderKey(String key) =>
       key.trim().isEmpty || key.startsWith('YOUR_');
 
+  static String _apiKeyFor({required bool isIos}) {
+    if (!isIos) return _revenueCatApiKeyAndroid;
+    return _isPlaceholderKey(_revenueCatApiKeyIos)
+        ? _defaultRevenueCatIosApiKey
+        : _revenueCatApiKeyIos;
+  }
+
   Future<void> init({required bool isIos}) async {
     _isLoading = true;
     _statusMessage = '';
     notifyListeners();
 
     try {
-      final apiKey = isIos ? _revenueCatApiKeyIos : _revenueCatApiKeyAndroid;
+      final apiKey = _apiKeyFor(isIos: isIos);
 
       if (_isPlaceholderKey(apiKey)) {
         _isPlaceholder = true;
@@ -202,6 +209,6 @@ class SubscriptionManager extends ChangeNotifier {
   }
 
   void _updateProStatus(CustomerInfo info) {
-    _isPro = info.entitlements.active.containsKey(_proEntitlement);
+    _isPro = info.entitlements.active.keys.any(_proEntitlements.contains);
   }
 }

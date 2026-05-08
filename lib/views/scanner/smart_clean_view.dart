@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:provider/provider.dart';
@@ -255,7 +257,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   Widget _scanningState(PhotoScannerService scanner) {
     final phaseName = switch (scanner.currentPhase) {
       ScanPhase.fetchingAssets => '讀取相簿',
-      ScanPhase.computingHashes => '分析照片',
+      ScanPhase.computingHashes => '分析項目',
       ScanPhase.findingDuplicates => '尋找重複照片',
       ScanPhase.findingSimilar => '尋找相似照片',
       ScanPhase.collectingScreenshots => '整理截圖',
@@ -295,7 +297,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 32),
             child: Text(
-              '大型相簿會優先掃描最近項目，避免一次處理幾萬張照片造成卡住。',
+              '大型相簿會先用安全模式掃描，縮圖只在你查看項目時載入。',
               textAlign: TextAlign.center,
               style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
             ),
@@ -449,14 +451,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(13),
-              child: asset.thumbnail != null
-                  ? Image.memory(asset.thumbnail!, fit: BoxFit.cover)
-                  : Icon(
-                      asset.type == AssetType.video
-                          ? Icons.videocam_rounded
-                          : Icons.image_rounded,
-                      color: Colors.grey,
-                    ),
+              child: AssetThumbnail(asset: asset),
             ),
             if (locked)
               Positioned(
@@ -549,19 +544,19 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                 color: Colors.transparent,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(50),
-                  onTap: () => _handleDelete(scanner, sub),
+                  onTap: () => _previewDelete(scanner, sub),
                   child: Center(
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(
-                          Icons.delete_rounded,
+                          Icons.visibility_rounded,
                           color: Colors.white,
                           size: 18,
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          '刪除 ${_selectedIds.length} 個項目',
+                          '預覽並刪除 ${_selectedIds.length} 個項目',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 14,
@@ -643,7 +638,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     );
   }
 
-  void _handleDelete(PhotoScannerService scanner, SubscriptionManager sub) {
+  void _previewDelete(PhotoScannerService scanner, SubscriptionManager sub) {
     if (!sub.isPro) {
       Navigator.push(
         context,
@@ -652,13 +647,47 @@ class _SmartCleanViewState extends State<SmartCleanView> {
       return;
     }
 
+    final toDelete = scanner.scanResult.allAssets
+        .where((asset) => _selectedIds.contains(asset.id))
+        .toList();
+    if (toDelete.isEmpty) return;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('刪除項目'),
-        content: Text(
-          '將刪除 ${_selectedIds.length} 個項目。刪除後仍可在系統最近刪除中復原。',
+        title: const Text('確認要刪除這些項目嗎？'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '共 ${toDelete.length} 個項目，預估大小 ${_fmt(_sumBytes(toDelete))}。請先確認縮圖再刪除。',
+                style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 220,
+                child: GridView.builder(
+                  itemCount: toDelete.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 6,
+                    mainAxisSpacing: 6,
+                  ),
+                  itemBuilder: (context, index) => ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: AssetThumbnail(asset: toDelete[index]),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -668,15 +697,12 @@ class _SmartCleanViewState extends State<SmartCleanView> {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              final toDelete = scanner.scanResult.allAssets
-                  .where((asset) => _selectedIds.contains(asset.id))
-                  .toList();
               await scanner.deleteAssets(toDelete);
               if (!mounted) return;
               setState(() => _selectedIds.clear());
             },
             child: const Text(
-              '刪除',
+              '確認刪除',
               style: TextStyle(
                 color: AppTheme.danger,
                 fontWeight: FontWeight.w700,
@@ -688,10 +714,70 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     );
   }
 
+  int _sumBytes(List<PhotoAsset> assets) {
+    return assets.fold<int>(0, (sum, asset) => sum + asset.size);
+  }
+
   String _fmt(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1048576) return '${(bytes / 1024).toStringAsFixed(1)} KB';
     if (bytes < 1073741824) return '${(bytes / 1048576).toStringAsFixed(1)} MB';
     return '${(bytes / 1073741824).toStringAsFixed(1)} GB';
+  }
+}
+
+class AssetThumbnail extends StatefulWidget {
+  final PhotoAsset asset;
+
+  const AssetThumbnail({super.key, required this.asset});
+
+  @override
+  State<AssetThumbnail> createState() => _AssetThumbnailState();
+}
+
+class _AssetThumbnailState extends State<AssetThumbnail> {
+  static final Map<String, Future<Uint8List?>> _cache = {};
+
+  late final Future<Uint8List?> _thumbnail = _cache.putIfAbsent(
+    widget.asset.id,
+    () => _loadThumbnail(widget.asset.id),
+  );
+
+  static Future<Uint8List?> _loadThumbnail(String id) async {
+    final entity = await AssetEntity.fromId(id).timeout(
+      const Duration(milliseconds: 800),
+      onTimeout: () => null,
+    );
+    if (entity == null) return null;
+    return entity.thumbnailDataWithSize(
+      const ThumbnailSize(220, 220),
+      format: ThumbnailFormat.jpeg,
+    ).timeout(
+      const Duration(milliseconds: 1200),
+      onTimeout: () => null,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Uint8List?>(
+      future: _thumbnail,
+      builder: (context, snapshot) {
+        final bytes = snapshot.data ?? widget.asset.thumbnail;
+        if (bytes != null) {
+          return Image.memory(bytes, fit: BoxFit.cover);
+        }
+
+        return Container(
+          color: Colors.grey[100],
+          child: Icon(
+            widget.asset.type == AssetType.video
+                ? Icons.videocam_rounded
+                : Icons.image_rounded,
+            color: Colors.grey,
+          ),
+        );
+      },
+    );
   }
 }
