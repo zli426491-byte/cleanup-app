@@ -140,11 +140,11 @@ class PhotoScannerService extends ChangeNotifier {
   static const _maxAssetsToScan = 2500;
   static const _maxScreenshotAssetsToScan = 800;
   static const _enableInlineImageAnalysis = true;
-  static const _maxImagesToAnalyze = 1200;
-  static const _maxScreenshotsToAnalyze = 350;
-  static const _thumbnailTimeout = Duration(milliseconds: 350);
+  static const _maxImagesToAnalyze = 420;
+  static const _maxScreenshotsToAnalyze = 140;
+  static const _thumbnailTimeout = Duration(milliseconds: 180);
   static const _assetPageTimeout = Duration(seconds: 4);
-  static const _imageAnalysisBudget = Duration(seconds: 24);
+  static const _imageAnalysisBudget = Duration(seconds: 8);
   static const _iosScreenshotMediaSubtype = 1 << 2;
 
   bool _isScanning = false;
@@ -339,7 +339,7 @@ class PhotoScannerService extends ChangeNotifier {
             }
 
             _scanProgress =
-                0.20 + 0.30 * ((position + 1) / analysisIndexes.length);
+                0.20 + 0.20 * ((position + 1) / analysisIndexes.length);
             notifyListeners();
             await Future<void>.delayed(Duration.zero);
           }
