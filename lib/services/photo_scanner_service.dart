@@ -517,8 +517,7 @@ class PhotoScannerService extends ChangeNotifier {
   }
 
   List<DuplicateGroup> _findMetadataDuplicates(List<PhotoAsset> assets) {
-    const sizeBucketBytes = 512 * 1024;
-    const timeBucket = Duration(minutes: 10);
+    const timeBucket = Duration(seconds: 2);
     final buckets = <String, List<PhotoAsset>>{};
 
     for (final asset in assets) {
@@ -532,9 +531,10 @@ class PhotoScannerService extends ChangeNotifier {
       final normalizedHeight = math.min(asset.width, asset.height);
       final createdBucket =
           asset.createDate.millisecondsSinceEpoch ~/ timeBucket.inMilliseconds;
-      final sizeBucket = asset.size ~/ sizeBucketBytes;
-      final key =
-          '$normalizedWidth:$normalizedHeight:$sizeBucket:$createdBucket';
+      final title = (asset.title ?? '').trim().toLowerCase();
+      final key = title.isEmpty
+          ? 'time:$normalizedWidth:$normalizedHeight:$createdBucket'
+          : 'title:$normalizedWidth:$normalizedHeight:$title';
       buckets.putIfAbsent(key, () => <PhotoAsset>[]).add(asset);
     }
 
