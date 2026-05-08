@@ -31,6 +31,7 @@ class PhotoAsset {
   final AssetType type;
   final Uint8List? thumbnail;
   final String? hash;
+  final bool isScreenshot;
   final bool isBlurry;
   final bool isDark;
   final bool isOverexposed;
@@ -45,6 +46,7 @@ class PhotoAsset {
     required this.type,
     this.thumbnail,
     this.hash,
+    this.isScreenshot = false,
     this.isBlurry = false,
     this.isDark = false,
     this.isOverexposed = false,
@@ -53,6 +55,7 @@ class PhotoAsset {
   PhotoAsset copyWith({
     String? hash,
     Uint8List? thumbnail,
+    bool? isScreenshot,
     bool? isBlurry,
     bool? isDark,
     bool? isOverexposed,
@@ -67,6 +70,7 @@ class PhotoAsset {
       type: type,
       thumbnail: thumbnail ?? this.thumbnail,
       hash: hash ?? this.hash,
+      isScreenshot: isScreenshot ?? this.isScreenshot,
       isBlurry: isBlurry ?? this.isBlurry,
       isDark: isDark ?? this.isDark,
       isOverexposed: isOverexposed ?? this.isOverexposed,
@@ -134,11 +138,13 @@ class ScanResult {
 class PhotoScannerService extends ChangeNotifier {
   static const _assetPageSize = 250;
   static const _maxAssetsToScan = 2500;
-  static const _enableInlineImageAnalysis = false;
-  static const _maxImagesToAnalyze = 0;
+  static const _maxScreenshotAssetsToScan = 800;
+  static const _enableInlineImageAnalysis = true;
+  static const _maxImagesToAnalyze = 650;
   static const _thumbnailTimeout = Duration(milliseconds: 350);
   static const _assetPageTimeout = Duration(seconds: 4);
-  static const _imageAnalysisBudget = Duration(seconds: 8);
+  static const _imageAnalysisBudget = Duration(seconds: 16);
+  static const _iosScreenshotMediaSubtype = 1 << 2;
 
   bool _isScanning = false;
   double _scanProgress = 0.0;
@@ -176,6 +182,10 @@ class PhotoScannerService extends ChangeNotifier {
 
       final albums = await PhotoManager.getAssetPathList(
         type: RequestType.common, // photos + videos
+        filterOption: FilterOptionGroup(
+          imageOption: const FilterOption(needTitle: true),
+          videoOption: const FilterOption(needTitle: true),
+        ),
       );
       if (albums.isEmpty) {
         _reset();
@@ -187,13 +197,17 @@ class PhotoScannerService extends ChangeNotifier {
       final scanAlbums = _primaryScanAlbums(albums);
 
       final List<AssetEntity> rawAssets = [];
+      final Set<String> screenshotIds = {};
       for (final album in scanAlbums) {
+        final isScreenshotAlbum = _isScreenshotAlbum(album);
         final count = await album.assetCountAsync.timeout(
           _assetPageTimeout,
           onTimeout: () => 0,
         );
+        final maxForAlbum =
+            isScreenshotAlbum ? _maxScreenshotAssetsToScan : _maxAssetsToScan;
         final cappedCount =
-            count > _maxAssetsToScan ? _maxAssetsToScan : count;
+            count > maxForAlbum ? maxForAlbum : count;
 
         for (var start = 0; start < cappedCount; start += _assetPageSize) {
           final end = (start + _assetPageSize > cappedCount)
@@ -207,15 +221,23 @@ class PhotoScannerService extends ChangeNotifier {
             onTimeout: () => const <AssetEntity>[],
           );
           rawAssets.addAll(assets);
+          if (isScreenshotAlbum) {
+            screenshotIds.addAll(assets.map((asset) => asset.id));
+          }
 
           _scanProgress =
               0.02 + 0.08 * (end / cappedCount.clamp(1, _maxAssetsToScan));
           notifyListeners();
           await Future<void>.delayed(Duration.zero);
 
-          if (rawAssets.length >= _maxAssetsToScan) break;
+          if (rawAssets.length >= _maxAssetsToScan + _maxScreenshotAssetsToScan) {
+            break;
+          }
         }
-        if (rawAssets.length >= _maxAssetsToScan) break;
+        if (!isScreenshotAlbum &&
+            rawAssets.length >= _maxAssetsToScan + _maxScreenshotAssetsToScan) {
+          break;
+        }
       }
 
       // Deduplicate by id (asset may appear in multiple albums).
@@ -225,9 +247,21 @@ class PhotoScannerService extends ChangeNotifier {
       }
       final sortedAssets = uniqueMap.values.toList()
         ..sort((a, b) => b.createDateTime.compareTo(a.createDateTime));
-      final uniqueAssets = sortedAssets.length > _maxAssetsToScan
-          ? sortedAssets.take(_maxAssetsToScan).toList()
-          : sortedAssets;
+      final selectedAssets = <String, AssetEntity>{};
+      for (final asset in sortedAssets) {
+        if (screenshotIds.contains(asset.id) || _isScreenshotEntity(asset)) {
+          selectedAssets[asset.id] = asset;
+          if (selectedAssets.length >= _maxScreenshotAssetsToScan) break;
+        }
+      }
+      for (final asset in sortedAssets) {
+        if (selectedAssets.length >= _maxAssetsToScan + _maxScreenshotAssetsToScan) {
+          break;
+        }
+        selectedAssets[asset.id] = asset;
+      }
+      final uniqueAssets = selectedAssets.values.toList()
+        ..sort((a, b) => b.createDateTime.compareTo(a.createDateTime));
 
       _scanProgress = 0.10;
       notifyListeners();
@@ -251,6 +285,8 @@ class PhotoScannerService extends ChangeNotifier {
           createDate: entity.createDateTime,
           type: entity.type,
           hash: null,
+          isScreenshot:
+              screenshotIds.contains(entity.id) || _isScreenshotEntity(entity),
         );
       }).toList();
 
@@ -260,9 +296,22 @@ class PhotoScannerService extends ChangeNotifier {
       if (_enableInlineImageAnalysis) {
         final analysisIndexes = <int>[];
         for (var i = 0; i < photoAssets.length; i++) {
-          if (photoAssets[i].type != AssetType.image) continue;
-          analysisIndexes.add(i);
-          if (analysisIndexes.length >= _maxImagesToAnalyze) break;
+          if (photoAssets[i].type == AssetType.image &&
+              photoAssets[i].isScreenshot) {
+            analysisIndexes.add(i);
+            if (analysisIndexes.length >= _maxImagesToAnalyze) break;
+          }
+        }
+        if (analysisIndexes.length < _maxImagesToAnalyze) {
+          for (var i = 0; i < photoAssets.length; i++) {
+            if (photoAssets[i].type != AssetType.image ||
+                photoAssets[i].isScreenshot ||
+                analysisIndexes.contains(i)) {
+              continue;
+            }
+            analysisIndexes.add(i);
+            if (analysisIndexes.length >= _maxImagesToAnalyze) break;
+          }
         }
 
         if (analysisIndexes.isNotEmpty) {
@@ -597,15 +646,46 @@ class PhotoScannerService extends ChangeNotifier {
     Map<String, AssetEntity> entityMap,
   ) {
     return assets.where((a) {
-      final title = (a.title ?? '').toLowerCase();
-      return title.contains('screenshot') || title.contains('screen_shot');
+      final entity = entityMap[a.id];
+      return a.isScreenshot || (entity != null && _isScreenshotEntity(entity));
     }).toList();
   }
 
   List<AssetPathEntity> _primaryScanAlbums(List<AssetPathEntity> albums) {
+    final selected = <String, AssetPathEntity>{};
+    for (final album in albums.where(_isScreenshotAlbum)) {
+      selected[album.id] = album;
+    }
     final allAlbums = albums.where((album) => album.isAll).toList();
-    if (allAlbums.isNotEmpty) return [allAlbums.first];
-    return [albums.first];
+    if (allAlbums.isNotEmpty) {
+      selected[allAlbums.first.id] = allAlbums.first;
+    } else {
+      selected[albums.first.id] = albums.first;
+    }
+    return selected.values.toList();
+  }
+
+  bool _isScreenshotAlbum(AssetPathEntity album) {
+    final name = album.name.toLowerCase();
+    return name.contains('screenshot') ||
+        name.contains('screen shot') ||
+        name.contains('screen_shot') ||
+        name.contains('截圖') ||
+        name.contains('螢幕快照') ||
+        album.albumTypeEx?.darwin?.subtype ==
+            PMDarwinAssetCollectionSubtype.smartAlbumScreenshots;
+  }
+
+  bool _isScreenshotEntity(AssetEntity entity) {
+    final title = (entity.title ?? '').toLowerCase();
+    return entity.type == AssetType.image &&
+        ((entity.subtype & _iosScreenshotMediaSubtype) ==
+                _iosScreenshotMediaSubtype ||
+            title.contains('screenshot') ||
+            title.contains('screen shot') ||
+            title.contains('screen_shot') ||
+            title.contains('截圖') ||
+            title.contains('螢幕快照'));
   }
 
   List<DuplicateGroup> _filterDuplicateGroups(
