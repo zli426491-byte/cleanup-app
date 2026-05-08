@@ -2,10 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:photo_manager/photo_manager.dart';
-import 'package:image/image.dart' as img;
 
 import '../analytics/analytics_manager.dart';
-import 'image_quality_service.dart';
 
 // ---------------------------------------------------------------------------
 // Inline models (move to ../models/ when those files are created)
@@ -138,16 +136,11 @@ class ScanResult {
 // ---------------------------------------------------------------------------
 
 class PhotoScannerService extends ChangeNotifier {
-  static const _assetPageSize = 250;
-  static const _maxAssetsToScan = 2500;
-  static const _maxScreenshotAssetsToScan = 800;
-  static const _enableInlineImageAnalysis = false;
-  static const _maxImagesToAnalyze = 420;
-  static const _maxScreenshotsToAnalyze = 140;
-  static const _thumbnailTimeout = Duration(milliseconds: 180);
-  static const _assetPageTimeout = Duration(seconds: 4);
-  static const _imageAnalysisBudget = Duration(seconds: 8);
-  static const _mainScanWatchdog = Duration(seconds: 12);
+  static const _assetPageSize = 120;
+  static const _maxAssetsToScan = 900;
+  static const _maxScreenshotAssetsToScan = 300;
+  static const _assetPageTimeout = Duration(seconds: 2);
+  static const _mainScanWatchdog = Duration(seconds: 10);
   static const _iosScreenshotMediaSubtype = 1 << 2;
 
   bool _isScanning = false;
@@ -180,275 +173,34 @@ class PhotoScannerService extends ChangeNotifier {
 
     final rawAssets = <AssetEntity>[];
     final screenshotIds = <String>{};
-    Timer? watchdog;
-    watchdog = Timer(_mainScanWatchdog, () {
+    var timedOut = false;
+
+    try {
+      final result = await Future.any<ScanResult>([
+        _runQuickIndexScan(
+          runId: runId,
+          rawAssets: rawAssets,
+          screenshotIds: screenshotIds,
+        ),
+        Future<ScanResult>.delayed(_mainScanWatchdog, () {
+          timedOut = true;
+          return _buildQuickResult(
+            rawAssets: rawAssets,
+            screenshotIds: screenshotIds,
+          );
+        }),
+      ]);
+
       if (!_isActiveScan(runId)) return;
+      _finishScanResult(result, timedOut: timedOut);
+    } catch (e) {
+      if (!_isActiveScan(runId)) return;
+      debugPrint('PhotoScannerService.startFullScan error: $e');
+      _lastError = '掃描中斷，已用安全模式完成。';
       _finishScanResult(
         _buildQuickResult(rawAssets: rawAssets, screenshotIds: screenshotIds),
         timedOut: true,
       );
-    });
-
-    try {
-      // 1. Request permission & fetch all assets
-      final permitted = await PhotoManager.requestPermissionExtend();
-      if (!_isActiveScan(runId)) return;
-      if (!permitted.isAuth) {
-        _reset();
-        return;
-      }
-
-      final albums = await PhotoManager.getAssetPathList(
-        type: RequestType.common, // photos + videos
-        filterOption: FilterOptionGroup(
-          imageOption: const FilterOption(needTitle: false),
-          videoOption: const FilterOption(needTitle: false),
-        ),
-      ).timeout(
-        _assetPageTimeout,
-        onTimeout: () => const <AssetPathEntity>[],
-      );
-      if (!_isActiveScan(runId)) return;
-      if (albums.isEmpty) {
-        _reset();
-        return;
-      }
-
-      // Scan the primary "All/Recent" library first. Walking every album on a
-      // large phone creates many duplicate reads and can look frozen.
-      final scanAlbums = _primaryScanAlbums(albums);
-
-      for (final album in scanAlbums) {
-        final isScreenshotAlbum = _isScreenshotAlbum(album);
-        final count = await album.assetCountAsync.timeout(
-          _assetPageTimeout,
-          onTimeout: () => 0,
-        );
-        if (!_isActiveScan(runId)) return;
-        final maxForAlbum =
-            isScreenshotAlbum ? _maxScreenshotAssetsToScan : _maxAssetsToScan;
-        final cappedCount =
-            count > maxForAlbum ? maxForAlbum : count;
-
-        for (var start = 0; start < cappedCount; start += _assetPageSize) {
-          final end = (start + _assetPageSize > cappedCount)
-              ? cappedCount
-              : start + _assetPageSize;
-          final assets = await album.getAssetListRange(
-            start: start,
-            end: end,
-          ).timeout(
-            _assetPageTimeout,
-            onTimeout: () => const <AssetEntity>[],
-          );
-          if (!_isActiveScan(runId)) return;
-          rawAssets.addAll(assets);
-          if (isScreenshotAlbum) {
-            screenshotIds.addAll(assets.map((asset) => asset.id));
-          }
-
-          _scanProgress =
-              0.02 + 0.08 * (end / cappedCount.clamp(1, _maxAssetsToScan));
-          notifyListeners();
-          await Future<void>.delayed(Duration.zero);
-          if (!_isActiveScan(runId)) return;
-
-          if (rawAssets.length >= _maxAssetsToScan + _maxScreenshotAssetsToScan) {
-            break;
-          }
-        }
-        if (!isScreenshotAlbum &&
-            rawAssets.length >= _maxAssetsToScan + _maxScreenshotAssetsToScan) {
-          break;
-        }
-      }
-
-      // Deduplicate by id (asset may appear in multiple albums).
-      final Map<String, AssetEntity> uniqueMap = {};
-      for (final a in rawAssets) {
-        uniqueMap[a.id] = a;
-      }
-      final sortedAssets = uniqueMap.values.toList()
-        ..sort((a, b) => b.createDateTime.compareTo(a.createDateTime));
-      final selectedAssets = <String, AssetEntity>{};
-      for (final asset in sortedAssets) {
-        if (screenshotIds.contains(asset.id) || _isScreenshotEntity(asset)) {
-          selectedAssets[asset.id] = asset;
-          if (selectedAssets.length >= _maxScreenshotAssetsToScan) break;
-        }
-      }
-      for (final asset in sortedAssets) {
-        if (selectedAssets.length >= _maxAssetsToScan + _maxScreenshotAssetsToScan) {
-          break;
-        }
-        selectedAssets[asset.id] = asset;
-      }
-      final uniqueAssets = selectedAssets.values.toList()
-        ..sort((a, b) => b.createDateTime.compareTo(a.createDateTime));
-
-      _scanProgress = 0.10;
-      notifyListeners();
-
-      // 2. Convert to PhotoAsset quickly. Deep image analysis is kept out of
-      // the main scan because PhotoKit thumbnail reads can stall on large or
-      // iCloud-backed libraries.
-      _currentPhase = ScanPhase.computingHashes;
-      notifyListeners();
-
-      // First pass: create PhotoAssets quickly without file I/O
-      final List<PhotoAsset> photoAssets = uniqueAssets.map((entity) {
-        // Estimate size from dimensions (avoid slow file I/O)
-        final estimatedSize = entity.width * entity.height * 3; // ~3 bytes/pixel
-        return PhotoAsset(
-          id: entity.id,
-          title: entity.title,
-          width: entity.width,
-          height: entity.height,
-          size: estimatedSize,
-          createDate: entity.createDateTime,
-          type: entity.type,
-          hash: null,
-          isScreenshot:
-              screenshotIds.contains(entity.id) || _isScreenshotEntity(entity),
-        );
-      }).toList();
-
-      _scanProgress = 0.20;
-      notifyListeners();
-
-      if (_enableInlineImageAnalysis) {
-        final analysisIndexes = <int>[];
-        var screenshotAnalysisCount = 0;
-        for (var i = 0; i < photoAssets.length; i++) {
-          if (photoAssets[i].type == AssetType.image &&
-              photoAssets[i].isScreenshot) {
-            analysisIndexes.add(i);
-            screenshotAnalysisCount++;
-            if (screenshotAnalysisCount >= _maxScreenshotsToAnalyze) break;
-            if (analysisIndexes.length >= _maxImagesToAnalyze) break;
-          }
-        }
-        if (analysisIndexes.length < _maxImagesToAnalyze) {
-          for (var i = 0; i < photoAssets.length; i++) {
-            if (photoAssets[i].type != AssetType.image ||
-                photoAssets[i].isScreenshot ||
-                analysisIndexes.contains(i)) {
-              continue;
-            }
-            analysisIndexes.add(i);
-            if (analysisIndexes.length >= _maxImagesToAnalyze) break;
-          }
-        }
-
-        if (analysisIndexes.isNotEmpty) {
-          final analysisWatch = Stopwatch()..start();
-          for (var position = 0; position < analysisIndexes.length; position++) {
-            if (analysisWatch.elapsed >= _imageAnalysisBudget) break;
-            final idx = analysisIndexes[position];
-            final entity = uniqueAssets[idx];
-            final analysis = await _analyzeImage(entity).timeout(
-              _thumbnailTimeout,
-            onTimeout: () => null,
-            );
-            if (!_isActiveScan(runId)) return;
-            if (analysis != null) {
-              photoAssets[idx] = photoAssets[idx].copyWith(
-                hash: analysis.hash,
-                thumbnail: analysis.thumbnail,
-                isBlurry: analysis.quality.isBlurry,
-                isDark: analysis.quality.isDark,
-                isOverexposed: analysis.quality.isOverexposed,
-              );
-            }
-
-            _scanProgress =
-                0.20 + 0.20 * ((position + 1) / analysisIndexes.length);
-            notifyListeners();
-            await Future<void>.delayed(Duration.zero);
-            if (!_isActiveScan(runId)) return;
-          }
-        }
-      }
-
-      _scanProgress = 0.45;
-      notifyListeners();
-      await Future<void>.delayed(Duration.zero);
-      if (!_isActiveScan(runId)) return;
-
-      // 3. Find exact duplicates (identical hash)
-      _currentPhase = ScanPhase.findingDuplicates;
-      _scanProgress = 0.55;
-      notifyListeners();
-
-      final duplicateGroups = _findDuplicates(photoAssets);
-
-      // 4. Find similar images (hamming distance ≤ 12)
-      _currentPhase = ScanPhase.findingSimilar;
-      _scanProgress = 0.65;
-      notifyListeners();
-
-      final similarGroups = _findSimilar(photoAssets, threshold: 12);
-
-      // 5. Collect screenshots
-      _currentPhase = ScanPhase.collectingScreenshots;
-      _scanProgress = 0.75;
-      notifyListeners();
-
-      final screenshots = _collectScreenshots(photoAssets, uniqueMap);
-
-      // 6. Large files (> 5 MB)
-      _currentPhase = ScanPhase.findingLargeFiles;
-      _scanProgress = 0.85;
-      notifyListeners();
-
-      const largeThreshold = 5 * 1024 * 1024; // 5 MB
-      final largeFiles =
-          photoAssets.where((a) => a.size > largeThreshold).toList()
-            ..sort((a, b) => b.size.compareTo(a.size));
-
-      // 7. Videos
-      _currentPhase = ScanPhase.scanningVideos;
-      _scanProgress = 0.93;
-      notifyListeners();
-
-      final videos =
-          photoAssets.where((a) => a.type == AssetType.video).toList()
-            ..sort((a, b) => b.size.compareTo(a.size));
-
-      final blurryPhotos = photoAssets.where((a) => a.isBlurry).toList();
-      final darkPhotos = photoAssets.where((a) => a.isDark).toList();
-      final overexposedPhotos = photoAssets.where((a) => a.isOverexposed).toList();
-
-      // Build result
-      final totalSavings = _estimateSavings(
-        duplicateGroups: duplicateGroups,
-        similarGroups: similarGroups,
-        screenshots: screenshots,
-        largeFiles: largeFiles,
-      );
-
-      if (!_isActiveScan(runId)) return;
-      _finishScanResult(
-        ScanResult(
-          allAssets: photoAssets,
-          duplicateGroups: duplicateGroups,
-          similarGroups: similarGroups,
-          screenshots: screenshots,
-          largeFiles: largeFiles,
-          videos: videos,
-          blurryPhotos: blurryPhotos,
-          darkPhotos: darkPhotos,
-          overexposedPhotos: overexposedPhotos,
-          totalSavingsEstimate: totalSavings,
-        ),
-      );
-    } catch (e) {
-      if (!_isActiveScan(runId)) return;
-      debugPrint('PhotoScannerService.startFullScan error: $e');
-      _lastError = '掃描中斷，請確認照片權限後再試一次。';
-      _reset(keepError: true);
-    } finally {
-      watchdog.cancel();
     }
   }
 
@@ -460,24 +212,35 @@ class PhotoScannerService extends ChangeNotifier {
       if (result.isNotEmpty) {
         // Remove deleted assets from the current scan result.
         final deletedIds = result.toSet();
-        final remainingAssets =
-            _scanResult.allAssets.where((a) => !deletedIds.contains(a.id)).toList();
-        final duplicateGroups =
-            _filterDuplicateGroups(_scanResult.duplicateGroups, deletedIds);
-        final similarGroups =
-            _filterSimilarGroups(_scanResult.similarGroups, deletedIds);
-        final screenshots =
-            _scanResult.screenshots.where((a) => !deletedIds.contains(a.id)).toList();
-        final largeFiles =
-            _scanResult.largeFiles.where((a) => !deletedIds.contains(a.id)).toList();
-        final videos =
-            _scanResult.videos.where((a) => !deletedIds.contains(a.id)).toList();
-        final blurryPhotos =
-            _scanResult.blurryPhotos.where((a) => !deletedIds.contains(a.id)).toList();
-        final darkPhotos =
-            _scanResult.darkPhotos.where((a) => !deletedIds.contains(a.id)).toList();
-        final overexposedPhotos =
-            _scanResult.overexposedPhotos.where((a) => !deletedIds.contains(a.id)).toList();
+        final remainingAssets = _scanResult.allAssets
+            .where((a) => !deletedIds.contains(a.id))
+            .toList();
+        final duplicateGroups = _filterDuplicateGroups(
+          _scanResult.duplicateGroups,
+          deletedIds,
+        );
+        final similarGroups = _filterSimilarGroups(
+          _scanResult.similarGroups,
+          deletedIds,
+        );
+        final screenshots = _scanResult.screenshots
+            .where((a) => !deletedIds.contains(a.id))
+            .toList();
+        final largeFiles = _scanResult.largeFiles
+            .where((a) => !deletedIds.contains(a.id))
+            .toList();
+        final videos = _scanResult.videos
+            .where((a) => !deletedIds.contains(a.id))
+            .toList();
+        final blurryPhotos = _scanResult.blurryPhotos
+            .where((a) => !deletedIds.contains(a.id))
+            .toList();
+        final darkPhotos = _scanResult.darkPhotos
+            .where((a) => !deletedIds.contains(a.id))
+            .toList();
+        final overexposedPhotos = _scanResult.overexposedPhotos
+            .where((a) => !deletedIds.contains(a.id))
+            .toList();
 
         _scanResult = ScanResult(
           allAssets: remainingAssets,
@@ -510,153 +273,6 @@ class PhotoScannerService extends ChangeNotifier {
     }
   }
 
-  // -----------------------------------------------------------------------
-  // Perceptual hashing (dHash)
-  // -----------------------------------------------------------------------
-
-  /// Build the thumbnail used by the UI, the dHash used by duplicate
-  /// detection, and lightweight quality flags in one thumbnail read.
-  Future<_ImageAnalysis?> _analyzeImage(AssetEntity entity) async {
-    try {
-      final thumbData = await entity.thumbnailDataWithSize(
-        const ThumbnailSize(160, 160),
-        format: ThumbnailFormat.jpeg,
-      );
-      if (thumbData == null) return null;
-
-      final decoded = img.decodeImage(thumbData);
-      if (decoded == null) return null;
-
-      // Resize to 9 wide × 8 tall, grayscale.
-      final resized = img.copyResize(decoded, width: 9, height: 8);
-      final gray = img.grayscale(resized);
-
-      int hash = 0;
-      for (int y = 0; y < 8; y++) {
-        for (int x = 0; x < 8; x++) {
-          final left = gray.getPixel(x, y).luminance;
-          final right = gray.getPixel(x + 1, y).luminance;
-          hash = (hash << 1) | (left < right ? 1 : 0);
-        }
-      }
-
-      return _ImageAnalysis(
-        hash: hash.toRadixString(16).padLeft(16, '0'),
-        thumbnail: thumbData,
-        quality: _analyzeQuality(decoded),
-      );
-    } catch (_) {
-      return null;
-    }
-  }
-
-  ImageQuality _analyzeQuality(img.Image image) {
-    final resized = img.copyResize(img.grayscale(image), width: 96);
-    double brightnessTotal = 0;
-    double laplacianTotal = 0;
-    double laplacianTotalSq = 0;
-    var count = 0;
-
-    for (var y = 1; y < resized.height - 1; y++) {
-      for (var x = 1; x < resized.width - 1; x++) {
-        final center = resized.getPixel(x, y).luminanceNormalized;
-        final top = resized.getPixel(x, y - 1).luminanceNormalized;
-        final bottom = resized.getPixel(x, y + 1).luminanceNormalized;
-        final left = resized.getPixel(x - 1, y).luminanceNormalized;
-        final right = resized.getPixel(x + 1, y).luminanceNormalized;
-        final laplacian = -4 * center + top + bottom + left + right;
-
-        brightnessTotal += center;
-        laplacianTotal += laplacian;
-        laplacianTotalSq += laplacian * laplacian;
-        count++;
-      }
-    }
-
-    final brightness = count == 0 ? 0.5 : brightnessTotal / count;
-    final mean = count == 0 ? 0.0 : laplacianTotal / count;
-    final blurScore = count == 0
-        ? 999.0
-        : ((laplacianTotalSq / count) - (mean * mean)).abs() * 100000;
-
-    final issues = <QualityIssue>[];
-    if (blurScore < 120) issues.add(QualityIssue.blurry);
-    if (brightness < 0.15) issues.add(QualityIssue.tooDark);
-    if (brightness > 0.85) issues.add(QualityIssue.overexposed);
-
-    return ImageQuality(
-      blurScore: blurScore,
-      brightness: brightness,
-      issues: issues,
-    );
-  }
-
-  /// Hamming distance between two hex-encoded 64-bit hashes.
-  static int _hammingDistance(String a, String b) {
-    final valA = int.tryParse(a, radix: 16) ?? 0;
-    final valB = int.tryParse(b, radix: 16) ?? 0;
-    int xor = valA ^ valB;
-    int count = 0;
-    while (xor != 0) {
-      count += xor & 1;
-      xor >>= 1;
-    }
-    return count;
-  }
-
-  // -----------------------------------------------------------------------
-  // Grouping helpers
-  // -----------------------------------------------------------------------
-
-  List<DuplicateGroup> _findDuplicates(List<PhotoAsset> assets) {
-    final Map<String, List<PhotoAsset>> hashMap = {};
-    for (final asset in assets) {
-      if (asset.hash == null) continue;
-      hashMap.putIfAbsent(asset.hash!, () => []).add(asset);
-    }
-    return hashMap.entries
-        .where((e) => e.value.length > 1)
-        .map((e) => DuplicateGroup(hash: e.key, assets: e.value))
-        .toList();
-  }
-
-  List<SimilarGroup> _findSimilar(List<PhotoAsset> assets,
-      {required int threshold}) {
-    final hashed = assets.where((a) => a.hash != null).toList();
-    final List<SimilarGroup> groups = [];
-    final Set<String> visited = {};
-
-    // Limit comparison to first 500 photos to avoid O(n²) freeze
-    final limit = hashed.length > 500 ? 500 : hashed.length;
-
-    for (var i = 0; i < limit; i++) {
-      if (visited.contains(hashed[i].id)) continue;
-
-      final List<PhotoAsset> group = [hashed[i]];
-      int maxDist = 0;
-
-      // Only compare nearby photos (within 100 index range) for performance
-      final jEnd = (i + 100 > limit) ? limit : i + 100;
-      for (var j = i + 1; j < jEnd; j++) {
-        if (visited.contains(hashed[j].id)) continue;
-        final dist = _hammingDistance(hashed[i].hash!, hashed[j].hash!);
-        if (dist > 0 && dist <= threshold) {
-          group.add(hashed[j]);
-          if (dist > maxDist) maxDist = dist;
-        }
-      }
-
-      if (group.length > 1) {
-        for (final a in group) {
-          visited.add(a.id);
-        }
-        groups.add(SimilarGroup(assets: group, hammingDistance: maxDist));
-      }
-    }
-
-    return groups;
-  }
-
   List<PhotoAsset> _collectScreenshots(
     List<PhotoAsset> assets,
     Map<String, AssetEntity> entityMap,
@@ -665,31 +281,6 @@ class PhotoScannerService extends ChangeNotifier {
       final entity = entityMap[a.id];
       return a.isScreenshot || (entity != null && _isScreenshotEntity(entity));
     }).toList();
-  }
-
-  List<AssetPathEntity> _primaryScanAlbums(List<AssetPathEntity> albums) {
-    final selected = <String, AssetPathEntity>{};
-    for (final album in albums.where(_isScreenshotAlbum)) {
-      selected[album.id] = album;
-    }
-    final allAlbums = albums.where((album) => album.isAll).toList();
-    if (allAlbums.isNotEmpty) {
-      selected[allAlbums.first.id] = allAlbums.first;
-    } else {
-      selected[albums.first.id] = albums.first;
-    }
-    return selected.values.toList();
-  }
-
-  bool _isScreenshotAlbum(AssetPathEntity album) {
-    final name = album.name.toLowerCase();
-    return name.contains('screenshot') ||
-        name.contains('screen shot') ||
-        name.contains('screen_shot') ||
-        name.contains('截圖') ||
-        name.contains('螢幕快照') ||
-        album.albumTypeEx?.darwin?.subtype ==
-            PMDarwinAssetCollectionSubtype.smartAlbumScreenshots;
   }
 
   bool _isScreenshotEntity(AssetEntity entity) {
@@ -709,10 +300,14 @@ class PhotoScannerService extends ChangeNotifier {
     Set<String> deletedIds,
   ) {
     return groups
-        .map((group) => DuplicateGroup(
-              hash: group.hash,
-              assets: group.assets.where((a) => !deletedIds.contains(a.id)).toList(),
-            ))
+        .map(
+          (group) => DuplicateGroup(
+            hash: group.hash,
+            assets: group.assets
+                .where((a) => !deletedIds.contains(a.id))
+                .toList(),
+          ),
+        )
         .where((group) => group.assets.length > 1)
         .toList();
   }
@@ -722,10 +317,14 @@ class PhotoScannerService extends ChangeNotifier {
     Set<String> deletedIds,
   ) {
     return groups
-        .map((group) => SimilarGroup(
-              assets: group.assets.where((a) => !deletedIds.contains(a.id)).toList(),
-              hammingDistance: group.hammingDistance,
-            ))
+        .map(
+          (group) => SimilarGroup(
+            assets: group.assets
+                .where((a) => !deletedIds.contains(a.id))
+                .toList(),
+            hammingDistance: group.hammingDistance,
+          ),
+        )
         .where((group) => group.assets.length > 1)
         .toList();
   }
@@ -757,6 +356,82 @@ class PhotoScannerService extends ChangeNotifier {
   // Internal helpers
   // -----------------------------------------------------------------------
 
+  Future<ScanResult> _runQuickIndexScan({
+    required int runId,
+    required List<AssetEntity> rawAssets,
+    required Set<String> screenshotIds,
+  }) async {
+    final permitted = await PhotoManager.requestPermissionExtend();
+    if (!_isActiveScan(runId) || !permitted.isAuth) {
+      return _buildQuickResult(
+        rawAssets: rawAssets,
+        screenshotIds: screenshotIds,
+      );
+    }
+
+    _scanProgress = 0.08;
+    notifyListeners();
+
+    final albums = await PhotoManager.getAssetPathList(
+      type: RequestType.common,
+      filterOption: FilterOptionGroup(
+        imageOption: const FilterOption(needTitle: false),
+        videoOption: const FilterOption(needTitle: false),
+      ),
+    ).timeout(_assetPageTimeout, onTimeout: () => const <AssetPathEntity>[]);
+    if (!_isActiveScan(runId) || albums.isEmpty) {
+      return _buildQuickResult(
+        rawAssets: rawAssets,
+        screenshotIds: screenshotIds,
+      );
+    }
+
+    final allAlbums = albums.where((album) => album.isAll).toList();
+    final allAlbum = allAlbums.isNotEmpty ? allAlbums.first : albums.first;
+    final count = await allAlbum.assetCountAsync.timeout(
+      _assetPageTimeout,
+      onTimeout: () => 0,
+    );
+    if (!_isActiveScan(runId) || count <= 0) {
+      return _buildQuickResult(
+        rawAssets: rawAssets,
+        screenshotIds: screenshotIds,
+      );
+    }
+
+    final cappedCount = count > _maxAssetsToScan ? _maxAssetsToScan : count;
+    for (var start = 0; start < cappedCount; start += _assetPageSize) {
+      if (!_isActiveScan(runId)) break;
+      final end = (start + _assetPageSize > cappedCount)
+          ? cappedCount
+          : start + _assetPageSize;
+      final assets = await allAlbum
+          .getAssetListRange(start: start, end: end)
+          .timeout(_assetPageTimeout, onTimeout: () => const <AssetEntity>[]);
+      if (!_isActiveScan(runId)) break;
+
+      rawAssets.addAll(assets);
+      _scanProgress = 0.10 + 0.62 * (end / cappedCount);
+      notifyListeners();
+      await Future<void>.delayed(Duration.zero);
+    }
+
+    _currentPhase = ScanPhase.collectingScreenshots;
+    _scanProgress = 0.78;
+    notifyListeners();
+    final result = _buildQuickResult(
+      rawAssets: rawAssets,
+      screenshotIds: screenshotIds,
+    );
+
+    _currentPhase = ScanPhase.findingLargeFiles;
+    _scanProgress = 0.90;
+    notifyListeners();
+    await Future<void>.delayed(Duration.zero);
+
+    return result;
+  }
+
   bool _isActiveScan(int runId) => _isScanning && _scanRunId == runId;
 
   ScanResult _buildQuickResult({
@@ -778,7 +453,8 @@ class PhotoScannerService extends ChangeNotifier {
       }
     }
     for (final asset in sortedAssets) {
-      if (selectedAssets.length >= _maxAssetsToScan + _maxScreenshotAssetsToScan) {
+      if (selectedAssets.length >=
+          _maxAssetsToScan + _maxScreenshotAssetsToScan) {
         break;
       }
       selectedAssets[asset.id] = asset;
@@ -801,8 +477,9 @@ class PhotoScannerService extends ChangeNotifier {
 
     final screenshots = _collectScreenshots(photoAssets, uniqueMap);
     const largeThreshold = 5 * 1024 * 1024;
-    final largeFiles = photoAssets.where((a) => a.size > largeThreshold).toList()
-      ..sort((a, b) => b.size.compareTo(a.size));
+    final largeFiles =
+        photoAssets.where((a) => a.size > largeThreshold).toList()
+          ..sort((a, b) => b.size.compareTo(a.size));
     final videos = photoAssets.where((a) => a.type == AssetType.video).toList()
       ..sort((a, b) => b.size.compareTo(a.size));
 
@@ -848,24 +525,4 @@ class PhotoScannerService extends ChangeNotifier {
     );
     notifyListeners();
   }
-
-  void _reset({bool keepError = false}) {
-    _isScanning = false;
-    _scanProgress = 0.0;
-    _currentPhase = ScanPhase.idle;
-    if (!keepError) _lastError = null;
-    notifyListeners();
-  }
-}
-
-class _ImageAnalysis {
-  final String hash;
-  final Uint8List thumbnail;
-  final ImageQuality quality;
-
-  const _ImageAnalysis({
-    required this.hash,
-    required this.thumbnail,
-    required this.quality,
-  });
 }
