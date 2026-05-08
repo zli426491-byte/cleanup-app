@@ -134,6 +134,7 @@ class ScanResult {
 class PhotoScannerService extends ChangeNotifier {
   static const _maxAssetsPerAlbum = 900;
   static const _maxAssetsToScan = 1800;
+  static const _enableInlineImageAnalysis = false;
   static const _maxImagesToAnalyze = 120;
   static const _thumbnailTimeout = Duration(milliseconds: 800);
 
@@ -201,7 +202,9 @@ class PhotoScannerService extends ChangeNotifier {
       _scanProgress = 0.10;
       notifyListeners();
 
-      // 2. Convert to PhotoAsset & compute perceptual hashes (batched)
+      // 2. Convert to PhotoAsset quickly. Deep image analysis is kept out of
+      // the main scan because PhotoKit thumbnail reads can stall on large or
+      // iCloud-backed libraries.
       _currentPhase = ScanPhase.computingHashes;
       notifyListeners();
 
@@ -224,37 +227,36 @@ class PhotoScannerService extends ChangeNotifier {
       _scanProgress = 0.20;
       notifyListeners();
 
-      // Second pass: compute hashes for a bounded set of recent images.
-      // Some iCloud-backed assets can stall thumbnail reads; keep each item
-      // bounded so one problematic asset cannot freeze the whole scan at 20%.
-      final analysisIndexes = <int>[];
-      for (var i = 0; i < photoAssets.length; i++) {
-        if (photoAssets[i].type != AssetType.image) continue;
-        analysisIndexes.add(i);
-        if (analysisIndexes.length >= _maxImagesToAnalyze) break;
-      }
+      if (_enableInlineImageAnalysis) {
+        final analysisIndexes = <int>[];
+        for (var i = 0; i < photoAssets.length; i++) {
+          if (photoAssets[i].type != AssetType.image) continue;
+          analysisIndexes.add(i);
+          if (analysisIndexes.length >= _maxImagesToAnalyze) break;
+        }
 
-      if (analysisIndexes.isNotEmpty) {
-        for (var position = 0; position < analysisIndexes.length; position++) {
-          final idx = analysisIndexes[position];
-          final entity = uniqueAssets[idx];
-          final analysis = await _analyzeImage(entity).timeout(
-            _thumbnailTimeout,
-            onTimeout: () => null,
-          );
-          if (analysis != null) {
-            photoAssets[idx] = photoAssets[idx].copyWith(
-              hash: analysis.hash,
-              thumbnail: analysis.thumbnail,
-              isBlurry: analysis.quality.isBlurry,
-              isDark: analysis.quality.isDark,
-              isOverexposed: analysis.quality.isOverexposed,
+        if (analysisIndexes.isNotEmpty) {
+          for (var position = 0; position < analysisIndexes.length; position++) {
+            final idx = analysisIndexes[position];
+            final entity = uniqueAssets[idx];
+            final analysis = await _analyzeImage(entity).timeout(
+              _thumbnailTimeout,
+              onTimeout: () => null,
             );
-          }
+            if (analysis != null) {
+              photoAssets[idx] = photoAssets[idx].copyWith(
+                hash: analysis.hash,
+                thumbnail: analysis.thumbnail,
+                isBlurry: analysis.quality.isBlurry,
+                isDark: analysis.quality.isDark,
+                isOverexposed: analysis.quality.isOverexposed,
+              );
+            }
 
-          _scanProgress = 0.20 + 0.30 * ((position + 1) / analysisIndexes.length);
-          notifyListeners();
-          await Future.delayed(const Duration(milliseconds: 1));
+            _scanProgress = 0.20 + 0.30 * ((position + 1) / analysisIndexes.length);
+            notifyListeners();
+            await Future.delayed(const Duration(milliseconds: 1));
+          }
         }
       }
 
