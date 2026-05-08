@@ -23,6 +23,12 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
       - name: Setup App Store Connect API Key
         run: |
           mkdir -p ~/private_keys
@@ -69,6 +75,7 @@ jobs:
         run: |
           flutter build ipa \
             --release \
+            --dart-define=REVENUECAT_IOS_API_KEY=${{ secrets.REVENUECAT_IOS_API_KEY }} \
             --export-options-plist=ios/ExportOptions.plist
 
       - name: Upload to TestFlight

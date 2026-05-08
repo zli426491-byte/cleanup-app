@@ -1,6 +1,6 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import '../../analytics/analytics_manager.dart';
 import '../../utils/app_theme.dart';
 import '../paywall/paywall_view.dart';
 
@@ -34,6 +34,7 @@ class _OnboardingViewState extends State<OnboardingView> with TickerProviderStat
   @override
   void initState() {
     super.initState();
+    AnalyticsManager.instance.track(AnalyticsEvent.onboardingStarted.name);
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -58,7 +59,7 @@ class _OnboardingViewState extends State<OnboardingView> with TickerProviderStat
           // Animated background gradient blobs
           AnimatedBuilder(
             animation: _pulseController,
-            builder: (_, __) => Stack(
+            builder: (_, child) => Stack(
               children: [
                 Positioned(
                   top: -60 + _pulseController.value * 20,
@@ -169,7 +170,7 @@ class _OnboardingViewState extends State<OnboardingView> with TickerProviderStat
           // Triple ring icon
           AnimatedBuilder(
             animation: _pulseController,
-            builder: (_, __) {
+            builder: (_, child) {
               final scale = 1.0 + _pulseController.value * 0.03;
               return Transform.scale(
                 scale: scale,
@@ -280,12 +281,14 @@ class _OnboardingViewState extends State<OnboardingView> with TickerProviderStat
     );
   }
 
-  void _onNext() {
+  Future<void> _onNext() async {
     if (_currentPage < _pages.length - 1) {
       _controller.nextPage(
           duration: const Duration(milliseconds: 400), curve: Curves.easeOutCubic);
     } else {
-      // Navigate to PaywallView; onboarding completion happens when PaywallView is dismissed
+      AnalyticsManager.instance.track(AnalyticsEvent.onboardingCompleted.name);
+      await AnalyticsManager.instance.requestATT();
+      if (!mounted) return;
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const PaywallView(fromOnboarding: true)),

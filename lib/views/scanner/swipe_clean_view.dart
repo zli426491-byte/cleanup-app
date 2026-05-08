@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/photo_scanner_service.dart';
@@ -91,9 +90,9 @@ class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStat
 
   Widget _buildSwipeView() {
     final asset = _currentAsset!;
-    final angle = _dragX / 800;
     final x = _isAnimating ? _animX.value : _dragX;
     final y = _isAnimating ? _animY.value : _dragY;
+    final angle = x / 800;
 
     return Column(
       children: [
@@ -154,40 +153,40 @@ class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStat
                 onPanEnd: (_) => _onDragEnd(),
                 child: AnimatedBuilder(
                   animation: _animController,
-                  builder: (_, __) => Transform(
-                    alignment: Alignment.center,
-                    transform: Matrix4.identity()
-                      ..translate(_isAnimating ? _animX.value : _dragX, _isAnimating ? _animY.value : _dragY)
-                      ..rotateZ(_isAnimating ? _animX.value / 800 : angle),
-                    child: Stack(
-                      children: [
-                        _buildCard(asset, isBackground: false),
-                        // Swipe label overlay
-                        if (_swipeLabel.isNotEmpty)
-                          Positioned.fill(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(28),
-                                border: Border.all(color: _swipeColor, width: 4),
-                              ),
-                              child: Center(
-                                child: Transform.rotate(
-                                  angle: _dragX > 0 ? -0.3 : 0.3,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                                    decoration: BoxDecoration(
-                                      border: Border.all(color: _swipeColor, width: 3),
-                                      borderRadius: BorderRadius.circular(12),
+                  builder: (_, child) => Transform.translate(
+                    offset: Offset(x, y),
+                    child: Transform.rotate(
+                      angle: angle,
+                      child: Stack(
+                        children: [
+                          _buildCard(asset, isBackground: false),
+                          // Swipe label overlay
+                          if (_swipeLabel.isNotEmpty)
+                            Positioned.fill(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(28),
+                                  border: Border.all(color: _swipeColor, width: 4),
+                                ),
+                                child: Center(
+                                  child: Transform.rotate(
+                                    angle: _dragX > 0 ? -0.3 : 0.3,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(color: _swipeColor, width: 3),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(_swipeLabel,
+                                          style: TextStyle(color: _swipeColor,
+                                              fontSize: 32, fontWeight: FontWeight.w900)),
                                     ),
-                                    child: Text(_swipeLabel,
-                                        style: TextStyle(color: _swipeColor,
-                                            fontSize: 32, fontWeight: FontWeight.w900)),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -282,9 +281,7 @@ class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStat
                       borderRadius: BorderRadius.circular(50),
                     ),
                     child: Text(
-                      asset.createDate != null
-                          ? '${asset.createDate!.month}/${asset.createDate!.day}'
-                          : '',
+                      '${asset.createDate.month}/${asset.createDate.day}',
                       style: const TextStyle(fontSize: 11, color: AppTheme.primary, fontWeight: FontWeight.w600),
                     ),
                   ),

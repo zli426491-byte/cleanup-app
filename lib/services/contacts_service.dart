@@ -33,9 +33,9 @@ class DuplicateContactGroup {
 
 class ContactsCleanupService extends ChangeNotifier {
   bool _isScanning = false;
-  List<DuplicateContactGroup> _duplicateGroups = [];
-  List<ContactModel> _incompleteContacts = [];
-  List<ContactModel> _allContacts = [];
+  final List<DuplicateContactGroup> _duplicateGroups = [];
+  final List<ContactModel> _incompleteContacts = [];
+  final List<ContactModel> _allContacts = [];
 
   bool get isScanning => _isScanning;
   List<DuplicateContactGroup> get duplicateGroups => _duplicateGroups;

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../services/photo_scanner_service.dart';
 import '../../services/subscription_manager.dart';
 import '../../utils/app_theme.dart';
+import '../paywall/paywall_view.dart';
 import 'swipe_clean_view.dart';
 
 class SmartCleanView extends StatefulWidget {
@@ -17,7 +18,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   final Set<String> _selectedIds = {};
   int _videoSort = 0; // 0=大小, 1=日期, 2=時長
 
-  final _categories = ['重複照片', '相似照片', '螢幕截圖', '影片', '模糊照片', '壓縮'];
+  final _categories = ['重複照片', '相似照片', '螢幕截圖', '影片', '模糊照片', '大型檔案'];
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +54,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: _categories.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 6),
+              separatorBuilder: (context, index) => const SizedBox(width: 6),
               itemBuilder: (ctx, i) {
                 final count = _countFor(i, scanner);
                 final selected = _selectedCategory == i;
@@ -242,7 +243,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: group.assets.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 6),
+            separatorBuilder: (context, index) => const SizedBox(width: 6),
             itemBuilder: (ctx, i) {
               final asset = group.assets[i];
               final isBest = asset.id == bestId;
@@ -351,7 +352,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
       case 1: return r.similarGroups.fold<int>(0, (a, g) => a + g.assets.length);
       case 2: return r.screenshots.length;
       case 3: return r.videos.length;
-      case 4: return 0; // Blur detection count (runtime)
+      case 4: return r.blurryPhotos.length;
       case 5: return r.largeFiles.length;
       default: return 0;
     }
@@ -365,10 +366,11 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   List<PhotoAsset> _assetsFor(int cat, PhotoScannerService s) {
     final r = s.scanResult;
     switch (cat) {
+      case 0: return r.duplicateGroups.expand((g) => g.assets.skip(1)).toList();
       case 1: return r.similarGroups.expand((g) => g.assets).toList();
       case 2: return r.screenshots;
       case 3: return _sortedVideos(r.videos);
-      case 4: return []; // Blur detection coming soon
+      case 4: return r.blurryPhotos;
       case 5: return r.largeFiles;
       default: return [];
     }
@@ -378,7 +380,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     final sorted = List<PhotoAsset>.from(videos);
     switch (_videoSort) {
       case 0: sorted.sort((a, b) => b.size.compareTo(a.size)); // Largest first
-      case 1: sorted.sort((a, b) => (b.createDate ?? DateTime(2000)).compareTo(a.createDate ?? DateTime(2000))); // Newest
+      case 1: sorted.sort((a, b) => b.createDate.compareTo(a.createDate)); // Newest
       case 2: sorted.sort((a, b) => b.size.compareTo(a.size)); // Duration (approx by size)
     }
     return sorted;
@@ -393,7 +395,14 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   }
 
   void _handleDelete(PhotoScannerService scanner, SubscriptionManager sub) {
-    if (!sub.requirePro()) return;
+    if (!sub.isPro) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const PaywallView()),
+      );
+      return;
+    }
+
     showDialog(context: context, builder: (ctx) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: const Text('刪除照片'),

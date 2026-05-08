@@ -52,7 +52,7 @@ class _ChargingAnimationViewState extends State<ChargingAnimationView> with Tick
             child: ClipRRect(
               borderRadius: BorderRadius.circular(32),
               child: Stack(children: [
-                AnimatedBuilder(animation: _anim, builder: (_, __) =>
+                AnimatedBuilder(animation: _anim, builder: (_, child) =>
                     CustomPaint(size: Size.infinite, painter: _getPainter(_selectedStyle, _anim.value, _battery))),
                 Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Text('${(_battery * 100).toInt()}%', style: const TextStyle(color: Colors.white, fontSize: 52, fontWeight: FontWeight.w800, letterSpacing: -2)),
@@ -124,7 +124,9 @@ class _WavePainter extends CustomPainter {
     for (int w = 0; w < 3; w++) {
       final wy = s.height * (1 - l) + w * 8;
       final path = Path()..moveTo(0, s.height);
-      for (double x = 0; x <= s.width; x += 2) path.lineTo(x, wy + sin((x / s.width + p + w * 0.3) * pi * 2) * (10 - w * 2));
+      for (double x = 0; x <= s.width; x += 2) {
+        path.lineTo(x, wy + sin((x / s.width + p + w * 0.3) * pi * 2) * (10 - w * 2));
+      }
       path.lineTo(s.width, s.height); path.close();
       c.drawPath(path, Paint()..color = Colors.blue.withValues(alpha: 0.3 - w * 0.08));
     }
@@ -208,7 +210,9 @@ class _AuroraPainter extends CustomPainter {
   final double p, l; _AuroraPainter(this.p, this.l);
   @override void paint(Canvas c, Size s) {
     for (int i = 0; i < 5; i++) { final path = Path()..moveTo(0, s.height * (0.3 + i * 0.1));
-      for (double x = 0; x <= s.width; x += 4) path.lineTo(x, s.height * (0.3 + i * 0.1) + sin(x / 60 + p * pi * 2 + i) * 40 + cos(x / 30 + p * pi * 3) * 20);
+      for (double x = 0; x <= s.width; x += 4) {
+        path.lineTo(x, s.height * (0.3 + i * 0.1) + sin(x / 60 + p * pi * 2 + i) * 40 + cos(x / 30 + p * pi * 3) * 20);
+      }
       path.lineTo(s.width, s.height); path.lineTo(0, s.height); path.close();
       c.drawPath(path, Paint()..color = HSLColor.fromAHSL(0.12, 200 + i * 30 + p * 60, 0.9, 0.6).toColor()..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20)); }
   }
@@ -230,7 +234,9 @@ class _RadarPainter extends CustomPainter {
   final double p, l; _RadarPainter(this.p, this.l);
   @override void paint(Canvas c, Size s) {
     final ct = Offset(s.width / 2, s.height / 2);
-    for (int i = 1; i <= 4; i++) c.drawCircle(ct, i * 35.0, Paint()..color = Colors.teal.withValues(alpha: 0.15)..style = PaintingStyle.stroke..strokeWidth = 1);
+    for (int i = 1; i <= 4; i++) {
+      c.drawCircle(ct, i * 35.0, Paint()..color = Colors.teal.withValues(alpha: 0.15)..style = PaintingStyle.stroke..strokeWidth = 1);
+    }
     c.drawLine(Offset(ct.dx, 0), Offset(ct.dx, s.height), Paint()..color = Colors.teal.withValues(alpha: 0.1)..strokeWidth = 1);
     c.drawLine(Offset(0, ct.dy), Offset(s.width, ct.dy), Paint()..color = Colors.teal.withValues(alpha: 0.1)..strokeWidth = 1);
     final a = p * pi * 2; c.drawLine(ct, Offset(ct.dx + cos(a) * 140, ct.dy + sin(a) * 140), Paint()..color = Colors.tealAccent.withValues(alpha: 0.7)..strokeWidth = 1.5);

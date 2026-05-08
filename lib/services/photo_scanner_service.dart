@@ -1,8 +1,9 @@
-import 'dart:typed_data';
-
 import 'package:flutter/foundation.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:image/image.dart' as img;
+
+import '../analytics/analytics_manager.dart';
+import 'image_quality_service.dart';
 
 // ---------------------------------------------------------------------------
 // Inline models (move to ../models/ when those files are created)
@@ -30,6 +31,9 @@ class PhotoAsset {
   final AssetType type;
   final Uint8List? thumbnail;
   final String? hash;
+  final bool isBlurry;
+  final bool isDark;
+  final bool isOverexposed;
 
   const PhotoAsset({
     required this.id,
@@ -41,9 +45,18 @@ class PhotoAsset {
     required this.type,
     this.thumbnail,
     this.hash,
+    this.isBlurry = false,
+    this.isDark = false,
+    this.isOverexposed = false,
   });
 
-  PhotoAsset copyWith({String? hash, Uint8List? thumbnail}) {
+  PhotoAsset copyWith({
+    String? hash,
+    Uint8List? thumbnail,
+    bool? isBlurry,
+    bool? isDark,
+    bool? isOverexposed,
+  }) {
     return PhotoAsset(
       id: id,
       title: title,
@@ -54,6 +67,9 @@ class PhotoAsset {
       type: type,
       thumbnail: thumbnail ?? this.thumbnail,
       hash: hash ?? this.hash,
+      isBlurry: isBlurry ?? this.isBlurry,
+      isDark: isDark ?? this.isDark,
+      isOverexposed: isOverexposed ?? this.isOverexposed,
     );
   }
 }
@@ -79,6 +95,9 @@ class ScanResult {
   final List<PhotoAsset> screenshots;
   final List<PhotoAsset> largeFiles;
   final List<PhotoAsset> videos;
+  final List<PhotoAsset> blurryPhotos;
+  final List<PhotoAsset> darkPhotos;
+  final List<PhotoAsset> overexposedPhotos;
   final int totalSavingsEstimate;
 
   const ScanResult({
@@ -88,6 +107,9 @@ class ScanResult {
     required this.screenshots,
     required this.largeFiles,
     required this.videos,
+    required this.blurryPhotos,
+    required this.darkPhotos,
+    required this.overexposedPhotos,
     required this.totalSavingsEstimate,
   });
 
@@ -98,6 +120,9 @@ class ScanResult {
     screenshots: [],
     largeFiles: [],
     videos: [],
+    blurryPhotos: [],
+    darkPhotos: [],
+    overexposedPhotos: [],
     totalSavingsEstimate: 0,
   );
 }
@@ -124,6 +149,7 @@ class PhotoScannerService extends ChangeNotifier {
   /// Run a full device scan: fetch assets, hash, find duplicates/similar,
   /// screenshots, large files, and videos.
   Future<void> startFullScan() async {
+    AnalyticsManager.instance.track(AnalyticsEvent.scanStarted.name);
     _isScanning = true;
     _scanProgress = 0.0;
     _currentPhase = ScanPhase.fetchingAssets;
@@ -200,9 +226,15 @@ class PhotoScannerService extends ChangeNotifier {
               if (idx >= photoAssets.length || idx >= uniqueAssets.length) return;
               if (photoAssets[idx].type == AssetType.image) {
                 final entity = uniqueAssets[idx];
-                final hash = await _computeDHash(entity);
-                if (hash != null) {
-                  photoAssets[idx] = photoAssets[idx].copyWith(hash: hash);
+                final analysis = await _analyzeImage(entity);
+                if (analysis != null) {
+                  photoAssets[idx] = photoAssets[idx].copyWith(
+                    hash: analysis.hash,
+                    thumbnail: analysis.thumbnail,
+                    isBlurry: analysis.quality.isBlurry,
+                    isDark: analysis.quality.isDark,
+                    isOverexposed: analysis.quality.isOverexposed,
+                  );
                 }
               }
             }),
@@ -254,6 +286,10 @@ class PhotoScannerService extends ChangeNotifier {
           photoAssets.where((a) => a.type == AssetType.video).toList()
             ..sort((a, b) => b.size.compareTo(a.size));
 
+      final blurryPhotos = photoAssets.where((a) => a.isBlurry).toList();
+      final darkPhotos = photoAssets.where((a) => a.isDark).toList();
+      final overexposedPhotos = photoAssets.where((a) => a.isOverexposed).toList();
+
       // Build result
       final totalSavings = _estimateSavings(
         duplicateGroups: duplicateGroups,
@@ -269,12 +305,29 @@ class PhotoScannerService extends ChangeNotifier {
         screenshots: screenshots,
         largeFiles: largeFiles,
         videos: videos,
+        blurryPhotos: blurryPhotos,
+        darkPhotos: darkPhotos,
+        overexposedPhotos: overexposedPhotos,
         totalSavingsEstimate: totalSavings,
       );
 
       _currentPhase = ScanPhase.done;
       _scanProgress = 1.0;
       _isScanning = false;
+      AnalyticsManager.instance.track(
+        AnalyticsEvent.scanCompleted.name,
+        properties: {
+          'assets': photoAssets.length,
+          'duplicates': duplicateGroups.length,
+          'similar_groups': similarGroups.length,
+          'screenshots': screenshots.length,
+          'large_files': largeFiles.length,
+          'videos': videos.length,
+          'blurry_photos': blurryPhotos.length,
+          'dark_photos': darkPhotos.length,
+          'estimated_savings_mb': (totalSavings / 1048576).round(),
+        },
+      );
       notifyListeners();
     } catch (e) {
       debugPrint('PhotoScannerService.startFullScan error: $e');
@@ -290,18 +343,45 @@ class PhotoScannerService extends ChangeNotifier {
       if (result.isNotEmpty) {
         // Remove deleted assets from the current scan result.
         final deletedIds = result.toSet();
+        final remainingAssets =
+            _scanResult.allAssets.where((a) => !deletedIds.contains(a.id)).toList();
+        final duplicateGroups =
+            _filterDuplicateGroups(_scanResult.duplicateGroups, deletedIds);
+        final similarGroups =
+            _filterSimilarGroups(_scanResult.similarGroups, deletedIds);
+        final screenshots =
+            _scanResult.screenshots.where((a) => !deletedIds.contains(a.id)).toList();
+        final largeFiles =
+            _scanResult.largeFiles.where((a) => !deletedIds.contains(a.id)).toList();
+        final videos =
+            _scanResult.videos.where((a) => !deletedIds.contains(a.id)).toList();
+        final blurryPhotos =
+            _scanResult.blurryPhotos.where((a) => !deletedIds.contains(a.id)).toList();
+        final darkPhotos =
+            _scanResult.darkPhotos.where((a) => !deletedIds.contains(a.id)).toList();
+        final overexposedPhotos =
+            _scanResult.overexposedPhotos.where((a) => !deletedIds.contains(a.id)).toList();
+
         _scanResult = ScanResult(
-          allAssets:
-              _scanResult.allAssets.where((a) => !deletedIds.contains(a.id)).toList(),
-          duplicateGroups: _scanResult.duplicateGroups,
-          similarGroups: _scanResult.similarGroups,
-          screenshots:
-              _scanResult.screenshots.where((a) => !deletedIds.contains(a.id)).toList(),
-          largeFiles:
-              _scanResult.largeFiles.where((a) => !deletedIds.contains(a.id)).toList(),
-          videos:
-              _scanResult.videos.where((a) => !deletedIds.contains(a.id)).toList(),
-          totalSavingsEstimate: _scanResult.totalSavingsEstimate,
+          allAssets: remainingAssets,
+          duplicateGroups: duplicateGroups,
+          similarGroups: similarGroups,
+          screenshots: screenshots,
+          largeFiles: largeFiles,
+          videos: videos,
+          blurryPhotos: blurryPhotos,
+          darkPhotos: darkPhotos,
+          overexposedPhotos: overexposedPhotos,
+          totalSavingsEstimate: _estimateSavings(
+            duplicateGroups: duplicateGroups,
+            similarGroups: similarGroups,
+            screenshots: screenshots,
+            largeFiles: largeFiles,
+          ),
+        );
+        AnalyticsManager.instance.track(
+          AnalyticsEvent.photosDeleted.name,
+          properties: {'count': result.length},
         );
         notifyListeners();
         return true;
@@ -317,16 +397,12 @@ class PhotoScannerService extends ChangeNotifier {
   // Perceptual hashing (dHash)
   // -----------------------------------------------------------------------
 
-  /// Compute a 64-bit difference hash (dHash) for an image asset.
-  ///
-  /// Algorithm:
-  ///   1. Resize to 9x8 grayscale.
-  ///   2. For each row compare adjacent pixels (left < right → 1).
-  ///   3. Produces an 8x8 = 64-bit hash.
-  Future<String?> _computeDHash(AssetEntity entity) async {
+  /// Build the thumbnail used by the UI, the dHash used by duplicate
+  /// detection, and lightweight quality flags in one thumbnail read.
+  Future<_ImageAnalysis?> _analyzeImage(AssetEntity entity) async {
     try {
       final thumbData = await entity.thumbnailDataWithSize(
-        const ThumbnailSize(64, 64),
+        const ThumbnailSize(256, 256),
         format: ThumbnailFormat.jpeg,
       );
       if (thumbData == null) return null;
@@ -347,7 +423,11 @@ class PhotoScannerService extends ChangeNotifier {
         }
       }
 
-      return hash.toRadixString(16).padLeft(16, '0');
+      return _ImageAnalysis(
+        hash: hash.toRadixString(16).padLeft(16, '0'),
+        thumbnail: thumbData,
+        quality: ImageQualityService.instance.analyzeQuality(thumbData),
+      );
     } catch (_) {
       return null;
     }
@@ -429,6 +509,32 @@ class PhotoScannerService extends ChangeNotifier {
     }).toList();
   }
 
+  List<DuplicateGroup> _filterDuplicateGroups(
+    List<DuplicateGroup> groups,
+    Set<String> deletedIds,
+  ) {
+    return groups
+        .map((group) => DuplicateGroup(
+              hash: group.hash,
+              assets: group.assets.where((a) => !deletedIds.contains(a.id)).toList(),
+            ))
+        .where((group) => group.assets.length > 1)
+        .toList();
+  }
+
+  List<SimilarGroup> _filterSimilarGroups(
+    List<SimilarGroup> groups,
+    Set<String> deletedIds,
+  ) {
+    return groups
+        .map((group) => SimilarGroup(
+              assets: group.assets.where((a) => !deletedIds.contains(a.id)).toList(),
+              hammingDistance: group.hammingDistance,
+            ))
+        .where((group) => group.assets.length > 1)
+        .toList();
+  }
+
   int _estimateSavings({
     required List<DuplicateGroup> duplicateGroups,
     required List<SimilarGroup> similarGroups,
@@ -462,4 +568,16 @@ class PhotoScannerService extends ChangeNotifier {
     _currentPhase = ScanPhase.idle;
     notifyListeners();
   }
+}
+
+class _ImageAnalysis {
+  final String hash;
+  final Uint8List thumbnail;
+  final ImageQuality quality;
+
+  const _ImageAnalysis({
+    required this.hash,
+    required this.thumbnail,
+    required this.quality,
+  });
 }

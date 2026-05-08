@@ -87,6 +87,7 @@ import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 enum AnalyticsEvent {
   // Lifecycle
   appOpened('app_opened'),
+  onboardingStarted('onboarding_started'),
   onboardingCompleted('onboarding_completed'),
 
   // Scan

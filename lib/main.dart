@@ -27,13 +27,6 @@ void main() async {
     debugPrint('SubscriptionManager init failed (safe): $e');
   }
 
-  // Request ATT after init (iOS only, safe no-op on other platforms)
-  try {
-    await AnalyticsManager.instance.requestATT();
-  } catch (e) {
-    debugPrint('ATT request failed (safe): $e');
-  }
-
   runApp(CleanupApp(
     hasCompletedOnboarding: hasCompletedOnboarding,
     subscriptionManager: subscriptionManager,

@@ -153,7 +153,7 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
   // ── Scan Button ──
   Widget _buildScanButton(PhotoScannerService s) => AnimatedBuilder(
     animation: _pulse,
-    builder: (_, __) {
+    builder: (_, child) {
       final scale = s.isScanning ? 1.0 : 1.0 - _pulse.value * 0.015;
       return Transform.scale(
         scale: scale,
@@ -229,15 +229,18 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
 
   // ── Tool List ──
   Widget _buildToolList(PhotoScannerService s) {
+    final hasScanned = s.scanResult.allAssets.isNotEmpty;
     final td = s.scanResult.duplicateGroups.fold<int>(0, (a, g) => a + g.assets.length);
     final ts = s.scanResult.similarGroups.fold<int>(0, (a, g) => a + g.assets.length);
+    final blurry = s.scanResult.blurryPhotos.length;
+    final dark = s.scanResult.darkPhotos.length;
     final items = [
-      _Tool(Icons.copy_rounded, '重複照片', td > 0 ? '$td 張' : '尚未掃描', td > 0 ? _Status.warn : _Status.scan, const Color(0xFFE5484D)),
-      _Tool(Icons.photo_library_rounded, '相似照片', ts > 0 ? '$ts 張' : '尚未掃描', ts > 0 ? _Status.warn : _Status.scan, const Color(0xFFF0997B)),
-      _Tool(Icons.screenshot_rounded, '螢幕截圖', s.scanResult.screenshots.isNotEmpty ? '${s.scanResult.screenshots.length} 張' : '尚未掃描', s.scanResult.screenshots.isNotEmpty ? _Status.minor : _Status.scan, const Color(0xFF1D9E75)),
-      _Tool(Icons.blur_on_rounded, '模糊照片', '尚未掃描', _Status.scan, const Color(0xFF9D6AFF)),
-      _Tool(Icons.dark_mode_rounded, '過暗照片', '尚未掃描', _Status.scan, const Color(0xFF6366F1)),
-      _Tool(Icons.compress_rounded, '大型檔案', s.scanResult.largeFiles.isNotEmpty ? '${s.scanResult.largeFiles.length} 個' : '尚未掃描', s.scanResult.largeFiles.isNotEmpty ? _Status.minor : _Status.scan, const Color(0xFFE5A31A)),
+      _Tool(Icons.copy_rounded, '重複照片', _photoCountLabel(td, hasScanned), td > 0 ? _Status.warn : hasScanned ? _Status.done : _Status.scan, const Color(0xFFE5484D)),
+      _Tool(Icons.photo_library_rounded, '相似照片', _photoCountLabel(ts, hasScanned), ts > 0 ? _Status.warn : hasScanned ? _Status.done : _Status.scan, const Color(0xFFF0997B)),
+      _Tool(Icons.screenshot_rounded, '螢幕截圖', _photoCountLabel(s.scanResult.screenshots.length, hasScanned), s.scanResult.screenshots.isNotEmpty ? _Status.minor : hasScanned ? _Status.done : _Status.scan, const Color(0xFF1D9E75)),
+      _Tool(Icons.blur_on_rounded, '模糊照片', _photoCountLabel(blurry, hasScanned), blurry > 0 ? _Status.warn : hasScanned ? _Status.done : _Status.scan, const Color(0xFF9D6AFF)),
+      _Tool(Icons.dark_mode_rounded, '過暗照片', _photoCountLabel(dark, hasScanned), dark > 0 ? _Status.warn : hasScanned ? _Status.done : _Status.scan, const Color(0xFF6366F1)),
+      _Tool(Icons.compress_rounded, '大型檔案', _itemCountLabel(s.scanResult.largeFiles.length, hasScanned), s.scanResult.largeFiles.isNotEmpty ? _Status.minor : hasScanned ? _Status.done : _Status.scan, const Color(0xFFE5A31A)),
     ];
 
     return Container(
@@ -251,6 +254,16 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
         ]);
       }).toList()),
     );
+  }
+
+  String _photoCountLabel(int count, bool hasScanned) {
+    if (!hasScanned) return '尚未掃描';
+    return count > 0 ? '$count 張' : '未發現';
+  }
+
+  String _itemCountLabel(int count, bool hasScanned) {
+    if (!hasScanned) return '尚未掃描';
+    return count > 0 ? '$count 個' : '未發現';
   }
 
   Widget _buildToolRow(_Tool t) {
