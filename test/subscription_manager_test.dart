@@ -6,7 +6,7 @@ void main() {
   test('SubscriptionManager stays in placeholder mode without RevenueCat keys', () async {
     final manager = SubscriptionManager();
 
-    await manager.init(isIos: true);
+    await manager.init(isIos: false);
 
     expect(manager.isPlaceholder, isTrue);
     expect(manager.isPro, isFalse);

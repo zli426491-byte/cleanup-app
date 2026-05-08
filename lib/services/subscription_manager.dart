@@ -1,20 +1,21 @@
 import 'package:flutter/foundation.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
-// ---------------------------------------------------------------------------
-// Service
-// ---------------------------------------------------------------------------
-
 class SubscriptionManager extends ChangeNotifier {
+  // RevenueCat public SDK keys are intended to be embedded in client apps.
+  // CI can still override them with --dart-define when needed.
+  static const _defaultRevenueCatIosApiKey =
+      'app1_nttjJtbdotLvIoxrLhIiTpMtivA';
   static const _revenueCatApiKeyAndroid = String.fromEnvironment(
     'REVENUECAT_ANDROID_API_KEY',
     defaultValue: 'YOUR_REVENUECAT_ANDROID_API_KEY',
   );
   static const _revenueCatApiKeyIos = String.fromEnvironment(
     'REVENUECAT_IOS_API_KEY',
-    defaultValue: 'YOUR_REVENUECAT_IOS_API_KEY',
+    defaultValue: _defaultRevenueCatIosApiKey,
   );
   static const _proEntitlement = 'pro';
+  static const _revenueCatTimeout = Duration(seconds: 12);
 
   bool _isPro = false;
   bool _isLoading = false;
@@ -35,64 +36,51 @@ class SubscriptionManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  // -----------------------------------------------------------------------
-  // Initialisation
-  // -----------------------------------------------------------------------
-
-  /// Check if the API keys are placeholders (not yet configured).
   static bool _isPlaceholderKey(String key) =>
       key.trim().isEmpty || key.startsWith('YOUR_');
 
-  /// Configure RevenueCat and check the current entitlement status.
-  /// If API keys are placeholders, skip initialization safely.
   Future<void> init({required bool isIos}) async {
     _isLoading = true;
+    _statusMessage = '';
     notifyListeners();
 
     try {
-      final apiKey =
-          isIos ? _revenueCatApiKeyIos : _revenueCatApiKeyAndroid;
+      final apiKey = isIos ? _revenueCatApiKeyIos : _revenueCatApiKeyAndroid;
 
-      // Guard: skip RevenueCat if keys are not configured yet
       if (_isPlaceholderKey(apiKey)) {
         _isPlaceholder = true;
         _isPro = false;
         _availablePackages = [];
-        _statusMessage = '訂閱功能尚未設定，請先加入 RevenueCat API Key。';
-        debugPrint('SubscriptionManager: placeholder API key detected, '
-            'skipping RevenueCat initialization. '
-            'Pass REVENUECAT_*_API_KEY with --dart-define.');
-        _isLoading = false;
-        notifyListeners();
+        _statusMessage = '尚未設定 RevenueCat API Key，訂閱功能暫時不可用。';
+        debugPrint(
+          'SubscriptionManager: placeholder API key detected. '
+          'Pass REVENUECAT_*_API_KEY with --dart-define.',
+        );
         return;
       }
 
       _isPlaceholder = false;
 
-      final configuration = PurchasesConfiguration(apiKey);
-      await Purchases.configure(configuration);
+      await Purchases.configure(
+        PurchasesConfiguration(apiKey),
+      ).timeout(_revenueCatTimeout);
 
-      // Listen for customer info changes.
       Purchases.addCustomerInfoUpdateListener(_onCustomerInfoUpdated);
 
-      // Check initial status.
-      final customerInfo = await Purchases.getCustomerInfo();
+      final customerInfo =
+          await Purchases.getCustomerInfo().timeout(_revenueCatTimeout);
       _updateProStatus(customerInfo);
 
       await loadProducts();
     } catch (e) {
       debugPrint('SubscriptionManager.init error: $e');
+      _statusMessage = '訂閱系統初始化失敗，請稍後再試。';
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // -----------------------------------------------------------------------
-  // Products
-  // -----------------------------------------------------------------------
-
-  /// Fetch available products / packages from RevenueCat.
   Future<List<Package>> loadProducts() async {
     if (_isPlaceholder) {
       _availablePackages = [];
@@ -100,27 +88,35 @@ class SubscriptionManager extends ChangeNotifier {
     }
 
     _isLoading = true;
+    _statusMessage = '';
     notifyListeners();
 
     try {
-      final offerings = await Purchases.getOfferings();
+      final offerings = await Purchases.getOfferings().timeout(
+        _revenueCatTimeout,
+      );
       final current = offerings.current ??
           (offerings.all.isNotEmpty ? offerings.all.values.first : null);
-      if (current != null) {
-        _availablePackages = current.availablePackages;
-        if (_availablePackages.isEmpty) {
-          _statusMessage = 'RevenueCat Offering 沒有可購買方案，請確認 weekly/yearly 已加入 default offering。';
-        } else {
-          _statusMessage = '';
-        }
-        debugPrint('SubscriptionManager: loaded ${_availablePackages.length} packages');
-      } else {
+
+      if (current == null) {
         _availablePackages = [];
-        _statusMessage = '找不到 RevenueCat Offering，請確認 default offering 已設為 Current。';
+        _statusMessage =
+            '找不到 RevenueCat Offering，請確認 default offering 已設為 Current。';
+      } else {
+        _availablePackages = current.availablePackages;
+        _statusMessage = _availablePackages.isEmpty
+            ? 'RevenueCat Offering 沒有可購買方案，請確認 weekly/yearly 產品已加入 default offering。'
+            : '';
       }
+
+      debugPrint(
+        'SubscriptionManager: loaded ${_availablePackages.length} packages',
+      );
     } catch (e) {
       debugPrint('SubscriptionManager.loadProducts error: $e');
-      _statusMessage = '訂閱方案載入失敗，請確認 RevenueCat 產品已綁定 App Store Connect 的 weekly/yearly。';
+      _availablePackages = [];
+      _statusMessage =
+          '訂閱方案載入失敗，請檢查 RevenueCat、App Store Connect 產品與網路狀態。';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -129,75 +125,64 @@ class SubscriptionManager extends ChangeNotifier {
     return _availablePackages;
   }
 
-  // -----------------------------------------------------------------------
-  // Purchasing
-  // -----------------------------------------------------------------------
-
-  /// Purchase a specific package. Returns true on success.
-  /// If keys are placeholders, shows a "coming soon" message.
   Future<bool> purchase(Package package) async {
     if (_isPlaceholder) {
-      _statusMessage = '訂閱功能尚未設定，請先加入 RevenueCat API Key。';
+      _statusMessage = '尚未設定 RevenueCat API Key，無法購買。';
       notifyListeners();
       return false;
     }
 
     _isLoading = true;
+    _statusMessage = '';
     notifyListeners();
 
     try {
-      final customerInfo = await Purchases.purchasePackage(package);
+      final customerInfo = await Purchases.purchasePackage(package).timeout(
+        _revenueCatTimeout,
+      );
       _updateProStatus(customerInfo);
-
-      _isLoading = false;
-      notifyListeners();
       return _isPro;
     } on PurchasesErrorCode catch (e) {
       debugPrint('SubscriptionManager.purchase error: $e');
-      _isLoading = false;
-      notifyListeners();
+      _statusMessage = '購買未完成，請稍後再試。';
       return false;
     } catch (e) {
       debugPrint('SubscriptionManager.purchase error: $e');
+      _statusMessage = '購買未完成，請稍後再試。';
+      return false;
+    } finally {
       _isLoading = false;
       notifyListeners();
-      return false;
     }
   }
 
-  /// Restore previous purchases. Returns true if the user now has Pro.
-  /// If keys are placeholders, shows a "coming soon" message.
   Future<bool> restorePurchases() async {
     if (_isPlaceholder) {
-      _statusMessage = '訂閱功能尚未設定，請先加入 RevenueCat API Key。';
+      _statusMessage = '尚未設定 RevenueCat API Key，無法恢復購買。';
       notifyListeners();
       return false;
     }
 
     _isLoading = true;
+    _statusMessage = '';
     notifyListeners();
 
     try {
-      final customerInfo = await Purchases.restorePurchases();
+      final customerInfo = await Purchases.restorePurchases().timeout(
+        _revenueCatTimeout,
+      );
       _updateProStatus(customerInfo);
-
-      _isLoading = false;
-      notifyListeners();
       return _isPro;
     } catch (e) {
       debugPrint('SubscriptionManager.restorePurchases error: $e');
+      _statusMessage = '找不到可恢復的購買紀錄。';
+      return false;
+    } finally {
       _isLoading = false;
       notifyListeners();
-      return false;
     }
   }
 
-  // -----------------------------------------------------------------------
-  // Pro gate
-  // -----------------------------------------------------------------------
-
-  /// Check whether the user has Pro access. If not, sets [showPaywall] to
-  /// true so the UI can present the paywall. Returns true if the user is Pro.
   bool requirePro() {
     if (_isPlaceholder) return false;
     if (_isPro) return true;
@@ -206,15 +191,10 @@ class SubscriptionManager extends ChangeNotifier {
     return false;
   }
 
-  /// Dismiss the paywall without purchasing.
   void dismissPaywall() {
     _showPaywall = false;
     notifyListeners();
   }
-
-  // -----------------------------------------------------------------------
-  // Helpers
-  // -----------------------------------------------------------------------
 
   void _onCustomerInfoUpdated(CustomerInfo info) {
     _updateProStatus(info);

@@ -6,9 +6,8 @@ class AppConstants {
   static const String revenueCatGoogleKey = 'YOUR_REVENUECAT_GOOGLE_KEY';
 
   // Product IDs
-  static const String weeklyProductId = 'com.cleanup.pro.weekly';
-  static const String yearlyProductId = 'com.cleanup.pro.yearly';
-  static const String lifetimeProductId = 'com.cleanup.pro.lifetime';
+  static const String weeklyProductId = 'com.cleanupapp.cleaner.weekly';
+  static const String yearlyProductId = 'com.cleanupapp.cleaner.yearly';
 
   // Free tier limits
   static const int maxFreeDeletes = 5;

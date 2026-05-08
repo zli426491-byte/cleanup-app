@@ -132,21 +132,25 @@ class ScanResult {
 // ---------------------------------------------------------------------------
 
 class PhotoScannerService extends ChangeNotifier {
-  static const _maxAssetsPerAlbum = 900;
-  static const _maxAssetsToScan = 1800;
-  static const _enableInlineImageAnalysis = false;
-  static const _maxImagesToAnalyze = 120;
-  static const _thumbnailTimeout = Duration(milliseconds: 800);
+  static const _assetPageSize = 250;
+  static const _maxAssetsToScan = 2500;
+  static const _enableInlineImageAnalysis = true;
+  static const _maxImagesToAnalyze = 60;
+  static const _thumbnailTimeout = Duration(milliseconds: 350);
+  static const _assetPageTimeout = Duration(seconds: 4);
+  static const _imageAnalysisBudget = Duration(seconds: 8);
 
   bool _isScanning = false;
   double _scanProgress = 0.0;
   ScanPhase _currentPhase = ScanPhase.idle;
   ScanResult _scanResult = ScanResult.empty;
+  String? _lastError;
 
   bool get isScanning => _isScanning;
   double get scanProgress => _scanProgress;
   ScanPhase get currentPhase => _currentPhase;
   ScanResult get scanResult => _scanResult;
+  String? get lastError => _lastError;
 
   // -----------------------------------------------------------------------
   // Public API
@@ -159,6 +163,7 @@ class PhotoScannerService extends ChangeNotifier {
     _isScanning = true;
     _scanProgress = 0.0;
     _currentPhase = ScanPhase.fetchingAssets;
+    _lastError = null;
     notifyListeners();
 
     try {
@@ -177,15 +182,40 @@ class PhotoScannerService extends ChangeNotifier {
         return;
       }
 
-      // Gather every asset across albums.
+      // Scan the primary "All/Recent" library first. Walking every album on a
+      // large phone creates many duplicate reads and can look frozen.
+      final scanAlbums = _primaryScanAlbums(albums);
+
       final List<AssetEntity> rawAssets = [];
-      for (final album in albums) {
-        final count = await album.assetCountAsync;
-        final assets = await album.getAssetListRange(
-          start: 0,
-          end: count > _maxAssetsPerAlbum ? _maxAssetsPerAlbum : count,
+      for (final album in scanAlbums) {
+        final count = await album.assetCountAsync.timeout(
+          _assetPageTimeout,
+          onTimeout: () => 0,
         );
-        rawAssets.addAll(assets);
+        final cappedCount =
+            count > _maxAssetsToScan ? _maxAssetsToScan : count;
+
+        for (var start = 0; start < cappedCount; start += _assetPageSize) {
+          final end = (start + _assetPageSize > cappedCount)
+              ? cappedCount
+              : start + _assetPageSize;
+          final assets = await album.getAssetListRange(
+            start: start,
+            end: end,
+          ).timeout(
+            _assetPageTimeout,
+            onTimeout: () => const <AssetEntity>[],
+          );
+          rawAssets.addAll(assets);
+
+          _scanProgress =
+              0.02 + 0.08 * (end / cappedCount.clamp(1, _maxAssetsToScan));
+          notifyListeners();
+          await Future<void>.delayed(Duration.zero);
+
+          if (rawAssets.length >= _maxAssetsToScan) break;
+        }
+        if (rawAssets.length >= _maxAssetsToScan) break;
       }
 
       // Deduplicate by id (asset may appear in multiple albums).
@@ -236,7 +266,9 @@ class PhotoScannerService extends ChangeNotifier {
         }
 
         if (analysisIndexes.isNotEmpty) {
+          final analysisWatch = Stopwatch()..start();
           for (var position = 0; position < analysisIndexes.length; position++) {
+            if (analysisWatch.elapsed >= _imageAnalysisBudget) break;
             final idx = analysisIndexes[position];
             final entity = uniqueAssets[idx];
             final analysis = await _analyzeImage(entity).timeout(
@@ -253,16 +285,17 @@ class PhotoScannerService extends ChangeNotifier {
               );
             }
 
-            _scanProgress = 0.20 + 0.30 * ((position + 1) / analysisIndexes.length);
+            _scanProgress =
+                0.20 + 0.30 * ((position + 1) / analysisIndexes.length);
             notifyListeners();
-            await Future.delayed(const Duration(milliseconds: 1));
+            await Future<void>.delayed(Duration.zero);
           }
         }
       }
 
       _scanProgress = 0.50;
       notifyListeners();
-      await Future.delayed(const Duration(milliseconds: 1));
+      await Future<void>.delayed(Duration.zero);
 
       // 3. Find exact duplicates (identical hash)
       _currentPhase = ScanPhase.findingDuplicates;
@@ -349,7 +382,8 @@ class PhotoScannerService extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('PhotoScannerService.startFullScan error: $e');
-      _reset();
+      _lastError = '掃描中斷，請確認照片權限後再試一次。';
+      _reset(keepError: true);
     }
   }
 
@@ -568,6 +602,12 @@ class PhotoScannerService extends ChangeNotifier {
     }).toList();
   }
 
+  List<AssetPathEntity> _primaryScanAlbums(List<AssetPathEntity> albums) {
+    final allAlbums = albums.where((album) => album.isAll).toList();
+    if (allAlbums.isNotEmpty) return [allAlbums.first];
+    return [albums.first];
+  }
+
   List<DuplicateGroup> _filterDuplicateGroups(
     List<DuplicateGroup> groups,
     Set<String> deletedIds,
@@ -621,10 +661,11 @@ class PhotoScannerService extends ChangeNotifier {
   // Internal helpers
   // -----------------------------------------------------------------------
 
-  void _reset() {
+  void _reset({bool keepError = false}) {
     _isScanning = false;
     _scanProgress = 0.0;
     _currentPhase = ScanPhase.idle;
+    if (!keepError) _lastError = null;
     notifyListeners();
   }
 }

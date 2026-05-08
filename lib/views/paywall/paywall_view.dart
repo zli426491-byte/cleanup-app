@@ -11,6 +11,7 @@ import '../home/main_tab_view.dart';
 
 class PaywallView extends StatefulWidget {
   final bool fromOnboarding;
+
   const PaywallView({super.key, this.fromOnboarding = false});
 
   @override
@@ -29,7 +30,6 @@ class _PaywallViewState extends State<PaywallView> {
       AnalyticsEvent.paywallShown.name,
       properties: {'source': widget.fromOnboarding ? 'onboarding' : 'in_app'},
     );
-
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadPackages());
   }
 
@@ -37,8 +37,10 @@ class _PaywallViewState extends State<PaywallView> {
   Widget build(BuildContext context) {
     final sub = context.watch<SubscriptionManager>();
     final packages = _sortedPackages(sub.availablePackages);
-    final canPurchase =
-        !sub.isPlaceholder && _selectedPackage != null && !sub.isLoading && !_isPurchasing;
+    final canPurchase = !sub.isPlaceholder &&
+        _selectedPackage != null &&
+        !sub.isLoading &&
+        !_isPurchasing;
 
     return Scaffold(
       appBar: AppBar(
@@ -50,91 +52,112 @@ class _PaywallViewState extends State<PaywallView> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            ShaderMask(
-              shaderCallback: (bounds) => AppTheme.primaryGradient.createShader(bounds),
-              child: const Icon(Icons.auto_awesome, size: 60, color: Colors.white),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Cleanup Pro',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text('解鎖完整清理與整理工具', style: TextStyle(color: Colors.grey[600])),
-            const SizedBox(height: 24),
-
-            if (sub.statusMessage.isNotEmpty) ...[
-              _StatusBanner(message: sub.statusMessage),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ShaderMask(
+                shaderCallback: (bounds) =>
+                    AppTheme.primaryGradient.createShader(bounds),
+                child: const Icon(
+                  Icons.auto_awesome,
+                  size: 60,
+                  color: Colors.white,
+                ),
+              ),
               const SizedBox(height: 16),
-            ],
-
-            ..._features.map((feature) => Padding(
+              const Text(
+                'Cleanup Pro',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '解鎖完整清理工具，快速找出可釋放的照片、影片與檔案空間。',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 24),
+              if (sub.statusMessage.isNotEmpty) ...[
+                _StatusBanner(message: sub.statusMessage),
+                const SizedBox(height: 16),
+              ],
+              ..._features.map(
+                (feature) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   child: Row(
                     children: [
-                      Icon(feature.$1, color: feature.$3, size: 22),
+                      Icon(feature.icon, color: feature.color, size: 22),
                       const SizedBox(width: 12),
-                      Expanded(child: Text(feature.$2)),
-                      const Icon(Icons.check_circle, color: AppTheme.success, size: 18),
+                      Expanded(child: Text(feature.label)),
+                      const Icon(
+                        Icons.check_circle,
+                        color: AppTheme.success,
+                        size: 18,
+                      ),
                     ],
                   ),
-                )),
-            const SizedBox(height: 28),
-
-            if (packages.isEmpty)
-              _PlaceholderPlans(isLoading: sub.isLoading)
-            else
-              ...packages.map((package) => Padding(
+                ),
+              ),
+              const SizedBox(height: 28),
+              if (packages.isEmpty)
+                _EmptyPlans(isLoading: sub.isLoading)
+              else
+                ...packages.map(
+                  (package) => Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: _PlanCard(
                       title: _titleFor(package),
                       subtitle: _subtitleFor(package),
                       price: package.storeProduct.priceString,
-                      isSelected: package.identifier == _selectedPackage?.identifier,
+                      isSelected:
+                          package.identifier == _selectedPackage?.identifier,
                       isBestValue: _isBestValue(package),
                       onTap: () => setState(() => _selectedPackage = package),
                     ),
-                  )),
-            const SizedBox(height: 16),
-
-            _PurchaseButton(
-              isEnabled: canPurchase,
-              isLoading: sub.isLoading || _isPurchasing,
-              label: sub.isPlaceholder ? '訂閱尚未設定' : '開始免費試用',
-              onTap: () => _purchase(sub),
-            ),
-            const SizedBox(height: 16),
-
-            Text(
-              '試用結束後依 App Store 顯示價格自動續訂',
-              style: TextStyle(color: Colors.grey[500], fontSize: 12),
-            ),
-            const SizedBox(height: 4),
-            Text('可隨時在 Apple ID 訂閱設定中取消', style: TextStyle(color: Colors.grey[500], fontSize: 11)),
-            const SizedBox(height: 8),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 4,
-              children: [
-                TextButton(
-                  onPressed: sub.isPlaceholder || sub.isLoading ? null : () => _restore(sub),
-                  child: const Text('恢復購買', style: TextStyle(fontSize: 12)),
+                  ),
                 ),
-                TextButton(
-                  onPressed: () => launchUrl(Uri.parse('https://zli426491-byte.github.io/cleanup-app/')),
-                  child: const Text('隱私政策', style: TextStyle(fontSize: 12)),
-                ),
-                TextButton(
-                  onPressed: () => launchUrl(Uri.parse('https://zli426491-byte.github.io/cleanup-app/')),
-                  child: const Text('使用條款', style: TextStyle(fontSize: 12)),
-                ),
-              ],
-            ),
-          ],
+              const SizedBox(height: 16),
+              _PurchaseButton(
+                isEnabled: canPurchase,
+                isLoading: sub.isLoading || _isPurchasing,
+                label: sub.isPlaceholder ? '訂閱尚未設定' : '繼續',
+                onTap: () => _purchase(sub),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '購買會透過 App Store 完成，訂閱可在 Apple ID 設定中管理或取消。',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[500], fontSize: 12),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 4,
+                children: [
+                  TextButton(
+                    onPressed:
+                        sub.isPlaceholder || sub.isLoading ? null : () => _restore(sub),
+                    child: const Text('恢復購買', style: TextStyle(fontSize: 12)),
+                  ),
+                  TextButton(
+                    onPressed: () => launchUrl(
+                      Uri.parse('https://zli426491-byte.github.io/cleanup-app/'),
+                    ),
+                    child: const Text('隱私權政策', style: TextStyle(fontSize: 12)),
+                  ),
+                  TextButton(
+                    onPressed: () => launchUrl(
+                      Uri.parse('https://zli426491-byte.github.io/cleanup-app/'),
+                    ),
+                    child: const Text('使用條款', style: TextStyle(fontSize: 12)),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -143,7 +166,9 @@ class _PaywallViewState extends State<PaywallView> {
   Future<void> _loadPackages() async {
     if (!mounted) return;
     final sub = context.read<SubscriptionManager>();
-    final packages = sub.availablePackages.isEmpty ? await sub.loadProducts() : sub.availablePackages;
+    final packages = sub.availablePackages.isEmpty
+        ? await sub.loadProducts()
+        : sub.availablePackages;
     if (!mounted || packages.isEmpty) return;
     setState(() => _selectedPackage ??= _defaultPackage(packages));
   }
@@ -171,8 +196,10 @@ class _PaywallViewState extends State<PaywallView> {
         package.storeProduct.currencyCode,
       );
       _dismiss(context);
-    } else if (sub.statusMessage.isNotEmpty) {
-      _showMessage(sub.statusMessage);
+    } else {
+      _showMessage(
+        sub.statusMessage.isNotEmpty ? sub.statusMessage : '購買未完成，請稍後再試。',
+      );
     }
   }
 
@@ -181,12 +208,12 @@ class _PaywallViewState extends State<PaywallView> {
     if (!mounted) return;
 
     if (restored) {
-      _showMessage('已恢復 Pro 權限');
+      _showMessage('已恢復 Pro 權限。');
       _dismiss(context);
-    } else if (sub.statusMessage.isNotEmpty) {
-      _showMessage(sub.statusMessage);
     } else {
-      _showMessage('找不到可恢復的訂閱');
+      _showMessage(
+        sub.statusMessage.isNotEmpty ? sub.statusMessage : '找不到可恢復的購買紀錄。',
+      );
     }
   }
 
@@ -250,38 +277,47 @@ class _PaywallViewState extends State<PaywallView> {
     };
   }
 
-  static bool _isBestValue(Package package) => package.packageType == PackageType.annual;
+  static bool _isBestValue(Package package) =>
+      package.packageType == PackageType.annual;
 
   static String _titleFor(Package package) {
     return switch (package.packageType) {
-      PackageType.weekly => '週方案',
-      PackageType.monthly => '月方案',
-      PackageType.annual => '年方案',
+      PackageType.weekly => '週訂閱',
+      PackageType.monthly => '月訂閱',
+      PackageType.annual => '年訂閱',
       PackageType.sixMonth => '半年方案',
       PackageType.threeMonth => '三個月方案',
       PackageType.twoMonth => '兩個月方案',
-      PackageType.lifetime => '終身方案',
+      PackageType.lifetime => '永久方案',
       PackageType.custom || PackageType.unknown => package.storeProduct.title,
     };
   }
 
   static String _subtitleFor(Package package) {
     return switch (package.packageType) {
-      PackageType.annual => '適合長期整理，單位成本最低',
-      PackageType.weekly => '適合先短期試用',
-      PackageType.monthly => '彈性使用，按月續訂',
+      PackageType.annual => '最適合長期清理與壓縮照片影片',
+      PackageType.weekly => '短期整理相簿時使用',
+      PackageType.monthly => '每月整理手機空間',
       _ => package.storeProduct.identifier,
     };
   }
 
   static const _features = [
-    (Icons.copy, '重複照片與相似照片清理', AppTheme.danger),
-    (Icons.photo_library, '螢幕截圖與大型檔案整理', AppTheme.warning),
-    (Icons.compress, '照片與影片壓縮', AppTheme.accent),
-    (Icons.people, '聯絡人合併清理', AppTheme.primary),
-    (Icons.lock, '私密空間保管庫', AppTheme.success),
-    (Icons.swipe, '滑動式快速篩選模式', Colors.teal),
+    _PaywallFeature(Icons.copy, '重複與相似照片整理', AppTheme.danger),
+    _PaywallFeature(Icons.photo_library, '截圖、大型照片與影片篩選', AppTheme.warning),
+    _PaywallFeature(Icons.compress, '影片壓縮節省空間', AppTheme.accent),
+    _PaywallFeature(Icons.people, '聯絡人清理工具', AppTheme.primary),
+    _PaywallFeature(Icons.lock, '私密空間保護重要照片', AppTheme.success),
+    _PaywallFeature(Icons.swipe, '滑動式快速清理體驗', Colors.teal),
   ];
+}
+
+class _PaywallFeature {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _PaywallFeature(this.icon, this.label, this.color);
 }
 
 class _StatusBanner extends StatelessWidget {
@@ -311,40 +347,32 @@ class _StatusBanner extends StatelessWidget {
   }
 }
 
-class _PlaceholderPlans extends StatelessWidget {
+class _EmptyPlans extends StatelessWidget {
   final bool isLoading;
 
-  const _PlaceholderPlans({required this.isLoading});
+  const _EmptyPlans({required this.isLoading});
 
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 24),
-        child: CircularProgressIndicator(color: AppTheme.primary),
+        child: Center(child: CircularProgressIndicator(color: AppTheme.primary)),
       );
     }
 
-    return Column(
-      children: const [
-        _PlanCard(
-          title: '年方案',
-          subtitle: '等待 App Store / RevenueCat 回傳實際價格',
-          price: '--',
-          isSelected: true,
-          isBestValue: true,
-          onTap: null,
-        ),
-        SizedBox(height: 8),
-        _PlanCard(
-          title: '週方案',
-          subtitle: '等待 App Store / RevenueCat 回傳實際價格',
-          price: '--',
-          isSelected: false,
-          isBestValue: false,
-          onTap: null,
-        ),
-      ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.18)),
+      ),
+      child: const Text(
+        '目前沒有可顯示的訂閱方案。請確認 RevenueCat 的 default offering 已加入產品。',
+        textAlign: TextAlign.center,
+        style: TextStyle(color: AppTheme.textSecondary),
+      ),
     );
   }
 }
@@ -408,8 +436,11 @@ class _PurchaseButton extends StatelessWidget {
 }
 
 class _PlanCard extends StatelessWidget {
-  final String title, subtitle, price;
-  final bool isSelected, isBestValue;
+  final String title;
+  final String subtitle;
+  final String price;
+  final bool isSelected;
+  final bool isBestValue;
   final VoidCallback? onTap;
 
   const _PlanCard({
@@ -452,16 +483,22 @@ class _PlanCard extends StatelessWidget {
                     spacing: 8,
                     runSpacing: 4,
                     children: [
-                      Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(
+                        title,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       if (isBestValue)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: AppTheme.warning,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: const Text(
-                            '最超值',
+                            '最佳價值',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 9,
@@ -474,13 +511,19 @@ class _PlanCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
+                    style: const TextStyle(
+                      color: AppTheme.textMuted,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 12),
-            Text(price, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              price,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
           ],
         ),
       ),
