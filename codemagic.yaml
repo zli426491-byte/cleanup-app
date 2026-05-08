@@ -8,9 +8,6 @@ workflows:
       app_store_connect: CleanupApp API Key
 
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.cleanupapp.cleaner
       vars:
         APP_STORE_CONNECT_ISSUER_ID: 5325aa4e-8a81-4662-94d3-83961c7e1151
         APP_STORE_CONNECT_KEY_IDENTIFIER: 5WHQMRJ2GT
@@ -23,10 +20,10 @@ workflows:
     scripts:
       - name: Set up code signing
         script: |
+          keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --create
-          keychain initialize
           keychain add-certificates
           xcode-project use-profiles
 
