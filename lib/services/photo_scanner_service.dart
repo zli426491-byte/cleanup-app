@@ -139,7 +139,7 @@ class PhotoScannerService extends ChangeNotifier {
   static const _assetPageSize = 250;
   static const _maxAssetsToScan = 2500;
   static const _maxScreenshotAssetsToScan = 800;
-  static const _enableInlineImageAnalysis = true;
+  static const _enableInlineImageAnalysis = false;
   static const _maxImagesToAnalyze = 420;
   static const _maxScreenshotsToAnalyze = 140;
   static const _thumbnailTimeout = Duration(milliseconds: 180);
