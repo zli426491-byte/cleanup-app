@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../analytics/analytics_manager.dart';
 import '../../services/subscription_manager.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/constants.dart';
 import '../home/main_tab_view.dart';
 
 class PaywallView extends StatefulWidget {
@@ -19,7 +20,7 @@ class PaywallView extends StatefulWidget {
 }
 
 class _PaywallViewState extends State<PaywallView> {
-  Package? _selectedPackage;
+  _PlanOption? _selectedPlan;
   bool _isPurchasing = false;
   bool _hasTrackedClose = false;
 
@@ -30,15 +31,15 @@ class _PaywallViewState extends State<PaywallView> {
       AnalyticsEvent.paywallShown.name,
       properties: {'source': widget.fromOnboarding ? 'onboarding' : 'in_app'},
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadPackages());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadPlans());
   }
 
   @override
   Widget build(BuildContext context) {
     final sub = context.watch<SubscriptionManager>();
-    final packages = _sortedPackages(sub.availablePackages);
+    final plans = _sortedPlans(sub);
     final canPurchase = !sub.isPlaceholder &&
-        _selectedPackage != null &&
+        _selectedPlan != null &&
         !sub.isLoading &&
         !_isPurchasing;
 
@@ -102,20 +103,21 @@ class _PaywallViewState extends State<PaywallView> {
                 ),
               ),
               const SizedBox(height: 28),
-              if (packages.isEmpty)
+              if (plans.isEmpty)
                 _EmptyPlans(isLoading: sub.isLoading)
               else
-                ...packages.map(
-                  (package) => Padding(
+                ...plans.map(
+                  (plan) => Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: _PlanCard(
-                      title: _titleFor(package),
-                      subtitle: _subtitleFor(package),
-                      price: package.storeProduct.priceString,
+                      title: _titleFor(plan),
+                      subtitle: _subtitleFor(plan),
+                      price: plan.product.priceString,
                       isSelected:
-                          package.identifier == _selectedPackage?.identifier,
-                      isBestValue: _isBestValue(package),
-                      onTap: () => setState(() => _selectedPackage = package),
+                          plan.product.identifier == _selectedPlan?.product.identifier,
+                      isBestValue:
+                          plan.product.identifier == AppConstants.yearlyProductId,
+                      onTap: () => setState(() => _selectedPlan = plan),
                     ),
                   ),
                 ),
@@ -163,37 +165,42 @@ class _PaywallViewState extends State<PaywallView> {
     );
   }
 
-  Future<void> _loadPackages() async {
+  Future<void> _loadPlans() async {
     if (!mounted) return;
     final sub = context.read<SubscriptionManager>();
-    final packages = sub.availablePackages.isEmpty
-        ? await sub.loadProducts()
-        : sub.availablePackages;
-    if (!mounted || packages.isEmpty) return;
-    setState(() => _selectedPackage ??= _defaultPackage(packages));
+    if (sub.availablePackages.isEmpty && sub.storeProducts.isEmpty) {
+      await sub.loadProducts();
+    }
+    if (!mounted) return;
+    final plans = _sortedPlans(sub);
+    if (plans.isNotEmpty) {
+      setState(() => _selectedPlan ??= plans.first);
+    }
   }
 
   Future<void> _purchase(SubscriptionManager sub) async {
-    final package = _selectedPackage;
-    if (package == null || sub.isPlaceholder || _isPurchasing) return;
+    final plan = _selectedPlan;
+    if (plan == null || sub.isPlaceholder || _isPurchasing) return;
 
     setState(() => _isPurchasing = true);
-    final didPurchase = await sub.purchase(package);
+    final didPurchase = plan.package == null
+        ? await sub.purchaseStoreProduct(plan.product)
+        : await sub.purchase(plan.package!);
     if (!mounted) return;
     setState(() => _isPurchasing = false);
 
     if (didPurchase) {
-      if (package.storeProduct.introductoryPrice != null) {
+      if (plan.product.introductoryPrice != null) {
         AnalyticsManager.instance.track(AnalyticsEvent.trialStarted.name);
       }
       AnalyticsManager.instance.track(
         AnalyticsEvent.subscriptionStarted.name,
-        properties: {'product_id': package.storeProduct.identifier},
+        properties: {'product_id': plan.product.identifier},
       );
       AnalyticsManager.instance.trackRevenue(
-        package.storeProduct.identifier,
-        package.storeProduct.price,
-        package.storeProduct.currencyCode,
+        plan.product.identifier,
+        plan.product.price,
+        plan.product.currencyCode,
       );
       _dismiss(context);
     } else {
@@ -245,60 +252,42 @@ class _PaywallViewState extends State<PaywallView> {
     }
   }
 
-  static Package? _defaultPackage(List<Package> packages) {
-    return _packageByType(packages, PackageType.annual) ??
-        _packageByType(packages, PackageType.weekly) ??
-        (packages.isNotEmpty ? packages.first : null);
-  }
-
-  static Package? _packageByType(List<Package> packages, PackageType type) {
-    for (final package in packages) {
-      if (package.packageType == type) return package;
+  static List<_PlanOption> _sortedPlans(SubscriptionManager sub) {
+    final options = <_PlanOption>[];
+    for (final package in sub.availablePackages) {
+      options.add(_PlanOption(product: package.storeProduct, package: package));
     }
-    return null;
+    if (options.isEmpty) {
+      for (final product in sub.storeProducts) {
+        options.add(_PlanOption(product: product));
+      }
+    }
+
+    options.sort((a, b) => _rank(a.product).compareTo(_rank(b.product)));
+    return options;
   }
 
-  static List<Package> _sortedPackages(List<Package> packages) {
-    final sorted = [...packages];
-    sorted.sort((a, b) => _rank(a).compareTo(_rank(b)));
-    return sorted;
-  }
-
-  static int _rank(Package package) {
-    return switch (package.packageType) {
-      PackageType.annual => 0,
-      PackageType.weekly => 1,
-      PackageType.monthly => 2,
-      PackageType.sixMonth => 3,
-      PackageType.threeMonth => 4,
-      PackageType.twoMonth => 5,
-      PackageType.lifetime => 6,
-      PackageType.custom || PackageType.unknown => 7,
+  static int _rank(StoreProduct product) {
+    return switch (product.identifier) {
+      AppConstants.yearlyProductId => 0,
+      AppConstants.weeklyProductId => 1,
+      _ => 2,
     };
   }
 
-  static bool _isBestValue(Package package) =>
-      package.packageType == PackageType.annual;
-
-  static String _titleFor(Package package) {
-    return switch (package.packageType) {
-      PackageType.weekly => '週訂閱',
-      PackageType.monthly => '月訂閱',
-      PackageType.annual => '年訂閱',
-      PackageType.sixMonth => '半年方案',
-      PackageType.threeMonth => '三個月方案',
-      PackageType.twoMonth => '兩個月方案',
-      PackageType.lifetime => '永久方案',
-      PackageType.custom || PackageType.unknown => package.storeProduct.title,
+  static String _titleFor(_PlanOption plan) {
+    return switch (plan.product.identifier) {
+      AppConstants.weeklyProductId => '週訂閱',
+      AppConstants.yearlyProductId => '年訂閱',
+      _ => plan.product.title,
     };
   }
 
-  static String _subtitleFor(Package package) {
-    return switch (package.packageType) {
-      PackageType.annual => '最適合長期清理與壓縮照片影片',
-      PackageType.weekly => '短期整理相簿時使用',
-      PackageType.monthly => '每月整理手機空間',
-      _ => package.storeProduct.identifier,
+  static String _subtitleFor(_PlanOption plan) {
+    return switch (plan.product.identifier) {
+      AppConstants.yearlyProductId => '最適合長期清理與壓縮照片影片',
+      AppConstants.weeklyProductId => '短期整理相簿時使用',
+      _ => plan.product.identifier,
     };
   }
 
@@ -310,6 +299,13 @@ class _PaywallViewState extends State<PaywallView> {
     _PaywallFeature(Icons.lock, '私密空間保護重要照片', AppTheme.success),
     _PaywallFeature(Icons.swipe, '滑動式快速清理體驗', Colors.teal),
   ];
+}
+
+class _PlanOption {
+  final StoreProduct product;
+  final Package? package;
+
+  const _PlanOption({required this.product, this.package});
 }
 
 class _PaywallFeature {
@@ -369,7 +365,7 @@ class _EmptyPlans extends StatelessWidget {
         border: Border.all(color: Colors.grey.withValues(alpha: 0.18)),
       ),
       child: const Text(
-        '目前沒有可顯示的訂閱方案。請確認 RevenueCat 的 default offering 已加入產品。',
+        '目前沒有可顯示的訂閱方案。請確認 RevenueCat 產品 ID 與 App Store Connect 產品一致。',
         textAlign: TextAlign.center,
         style: TextStyle(color: AppTheme.textSecondary),
       ),
