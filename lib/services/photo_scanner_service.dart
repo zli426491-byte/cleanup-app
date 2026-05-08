@@ -140,10 +140,11 @@ class PhotoScannerService extends ChangeNotifier {
   static const _maxAssetsToScan = 2500;
   static const _maxScreenshotAssetsToScan = 800;
   static const _enableInlineImageAnalysis = true;
-  static const _maxImagesToAnalyze = 650;
+  static const _maxImagesToAnalyze = 1200;
+  static const _maxScreenshotsToAnalyze = 350;
   static const _thumbnailTimeout = Duration(milliseconds: 350);
   static const _assetPageTimeout = Duration(seconds: 4);
-  static const _imageAnalysisBudget = Duration(seconds: 16);
+  static const _imageAnalysisBudget = Duration(seconds: 24);
   static const _iosScreenshotMediaSubtype = 1 << 2;
 
   bool _isScanning = false;
@@ -295,10 +296,13 @@ class PhotoScannerService extends ChangeNotifier {
 
       if (_enableInlineImageAnalysis) {
         final analysisIndexes = <int>[];
+        var screenshotAnalysisCount = 0;
         for (var i = 0; i < photoAssets.length; i++) {
           if (photoAssets[i].type == AssetType.image &&
               photoAssets[i].isScreenshot) {
             analysisIndexes.add(i);
+            screenshotAnalysisCount++;
+            if (screenshotAnalysisCount >= _maxScreenshotsToAnalyze) break;
             if (analysisIndexes.length >= _maxImagesToAnalyze) break;
           }
         }
@@ -543,11 +547,11 @@ class PhotoScannerService extends ChangeNotifier {
 
     for (var y = 1; y < resized.height - 1; y++) {
       for (var x = 1; x < resized.width - 1; x++) {
-        final center = resized.getPixel(x, y).luminance;
-        final top = resized.getPixel(x, y - 1).luminance;
-        final bottom = resized.getPixel(x, y + 1).luminance;
-        final left = resized.getPixel(x - 1, y).luminance;
-        final right = resized.getPixel(x + 1, y).luminance;
+        final center = resized.getPixel(x, y).luminanceNormalized;
+        final top = resized.getPixel(x, y - 1).luminanceNormalized;
+        final bottom = resized.getPixel(x, y + 1).luminanceNormalized;
+        final left = resized.getPixel(x - 1, y).luminanceNormalized;
+        final right = resized.getPixel(x + 1, y).luminanceNormalized;
         final laplacian = -4 * center + top + bottom + left + right;
 
         brightnessTotal += center;
@@ -561,10 +565,10 @@ class PhotoScannerService extends ChangeNotifier {
     final mean = count == 0 ? 0.0 : laplacianTotal / count;
     final blurScore = count == 0
         ? 999.0
-        : ((laplacianTotalSq / count) - (mean * mean)).abs() * 255 * 255;
+        : ((laplacianTotalSq / count) - (mean * mean)).abs() * 100000;
 
     final issues = <QualityIssue>[];
-    if (blurScore < 100) issues.add(QualityIssue.blurry);
+    if (blurScore < 120) issues.add(QualityIssue.blurry);
     if (brightness < 0.15) issues.add(QualityIssue.tooDark);
     if (brightness > 0.85) issues.add(QualityIssue.overexposed);
 
