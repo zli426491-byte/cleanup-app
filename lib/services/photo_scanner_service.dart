@@ -132,6 +132,11 @@ class ScanResult {
 // ---------------------------------------------------------------------------
 
 class PhotoScannerService extends ChangeNotifier {
+  static const _maxAssetsPerAlbum = 1200;
+  static const _maxImagesToAnalyze = 300;
+  static const _analysisBatchSize = 8;
+  static const _thumbnailTimeout = Duration(milliseconds: 1200);
+
   bool _isScanning = false;
   double _scanProgress = 0.0;
   ScanPhase _currentPhase = ScanPhase.idle;
@@ -175,7 +180,10 @@ class PhotoScannerService extends ChangeNotifier {
       final List<AssetEntity> rawAssets = [];
       for (final album in albums) {
         final count = await album.assetCountAsync;
-        final assets = await album.getAssetListRange(start: 0, end: count);
+        final assets = await album.getAssetListRange(
+          start: 0,
+          end: count > _maxAssetsPerAlbum ? _maxAssetsPerAlbum : count,
+        );
         rawAssets.addAll(assets);
       }
 
@@ -184,7 +192,8 @@ class PhotoScannerService extends ChangeNotifier {
       for (final a in rawAssets) {
         uniqueMap[a.id] = a;
       }
-      final uniqueAssets = uniqueMap.values.toList();
+      final uniqueAssets = uniqueMap.values.toList()
+        ..sort((a, b) => b.createDateTime.compareTo(a.createDateTime));
 
       _scanProgress = 0.10;
       notifyListeners();
@@ -212,35 +221,41 @@ class PhotoScannerService extends ChangeNotifier {
       _scanProgress = 0.20;
       notifyListeners();
 
-      // Second pass: compute hashes only for images, in batches
-      if (photoAssets.isNotEmpty) {
-        const batchSize = 50;
-        for (var i = 0; i < photoAssets.length; i += batchSize) {
-          final end = (i + batchSize > photoAssets.length)
-              ? photoAssets.length
-              : i + batchSize;
+      // Second pass: compute hashes for a bounded set of recent images.
+      // Some iCloud-backed assets can stall thumbnail reads; keep each item
+      // bounded so one problematic asset cannot freeze the whole scan at 20%.
+      final analysisIndexes = <int>[];
+      for (var i = 0; i < photoAssets.length; i++) {
+        if (photoAssets[i].type != AssetType.image) continue;
+        analysisIndexes.add(i);
+        if (analysisIndexes.length >= _maxImagesToAnalyze) break;
+      }
 
-          await Future.wait(
-            List.generate(end - i, (j) async {
-              final idx = i + j;
-              if (idx >= photoAssets.length || idx >= uniqueAssets.length) return;
-              if (photoAssets[idx].type == AssetType.image) {
-                final entity = uniqueAssets[idx];
-                final analysis = await _analyzeImage(entity);
-                if (analysis != null) {
-                  photoAssets[idx] = photoAssets[idx].copyWith(
-                    hash: analysis.hash,
-                    thumbnail: analysis.thumbnail,
-                    isBlurry: analysis.quality.isBlurry,
-                    isDark: analysis.quality.isDark,
-                    isOverexposed: analysis.quality.isOverexposed,
-                  );
-                }
-              }
-            }),
-          );
+      if (analysisIndexes.isNotEmpty) {
+        for (var offset = 0; offset < analysisIndexes.length; offset += _analysisBatchSize) {
+          final end = (offset + _analysisBatchSize > analysisIndexes.length)
+              ? analysisIndexes.length
+              : offset + _analysisBatchSize;
+          final batch = analysisIndexes.sublist(offset, end);
 
-          _scanProgress = 0.20 + 0.30 * ((i + batchSize).clamp(0, photoAssets.length) / photoAssets.length);
+          await Future.wait(batch.map((idx) async {
+            final entity = uniqueAssets[idx];
+            final analysis = await _analyzeImage(entity).timeout(
+              _thumbnailTimeout,
+              onTimeout: () => null,
+            );
+            if (analysis == null) return;
+
+            photoAssets[idx] = photoAssets[idx].copyWith(
+              hash: analysis.hash,
+              thumbnail: analysis.thumbnail,
+              isBlurry: analysis.quality.isBlurry,
+              isDark: analysis.quality.isDark,
+              isOverexposed: analysis.quality.isOverexposed,
+            );
+          }));
+
+          _scanProgress = 0.20 + 0.30 * (end / analysisIndexes.length);
           notifyListeners();
           await Future.delayed(Duration.zero);
         }

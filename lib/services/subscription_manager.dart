@@ -104,17 +104,23 @@ class SubscriptionManager extends ChangeNotifier {
 
     try {
       final offerings = await Purchases.getOfferings();
-      final current = offerings.current;
+      final current = offerings.current ??
+          (offerings.all.isNotEmpty ? offerings.all.values.first : null);
       if (current != null) {
         _availablePackages = current.availablePackages;
+        if (_availablePackages.isEmpty) {
+          _statusMessage = 'RevenueCat Offering 沒有可購買方案，請確認 weekly/yearly 已加入 default offering。';
+        } else {
+          _statusMessage = '';
+        }
         debugPrint('SubscriptionManager: loaded ${_availablePackages.length} packages');
       } else {
         _availablePackages = [];
-        _statusMessage = '找不到可購買的訂閱方案，請檢查 RevenueCat Offering。';
+        _statusMessage = '找不到 RevenueCat Offering，請確認 default offering 已設為 Current。';
       }
     } catch (e) {
       debugPrint('SubscriptionManager.loadProducts error: $e');
-      _statusMessage = '訂閱方案載入失敗，請稍後再試。';
+      _statusMessage = '訂閱方案載入失敗，請確認 RevenueCat 產品已綁定 App Store Connect 的 weekly/yearly。';
     } finally {
       _isLoading = false;
       notifyListeners();
