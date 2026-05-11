@@ -7,7 +7,7 @@ class SubscriptionManager extends ChangeNotifier {
   // RevenueCat public SDK keys are intended to be embedded in client apps.
   // CI can still override them with --dart-define when needed.
   static const _defaultRevenueCatIosApiKey =
-      'appl_nttjJtbdotLvIoxrLhIiTpMtivA';
+      'appl_nttijTbdotLvIoxrLhTiTPmTivA';
   static const _revenueCatApiKeyAndroid = String.fromEnvironment(
     'REVENUECAT_ANDROID_API_KEY',
     defaultValue: 'YOUR_REVENUECAT_ANDROID_API_KEY',
