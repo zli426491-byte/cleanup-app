@@ -26,6 +26,9 @@ void main() {
   Completer<Map<String, Object>>? pageResponse;
   late Map<String, Map<String, Object>> nativeResults;
   late List<String> resourceRequests;
+  late List<List<String>> previewRequests;
+  Completer<Map<String, Object>>? previewResponse;
+  Future<Map<String, Object>> Function(List<String>)? previewHandler;
   late List<Map> nativeCancellations;
 
   Map<String, Object> photo(
@@ -86,6 +89,9 @@ void main() {
     pageResponse = null;
     nativeResults = {};
     resourceRequests = [];
+    previewRequests = [];
+    previewResponse = null;
+    previewHandler = null;
     nativeCancellations = [];
     messenger.setMockMethodCallHandler(resources, (call) async {
       final args = call.arguments as Map;
@@ -93,6 +99,33 @@ void main() {
         nativeCancellations.add(args);
         return null;
       }
+      if (call.method == 'inspectPreviews') {
+        final ids = List<String>.from(args['assetIds'] as List);
+        previewRequests.add(ids);
+        if (previewResponse != null) return previewResponse!.future;
+        if (previewHandler != null) return previewHandler!(ids);
+        return {
+          'assets': ids
+              .map(
+                (id) => {
+                  'assetId': id,
+                  'status': nativeResults[id]?['thumbnail'] != null
+                      ? 'local'
+                      : 'not_local',
+                  if (nativeResults[id]?['thumbnail'] != null)
+                    'thumbnail': nativeResults[id]!['thumbnail']!,
+                  if (nativeResults[id]?['thumbnailDegraded'] != null)
+                    'thumbnailDegraded':
+                        nativeResults[id]!['thumbnailDegraded']!,
+                },
+              )
+              .toList(),
+        };
+      }
+      expectSync(call.method, 'inspectAsset');
+      expectSync(args['includeThumbnail'], false);
+      expectSync(args['resourceTimeoutMs'], 4000);
+      expectSync(args['maxBytes'], 64 * 1024 * 1024);
       final id = args['assetId'] as String;
       resourceRequests.add(id);
       if (resourceResponse != null) return resourceResponse!.future;
@@ -167,7 +200,8 @@ void main() {
       expect(scanner.availableAssetCount, 5007);
       expect(rangeEnds.last, 5007);
       expect(scanner.scannedAssetCount, 5007);
-      expect(resourceRequests, hasLength(5007));
+      expect(previewRequests.expand((ids) => ids), hasLength(5007));
+      expect(resourceRequests, isEmpty);
       expect(scanner.pendingAnalysisCount, 5007);
     },
   );
@@ -241,6 +275,7 @@ void main() {
         'second': inspected('same-all-resource-content'),
       };
       await scanner.startFullScan();
+      await scanner.verifyOriginals();
       final group = scanner.scanResult.duplicateGroups.single;
       expect(
         group.assets.map((asset) => asset.id),
@@ -264,6 +299,7 @@ void main() {
         'second': inspected('original-B', thumbnail: preview(alternate: true)),
       };
       await scanner.startFullScan();
+      await scanner.verifyOriginals();
       expect(scanner.scanResult.duplicateGroups, isEmpty);
       expect(scanner.scanResult.similarGroups, isEmpty);
     },
@@ -289,15 +325,17 @@ void main() {
         'second': {...inspected('same'), 'sizeKnown': false},
       };
       await scanner.startFullScan();
+      await scanner.verifyOriginals();
       expect(
         scanner.scanResult.allAssets.every(
           (asset) => !asset.sizeKnown && asset.size == 0 && asset.hash == null,
         ),
         isTrue,
       );
-      expect(scanner.pendingAnalysisCount, 2);
+      expect(scanner.pendingAnalysisCount, 0);
+      expect(scanner.pendingResourceCount, 2);
       expect(scanner.scanResult.duplicateGroups, isEmpty);
-      expect(scanner.scanResult.similarGroups, isEmpty);
+      expect(scanner.scanResult.similarGroups, hasLength(1));
       expect(scanner.scanResult.largeFiles, isEmpty);
     },
   );
@@ -311,6 +349,7 @@ void main() {
         'first': inspected('image', size: 900000),
       };
       await scanner.startFullScan();
+      await scanner.verifyOriginals();
       expect(scanner.scanResult.largeFiles.single.id, 'video');
       expect(
         scanner.scanResult.allAssets
@@ -359,7 +398,8 @@ void main() {
     'native analysis cancelled before a new run cannot overwrite its result',
     () async {
       resourceResponse = Completer<Map<String, Object>>();
-      final scan = scanner.startFullScan();
+      await scanner.startFullScan();
+      final scan = scanner.verifyOriginals();
       while (resourceRequests.isEmpty) {
         await Future<void>.delayed(Duration.zero);
       }
@@ -376,6 +416,7 @@ void main() {
         'second': inspected('new-second', size: 444),
       };
       await scanner.resumeScan();
+      await scanner.verifyOriginals();
       oldResponse.complete(inspected('old-late', size: 9999999));
       await Future<void>.delayed(Duration.zero);
       expect(
@@ -414,6 +455,7 @@ void main() {
         'second': inspected('second'),
       };
       await scanner.startFullScan();
+      await scanner.verifyOriginals();
       resourceRequests.clear();
       library = [
         {...photo('first'), 'modifiedDt': 1900000000},
@@ -421,6 +463,7 @@ void main() {
       ];
       nativeResults['first'] = inspected('edited-first');
       await scanner.resumeScan();
+      await scanner.verifyOriginals();
       expect(resourceRequests, ['first']);
       expect(
         scanner.scanResult.allAssets
@@ -436,7 +479,8 @@ void main() {
     () async {
       final subject = PhotoScannerService(supportsNativeResources: true);
       resourceResponse = Completer<Map<String, Object>>();
-      final scan = subject.startFullScan();
+      await subject.startFullScan();
+      final scan = subject.verifyOriginals();
       while (resourceRequests.isEmpty) {
         await Future<void>.delayed(Duration.zero);
       }
@@ -538,23 +582,28 @@ void main() {
   );
 
   testWidgets(
-    'a local resource operation can take over ten seconds but has a bounded timeout',
+    'explicit original verification times out promptly and ignores late streams',
     (tester) async {
       library = [photo('video', type: 2)];
+      final indexed = scanner.startFullScan();
+      for (var frame = 0; frame < 30 && scanner.isScanning; frame++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      await indexed;
+      expect(resourceRequests, isEmpty);
       resourceResponse = Completer<Map<String, Object>>();
-      final scan = scanner.startFullScan();
+      final verification = scanner.verifyOriginals();
       for (var frame = 0; frame < 30 && resourceRequests.isEmpty; frame++) {
         await tester.pump(const Duration(milliseconds: 10));
       }
       expect(resourceRequests, ['video']);
-      await tester.pump(const Duration(seconds: 15));
-      expect(scanner.isScanning, isTrue);
-      await tester.pump(const Duration(seconds: 51));
+      expect(scanner.isVerifyingOriginals, isTrue);
+      await tester.pump(const Duration(seconds: 6));
       for (var frame = 0; frame < 20 && scanner.isScanning; frame++) {
         await tester.pump(const Duration(milliseconds: 10));
       }
-      await scan;
-      expect(scanner.pendingAnalysisCount, 1);
+      await verification;
+      expect(scanner.pendingResourceCount, 1);
       expect(scanner.scanResult.allAssets.single.sizeKnown, isFalse);
       expect(
         nativeCancellations.any((args) => args.containsKey('token')),
@@ -595,6 +644,301 @@ void main() {
         scanner.scanResult.allAssets.map((asset) => asset.id),
         isNot(contains('late-page')),
       );
+    },
+  );
+
+  test(
+    '42,683 assets are fully indexed with amortized snapshots and no original reads',
+    () async {
+      library = List.generate(42683, (i) => photo('asset-$i'));
+      var snapshots = 0;
+      var previous = scanner.scanResult;
+      scanner.addListener(() {
+        if (!identical(previous, scanner.scanResult)) {
+          snapshots++;
+          previous = scanner.scanResult;
+        }
+        // Repeated progress getter reads must not traverse the library.
+        expectSync(scanner.totalPhotoCount, scanner.scannedAssetCount);
+      });
+      final clock = Stopwatch()..start();
+      await scanner.startFullScan();
+      expect(scanner.scannedAssetCount, 42683);
+      expect(rangeEnds.last, 42683);
+      expect(scanner.attemptedAnalysisCount, 42683);
+      expect(scanner.cloudPendingCount, 42683);
+      expect(scanner.pendingResourceCount, 42683);
+      expect(scanner.attemptedResourceCount, 0);
+      expect(resourceRequests, isEmpty);
+      expect(
+        scanner.scanResult.allAssets.every((a) => a.thumbnail == null),
+        isTrue,
+      );
+      expect(
+        snapshots,
+        lessThan(100),
+        reason: 'No whole-library copy per eight assets.',
+      );
+      expect(clock.elapsed, lessThan(const Duration(seconds: 15)));
+    },
+  );
+
+  test(
+    'slow first original cannot block usable local previews in the first batch',
+    () async {
+      library = [photo('slow'), photo('local-a'), photo('local-b')];
+      resourceResponse = Completer<Map<String, Object>>();
+      final bytes = preview();
+      previewHandler = (ids) async {
+        await Future<void>.delayed(const Duration(milliseconds: 1500));
+        return {
+          'assets': ids
+              .map(
+                (id) => {
+                  'assetId': id,
+                  'status': id == 'slow' ? 'timeout' : 'local',
+                  if (id != 'slow') 'thumbnail': bytes,
+                },
+              )
+              .toList(),
+        };
+      };
+      final clock = Stopwatch()..start();
+      await scanner.startFullScan();
+      expect(clock.elapsed, lessThan(const Duration(seconds: 3)));
+      expect(scanner.analyzedAssetCount, 2);
+      expect(scanner.attemptedAnalysisCount, 3);
+      expect(scanner.pendingAnalysisCount, 1);
+      expect(scanner.scanResult.similarGroups.single.assets, hasLength(2));
+      expect(scanner.verifiedOriginalCount, 0);
+      expect(resourceRequests, isEmpty);
+      resourceResponse!.complete(inspected('unrequested-original'));
+    },
+  );
+
+  test(
+    'degraded thumbnails form review candidates without quality or best suggestions',
+    () async {
+      nativeResults = {
+        'first': {...inspected('a'), 'thumbnailDegraded': true},
+        'second': {...inspected('b'), 'thumbnailDegraded': true},
+      };
+      await scanner.startFullScan();
+      final group = scanner.scanResult.similarGroups.single;
+      expect(group.bestAssetId, isNull);
+      expect(group.bestReason, isNull);
+      expect(
+        group.assets.every((a) => a.previewDegraded && a.qualityScore == 0),
+        isTrue,
+      );
+      expect(scanner.scanResult.blurryPhotos, isEmpty);
+      expect(scanner.scanResult.darkPhotos, isEmpty);
+    },
+  );
+
+  testWidgets(
+    '42k timeout-heavy scan has a 30-second round and resumes at the untouched tail',
+    (tester) async {
+      library = List.generate(42683, (i) => photo('asset-$i'));
+      previewHandler = (ids) async {
+        await Future<void>.delayed(const Duration(seconds: 2));
+        return {
+          'assets': ids
+              .map((id) => {'assetId': id, 'status': 'timeout'})
+              .toList(),
+        };
+      };
+      final scan = scanner.startFullScan();
+      for (var i = 0; i < 500 && previewRequests.isEmpty; i++) {
+        await tester.pump(const Duration(milliseconds: 1));
+      }
+      expect(scanner.scannedAssetCount, 42683);
+      expect(previewRequests, hasLength(1));
+      await tester.pump(const Duration(seconds: 1));
+      expect(scanner.currentWaitSeconds, greaterThanOrEqualTo(1));
+      expect(scanner.attemptedAnalysisCount, 0);
+      for (var i = 0; i < 17 && scanner.isScanning; i++) {
+        await tester.pump(const Duration(seconds: 2));
+      }
+      await scan;
+      expect(scanner.isScanning, isFalse);
+      expect(scanner.hasCompletedScan, isFalse);
+      expect(scanner.lastError, contains('30 秒'));
+      final processed = scanner.attemptedAnalysisCount;
+      expect(processed, inInclusiveRange(8, 120));
+      expect(scanner.pendingAnalysisCount, 42683);
+      expect(resourceRequests, isEmpty);
+      // Drain any obsolete mock completion; it cannot change counters or groups.
+      await tester.pump(const Duration(seconds: 3));
+      expect(scanner.attemptedAnalysisCount, processed);
+      final before = previewRequests.length;
+      previewResponse = Completer<Map<String, Object>>();
+      final resumed = scanner.resumeScan();
+      for (var i = 0; i < 500 && previewRequests.length == before; i++) {
+        await tester.pump(const Duration(milliseconds: 1));
+      }
+      expect(previewRequests.last.first, 'asset-$processed');
+      scanner.cancelScan();
+      await resumed;
+      final countAfterCancel = scanner.attemptedAnalysisCount;
+      previewResponse!.complete({
+        'assets': [
+          {
+            'assetId': 'asset-$processed',
+            'status': 'local',
+            'thumbnail': preview(),
+          },
+        ],
+      });
+      await tester.pump();
+      expect(scanner.attemptedAnalysisCount, countAfterCancel);
+      expect(scanner.analyzedAssetCount, 0);
+    },
+  );
+
+  testWidgets(
+    'missing native preview callbacks time out per batch and still obey the total budget',
+    (tester) async {
+      library = List.generate(400, (i) => photo('asset-$i'));
+      previewResponse = Completer<Map<String, Object>>();
+      final scan = scanner.startFullScan();
+      for (var i = 0; i < 30 && previewRequests.isEmpty; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      for (var i = 0; i < 14 && scanner.isScanning; i++) {
+        await tester.pump(const Duration(milliseconds: 2500));
+      }
+      await scan;
+      expect(scanner.isScanning, isFalse);
+      expect(scanner.attemptedAnalysisCount, greaterThan(8));
+      expect(scanner.attemptedAnalysisCount, lessThan(100));
+      expect(scanner.currentOperation, isNull);
+      expect(
+        nativeCancellations.where((c) => c.containsKey('token')),
+        isNotEmpty,
+      );
+      final count = scanner.attemptedAnalysisCount;
+      previewResponse!.complete({
+        'assets': [
+          {'assetId': 'asset-0', 'status': 'local', 'thumbnail': preview()},
+        ],
+      });
+      await tester.pump();
+      expect(scanner.attemptedAnalysisCount, count);
+      expect(scanner.analyzedAssetCount, 0);
+    },
+  );
+
+  testWidgets(
+    'original verification has a separate 60-second budget and retains attempted failures',
+    (tester) async {
+      library = List.generate(400, (i) => photo('asset-$i', type: 2));
+      final initial = scanner.startFullScan();
+      for (var i = 0; i < 30 && scanner.isScanning; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      await initial;
+      resourceResponse = Completer<Map<String, Object>>();
+      final verification = scanner.verifyOriginals();
+      for (var i = 0; i < 30 && resourceRequests.isEmpty; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      for (var i = 0; i < 14 && scanner.isScanning; i++) {
+        await tester.pump(const Duration(seconds: 5));
+      }
+      await verification;
+      expect(scanner.lastError, contains('60 秒'));
+      final attempted = scanner.attemptedResourceCount;
+      expect(attempted, inInclusiveRange(1, 12));
+      expect(scanner.verifiedOriginalCount, 0);
+      expect(scanner.pendingResourceCount, 400);
+      final calls = resourceRequests.length;
+      final resumed = scanner.verifyOriginals();
+      for (var i = 0; i < 30 && resourceRequests.length == calls; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      expect(resourceRequests.last, 'asset-$attempted');
+      scanner.cancelScan();
+      await resumed;
+      resourceResponse!.complete(inspected('late-original'));
+      await tester.pump();
+      expect(scanner.verifiedOriginalCount, 0);
+    },
+  );
+
+  test(
+    'interrupted resume preserves the hidden verified checkpoint beyond its visible index',
+    () async {
+      library = List.generate(250, (i) => photo('video-$i', type: 2));
+      nativeResults = {
+        for (var i = 0; i < 250; i++)
+          'video-$i': {'complete': true, 'sizeKnown': true, 'size': 1000 + i},
+      };
+      await scanner.startFullScan();
+      await scanner.verifyOriginals();
+      expect(scanner.verifiedOriginalCount, 250);
+      var blocked = false;
+      scanner.addListener(() {
+        if (!blocked &&
+            scanner.isScanning &&
+            scanner.scannedAssetCount == 120) {
+          blocked = true;
+          pageResponse = Completer<Map<String, Object>>();
+        }
+      });
+      final oldPageCount = rangeEnds.length;
+      final partial = scanner.resumeScan();
+      while (rangeEnds.length < oldPageCount + 2) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      scanner.cancelScan();
+      await partial;
+      expect(scanner.scannedAssetCount, 120);
+      expect(scanner.verifiedOriginalCount, 120);
+      final obsolete = pageResponse!;
+      pageResponse = null;
+      resourceRequests.clear();
+      await scanner.verifyOriginals();
+      expect(scanner.scannedAssetCount, 250);
+      expect(scanner.verifiedOriginalCount, 250);
+      expect(
+        resourceRequests,
+        isEmpty,
+        reason: 'The unindexed tail retains its hidden checkpoint.',
+      );
+      obsolete.complete({
+        'data': [photo('obsolete')],
+      });
+      await Future<void>.delayed(Duration.zero);
+      expect(scanner.scannedAssetCount, 250);
+    },
+  );
+
+  test(
+    'original pending reason cannot overwrite the preview cloud status',
+    () async {
+      nativeResults = {
+        'first': {
+          'complete': false,
+          'sizeKnown': false,
+          'size': 0,
+          'pendingReason': 'byte_budget_exceeded',
+          'partialBytes': 67108864,
+        },
+        'second': inspected('local'),
+      };
+      await scanner.startFullScan();
+      expect(scanner.cloudPendingCount, 1);
+      await scanner.verifyOriginals();
+      final first = scanner.scanResult.allAssets.firstWhere(
+        (a) => a.id == 'first',
+      );
+      expect(first.pendingReason, 'not_local');
+      expect(first.resourcePendingReason, 'byte_budget_exceeded');
+      expect(first.sizeKnown, isFalse);
+      expect(first.size, 0);
+      expect(scanner.cloudPendingCount, 1);
+      expect(scanner.attemptedResourceCount, 2);
     },
   );
 

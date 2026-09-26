@@ -53,6 +53,22 @@ class _Scanner extends PhotoScannerService {
   @override
   int get pendingAnalysisCount => 200;
   @override
+  int get attemptedAnalysisCount => 1000;
+  @override
+  int get totalPhotoCount => 1200;
+  @override
+  int get attemptedResourceCount => 900;
+  @override
+  int get verifiedOriginalCount => 900;
+  @override
+  int get cloudPendingCount => 200;
+  @override
+  String? get currentOperation => null;
+  @override
+  int get currentWaitSeconds => 0;
+  @override
+  bool get isVerifyingOriginals => false;
+  @override
   double get scanProgress => .2;
   @override
   ScanPhase get currentPhase => ScanPhase.computingHashes;
@@ -197,9 +213,12 @@ void main() {
       final scanner = _Scanner(scanning: true);
       await _mount(tester, scanner, const SmartCleanView());
       expect(find.text('已讀取 1200 / 6000 個項目'), findsOneWidget);
-      expect(find.text('內容分析已完成 1000 個 · 待處理 200 個'), findsOneWidget);
-      expect(find.textContaining('900'), findsNothing);
-      await tester.tap(find.text('取消掃描並保留進度'));
+      expect(find.text('照片畫面已處理 1000 / 1200 張'), findsOneWidget);
+      expect(find.text('視覺分析成功 1000 個'), findsOneWidget);
+      expect(find.text('原始素材已驗證 900 個'), findsOneWidget);
+      expect(find.text('待下載 200 個'), findsOneWidget);
+      expect(find.textContaining('最多讀取 900'), findsNothing);
+      await tester.tap(find.byTooltip('取消掃描並保留進度'));
       await tester.pump();
       expect(scanner.cancelled, isTrue);
       await tester.tap(find.text('繼續掃描／重試待處理項目'));

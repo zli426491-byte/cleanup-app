@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:isolate';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -32,9 +33,14 @@ class PhotoAsset {
   final int size; // bytes
   final bool sizeKnown;
   final bool analysisPending;
+  final bool analysisAttempted;
+  final bool resourceAnalysisPending;
+  final bool resourceAnalysisAttempted;
+  final bool previewDegraded;
   final double? qualityScore;
   final List<String> qualityReasons;
   final String? pendingReason;
+  final String? resourcePendingReason;
   final DateTime createDate;
   final AssetType type;
   final Uint8List? thumbnail;
@@ -52,9 +58,14 @@ class PhotoAsset {
     required this.size,
     this.sizeKnown = false,
     this.analysisPending = true,
+    this.analysisAttempted = false,
+    this.resourceAnalysisPending = true,
+    this.resourceAnalysisAttempted = false,
+    this.previewDegraded = false,
     this.qualityScore,
     this.qualityReasons = const [],
     this.pendingReason,
+    this.resourcePendingReason,
     required this.createDate,
     required this.type,
     this.thumbnail,
@@ -67,12 +78,18 @@ class PhotoAsset {
 
   PhotoAsset copyWith({
     bool clearHash = false,
+    bool clearResourcePendingReason = false,
     int? size,
     bool? sizeKnown,
     bool? analysisPending,
+    bool? analysisAttempted,
+    bool? resourceAnalysisPending,
+    bool? resourceAnalysisAttempted,
+    bool? previewDegraded,
     double? qualityScore,
     List<String>? qualityReasons,
     String? pendingReason,
+    String? resourcePendingReason,
     String? hash,
     Uint8List? thumbnail,
     bool? isScreenshot,
@@ -88,9 +105,18 @@ class PhotoAsset {
       size: size ?? this.size,
       sizeKnown: sizeKnown ?? this.sizeKnown,
       analysisPending: analysisPending ?? this.analysisPending,
+      analysisAttempted: analysisAttempted ?? this.analysisAttempted,
+      resourceAnalysisPending:
+          resourceAnalysisPending ?? this.resourceAnalysisPending,
+      resourceAnalysisAttempted:
+          resourceAnalysisAttempted ?? this.resourceAnalysisAttempted,
+      previewDegraded: previewDegraded ?? this.previewDegraded,
       qualityScore: qualityScore ?? this.qualityScore,
       qualityReasons: qualityReasons ?? this.qualityReasons,
       pendingReason: pendingReason ?? this.pendingReason,
+      resourcePendingReason: clearResourcePendingReason
+          ? null
+          : resourcePendingReason ?? this.resourcePendingReason,
       createDate: createDate,
       type: type,
       thumbnail: thumbnail ?? this.thumbnail,
@@ -178,17 +204,49 @@ Map<String, Map<String, Object>> _analyzeThumbnailBatch(
   Map<String, Uint8List> bytes,
 ) => bytes.map((id, data) => MapEntry(id, analyzePhotoThumbnail(data).toMap()));
 
+void _analysisWorker(List<Object> request) {
+  final reply = request[0] as SendPort;
+  try {
+    reply.send([
+      true,
+      Function.apply(request[1] as Function, [request[2]]),
+    ]);
+  } catch (error) {
+    reply.send([false, error.toString()]);
+  }
+}
+
 class _ScanCancelled implements Exception {}
+
+class _RoundBudgetExpired implements Exception {}
 
 class PhotoScannerService extends ChangeNotifier {
   static const _assetPageSize = 120;
   static const _pageTimeout = Duration(seconds: 30);
-  static const _analysisTimeout = Duration(seconds: 65);
+  static const _previewTimeout = Duration(milliseconds: 2500);
+  static const _previewRoundBudget = Duration(seconds: 30);
+  static const _resourceRoundBudget = Duration(seconds: 60);
+  static const _resourceTimeout = Duration(seconds: 5);
   static const _resourceChannel = MethodChannel('cleanup/photo_resources');
   static int _instances = 0;
   final String _instanceId = 'scanner-${++_instances}';
   bool _isScanning = false;
   bool _isDeleting = false;
+  bool _isVerifyingOriginals = false;
+  int _analyzedCount = 0;
+  int _pendingCount = 0;
+  int _attemptedCount = 0;
+  int _cloudCount = 0;
+  int _verifiedCount = 0;
+  int _pendingResourceCount = 0;
+  int _attemptedResourceCount = 0;
+  String? _currentOperation;
+  int _currentWaitSeconds = 0;
+  Timer? _heartbeat;
+  Timer? _budgetTimer;
+  bool _budgetReached = false;
+  void Function(Object)? _abortWait;
+  final Stopwatch _snapshotClock = Stopwatch();
   bool _disposed = false;
   bool _wasCancelled = false;
   bool _nativeAvailable;
@@ -202,10 +260,18 @@ class PhotoScannerService extends ChangeNotifier {
   ScanPhase _currentPhase = ScanPhase.idle;
   ScanResult _scanResult = ScanResult.empty;
   AssetPathEntity? _album;
-  Completer<void>? _cancellation;
+
   final Map<String, AssetEntity> _entities = {};
   final Map<String, PhotoAsset> _assets = {};
   final Map<String, ContentSignature> _signatures = {};
+  // Checkpoints survive an interrupted re-index, but are never displayed until
+  // the current permission scope and modification dates have been revalidated.
+  final Map<String, AssetEntity> _checkpointEntities = {};
+  final Map<String, PhotoAsset> _checkpointAssets = {};
+  final Map<String, ContentSignature> _checkpointSignatures = {};
+  List<String>? _orderedIds;
+  List<DuplicateGroup> _duplicateGroups = [];
+  List<SimilarGroup> _similarGroups = [];
 
   PhotoScannerService({bool? supportsNativeResources})
     : _nativeAvailable =
@@ -222,10 +288,17 @@ class PhotoScannerService extends ChangeNotifier {
   String? get lastError => _lastError;
   int? get availableAssetCount => _availableAssetCount;
   int get scannedAssetCount => _assets.length;
-  int get analyzedAssetCount =>
-      _assets.values.where((asset) => !asset.analysisPending).length;
-  int get pendingAnalysisCount =>
-      _assets.values.where((asset) => asset.analysisPending).length;
+  int get analyzedAssetCount => _analyzedCount;
+  int get pendingAnalysisCount => _pendingCount;
+  int get attemptedAnalysisCount => _attemptedCount;
+  int get cloudPendingCount => _cloudCount;
+  int get verifiedOriginalCount => _verifiedCount;
+  int get pendingResourceCount => _pendingResourceCount;
+  int get attemptedResourceCount => _attemptedResourceCount;
+  int get totalPhotoCount => _analyzedCount + _pendingCount;
+  bool get isVerifyingOriginals => _isVerifyingOriginals;
+  String? get currentOperation => _currentOperation;
+  int get currentWaitSeconds => _currentWaitSeconds;
   String? get scanNotice {
     final notices = <String>[
       ?_lastError,
@@ -235,8 +308,10 @@ class PhotoScannerService extends ChangeNotifier {
         '已讀取 $scannedAssetCount / $_availableAssetCount 個可存取項目。',
       if (_hasLimitedAccess) '僅整理你允許存取的照片，未讀取整個相簿。',
       if (!_isScanning && pendingAnalysisCount > 0)
-        '$pendingAnalysisCount 個項目仍待分析；雲端原始素材不會自動下載，可在素材存於本機後繼續掃描。',
+        '$pendingAnalysisCount 張照片仍待視覺分析；繼續掃描會先處理尚未嘗試的照片，不自動下載雲端素材。',
       if (!_nativeAvailable) '此裝置尚未提供本機原始素材分析，未確認容量與重複內容。',
+      if (!_isScanning && _nativeAvailable && pendingResourceCount > 0)
+        '素材容量與完全重複另需驗證本機原始素材；大型或雲端素材可能仍待驗證，未驗證項目不估算容量。',
     ];
     return notices.isEmpty ? null : notices.join('\n');
   }
@@ -244,13 +319,18 @@ class PhotoScannerService extends ChangeNotifier {
   Future<void> startFullScan() => _scan(resume: false);
   Future<void> resumeScan() => _scan(resume: true);
 
+  /// An explicit, bounded local-resource pass; never runs as part of a preview scan.
+  /// Re-index first so revoked access or same-ID edits cannot reuse old hashes.
+  Future<void> verifyOriginals() => _scan(resume: true, originals: true);
+
   void cancelScan() {
     if (!_isScanning || _disposed) return;
     final prefix = '$_instanceId:$_scanRunId:';
     _scanRunId++;
-    _cancellation?.complete();
-    _cancellation = null;
+    _abortWait?.call(_ScanCancelled());
+    _abortWait = null;
     _isScanning = false;
+    _stopRound();
     _wasCancelled = true;
     _hasCompletedScan = false;
     _currentPhase = ScanPhase.idle;
@@ -258,33 +338,44 @@ class PhotoScannerService extends ChangeNotifier {
     _cancelNative(prefix);
   }
 
-  Future<void> _scan({required bool resume}) async {
+  Future<void> _scan({required bool resume, bool originals = false}) async {
     if (_disposed || _isScanning || _isDeleting) return;
     final runId = ++_scanRunId;
-    _cancellation = Completer<void>();
+
     _isScanning = true;
+    _isVerifyingOriginals = originals;
+    _setOperation('讀取相簿索引');
     _wasCancelled = false;
     _hasCompletedScan = false;
     _lastError = null;
     _currentPhase = ScanPhase.fetchingAssets;
     final priorAssets = resume
-        ? Map<String, PhotoAsset>.from(_assets)
+        ? Map<String, PhotoAsset>.from(_checkpointAssets)
         : <String, PhotoAsset>{};
     final priorEntities = resume
-        ? Map<String, AssetEntity>.from(_entities)
+        ? Map<String, AssetEntity>.from(_checkpointEntities)
         : <String, AssetEntity>{};
     final priorSignatures = resume
-        ? Map<String, ContentSignature>.from(_signatures)
+        ? Map<String, ContentSignature>.from(_checkpointSignatures)
         : <String, ContentSignature>{};
+    if (!resume) {
+      _checkpointAssets.clear();
+      _checkpointEntities.clear();
+      _checkpointSignatures.clear();
+    }
+    _orderedIds = null;
     // Re-index on resume: the accessible set and edits may change without the
     // permission enum or total count changing. Never display revoked assets.
     _assets.clear();
+    _resetCounters();
     _entities.clear();
     _signatures.clear();
     _album = null;
     _nextAssetOffset = 0;
     _availableAssetCount = null;
     _scanResult = ScanResult.empty;
+    _duplicateGroups = [];
+    _similarGroups = [];
     _scanProgress = 0;
     notifyListeners();
     AnalyticsManager.instance.track(AnalyticsEvent.scanStarted.name);
@@ -297,6 +388,9 @@ class PhotoScannerService extends ChangeNotifier {
       _checkRun(runId);
       _hasLimitedAccess = permission.isLimited;
       if (!permission.hasAccess) {
+        _checkpointAssets.clear();
+        _checkpointEntities.clear();
+        _checkpointSignatures.clear();
         _assets.clear();
         _entities.clear();
         _signatures.clear();
@@ -304,7 +398,7 @@ class PhotoScannerService extends ChangeNotifier {
         _album = null;
         _nextAssetOffset = 0;
         _lastError = '尚未取得相簿權限，請在設定中允許存取照片後重試。';
-        _finish(runId, completed: false);
+        await _finish(runId, completed: false, refresh: false);
         return;
       }
       if (_album == null) {
@@ -321,8 +415,11 @@ class PhotoScannerService extends ChangeNotifier {
         );
         _checkRun(runId);
         if (albums.isEmpty) {
+          _checkpointAssets.clear();
+          _checkpointEntities.clear();
+          _checkpointSignatures.clear();
           _availableAssetCount = 0;
-          _finish(runId);
+          await _finish(runId, refresh: false);
           return;
         }
         _album = albums.firstWhere(
@@ -350,6 +447,7 @@ class PhotoScannerService extends ChangeNotifier {
         }
         for (final entity in page) {
           _entities[entity.id] = entity;
+          _checkpointEntities[entity.id] = entity;
           final previous = priorEntities[entity.id];
           if (previous != null &&
               previous.modifiedDateTime == entity.modifiedDateTime &&
@@ -357,148 +455,60 @@ class PhotoScannerService extends ChangeNotifier {
               previous.height == entity.height &&
               previous.type == entity.type) {
             final cached = priorAssets[entity.id];
-            if (cached != null) _assets[entity.id] = cached;
+            if (cached != null) _setAsset(cached);
             final signature = priorSignatures[entity.id];
             if (signature != null) _signatures[entity.id] = signature;
           }
-          _assets.putIfAbsent(
-            entity.id,
-            () => PhotoAsset(
-              id: entity.id,
-              title: entity.title,
-              width: entity.width,
-              height: entity.height,
-              size: 0,
-              createDate: entity.createDateTime,
-              type: entity.type,
-              isScreenshot: _isScreenshot(entity),
-            ),
-          );
+          if (!_assets.containsKey(entity.id)) {
+            _checkpointSignatures.remove(entity.id);
+            _setAsset(
+              PhotoAsset(
+                id: entity.id,
+                title: entity.title,
+                width: entity.width,
+                height: entity.height,
+                size: 0,
+                analysisPending: entity.type == AssetType.image,
+                createDate: entity.createDateTime,
+                type: entity.type,
+                isScreenshot: _isScreenshot(entity),
+              ),
+            );
+          }
         }
         _nextAssetOffset = end;
         _scanProgress = count == 0 ? 0.45 : 0.45 * end / count;
-        _publish();
-        await Future<void>.delayed(Duration.zero);
-        _checkRun(runId);
-      }
-      _currentPhase = ScanPhase.computingHashes;
-      final pending = _assets.values
-          .where((asset) => asset.analysisPending)
-          .map((asset) => asset.id)
-          .toList();
-      var attempted = 0;
-      for (var offset = 0; offset < pending.length; offset += 8) {
-        final batch = pending.skip(offset).take(8).toList();
-        final updates = <String, PhotoAsset>{};
-        final thumbnailBytes = <String, Uint8List>{};
-        for (final id in batch) {
-          _checkRun(runId);
-          final asset = _assets[id];
-          if (asset == null) continue;
-          final token = '$_instanceId:$runId:$id';
-          Map<dynamic, dynamic>? data;
-          if (_nativeAvailable) {
-            try {
-              data = await _awaitRun(
-                _resourceChannel
-                    .invokeMapMethod<String, dynamic>('inspectAsset', {
-                      'assetId': id,
-                      'token': token,
-                      'includeHash': asset.type == AssetType.image,
-                      'includeThumbnail': asset.type == AssetType.image,
-                    }),
-                runId,
-                timeout: _analysisTimeout,
-              );
-            } on MissingPluginException {
-              _nativeAvailable = false;
-            } on TimeoutException {
-              _cancelNative(token, exact: true);
-            } on PlatformException {
-              // Local Photos resources may be unavailable; keep them pending.
-            }
-          }
-          _checkRun(runId);
-          final complete = data?['complete'] == true;
-          final nativeSize = data?['size'];
-          final known =
-              complete &&
-              data?['sizeKnown'] == true &&
-              nativeSize is num &&
-              nativeSize > 0;
-          final nativeHash = data?['hash'];
-          final hash =
-              known &&
-                  complete &&
-                  nativeHash is String &&
-                  RegExp(r'^[a-f0-9]{64}$').hasMatch(nativeHash)
-              ? nativeHash
-              : null;
-          final thumb = data?['thumbnail'];
-          if (thumb is Uint8List && asset.type == AssetType.image) {
-            thumbnailBytes[id] = thumb;
-          }
-          updates[id] = asset.copyWith(
-            size: known ? nativeSize.toInt() : 0,
-            sizeKnown: known,
-            hash: hash,
-            clearHash: hash == null,
-            analysisPending:
-                !known || (asset.type == AssetType.image && hash == null),
-            pendingReason: data?['pendingReason'] as String?,
-          );
-          // Preserve successful resource reads even if cancellation happens
-          // before the thumbnail batch finishes. Photo quality remains pending.
-          _assets[id] = updates[id]!.copyWith(
-            analysisPending: asset.type == AssetType.image || !known,
-          );
-          attempted++;
-          _scanProgress = 0.45 + 0.50 * attempted / math.max(1, pending.length);
+        // Counters remain live on every page; large snapshots are amortized.
+        if (end == count || end == _assetPageSize || end % 960 == 0) {
+          _publish();
+        } else {
           notifyListeners();
         }
-        if (thumbnailBytes.isNotEmpty) {
-          final signatures = await _awaitRun(
-            compute(_analyzeThumbnailBatch, thumbnailBytes),
-            runId,
-            timeout: _pageTimeout,
-          );
-          _checkRun(runId);
-          for (final entry in signatures.entries) {
-            _signatures[entry.key] = ContentSignature.fromMap(entry.value);
-          }
-        }
-        _checkRun(runId);
-        for (final entry in updates.entries) {
-          final signature = _signatures[entry.key];
-          final photo = entry.value;
-          _assets[entry.key] = photo.copyWith(
-            analysisPending:
-                photo.analysisPending ||
-                (photo.type == AssetType.image && signature?.isValid != true),
-            qualityScore:
-                signature?.isValid == true && !signature!.isLowInformation
-                ? signature.qualityScore
-                : null,
-            qualityReasons: signature?.qualityReasons ?? const [],
-            isBlurry:
-                signature?.isValid == true &&
-                !signature!.isLowInformation &&
-                signature.sharpness < 0.004,
-            isDark:
-                signature?.isValid == true &&
-                !signature!.isLowInformation &&
-                signature.brightness < 0.15,
-            isOverexposed:
-                signature?.isValid == true &&
-                !signature!.isLowInformation &&
-                signature.brightness > 0.85,
-          );
-        }
-        _publish();
         await Future<void>.delayed(Duration.zero);
         _checkRun(runId);
       }
-      _finish(runId);
+      _checkpointAssets.removeWhere((id, _) => !_assets.containsKey(id));
+      _checkpointEntities.removeWhere((id, _) => !_entities.containsKey(id));
+      _checkpointSignatures.removeWhere(
+        (id, _) => !_signatures.containsKey(id),
+      );
+      final ordered = _assets.values.toList()
+        ..sort((a, b) => b.createDate.compareTo(a.createDate));
+      _orderedIds = ordered.map((a) => a.id).toList();
+      _currentPhase = ScanPhase.computingHashes;
+      if (originals) {
+        await _verifyLocalResources(runId);
+      } else {
+        await _analyzeLocalPreviews(runId);
+      }
+      await _finish(runId);
+    } on _RoundBudgetExpired {
+      if (!_active(runId)) return;
+      _cancelNative('$_instanceId:$runId:');
+      _lastError = originals
+          ? '本輪原始素材驗證已達 60 秒，結果已保留；再次驗證會先處理未嘗試項目。'
+          : '本輪本機預覽分析已達 30 秒，結果已保留；繼續掃描會先處理未嘗試照片。';
+      await _finish(runId, completed: false, refresh: false);
     } on _ScanCancelled {
       // cancelScan has already published a stable partial snapshot.
     } catch (error) {
@@ -506,7 +516,307 @@ class PhotoScannerService extends ChangeNotifier {
       _lastError = error is TimeoutException
           ? '部分讀取逾時，已保留目前結果，可繼續掃描。'
           : '部分相簿讀取中斷，已保留目前結果，可繼續掃描。';
-      _finish(runId, completed: false);
+      await _finish(runId, completed: false, refresh: false);
+    }
+  }
+
+  void _resetCounters() {
+    _analyzedCount = _pendingCount = _attemptedCount = _cloudCount = 0;
+    _verifiedCount = _pendingResourceCount = _attemptedResourceCount = 0;
+  }
+
+  void _countAsset(PhotoAsset asset, int direction) {
+    if (asset.type == AssetType.image) {
+      if (asset.analysisPending) {
+        _pendingCount += direction;
+      } else {
+        _analyzedCount += direction;
+      }
+      if (asset.analysisAttempted) _attemptedCount += direction;
+      if (asset.analysisPending && asset.pendingReason == 'not_local') {
+        _cloudCount += direction;
+      }
+    }
+    if (asset.resourceAnalysisAttempted) _attemptedResourceCount += direction;
+    if (asset.resourceAnalysisPending) {
+      _pendingResourceCount += direction;
+    } else {
+      _verifiedCount += direction;
+    }
+  }
+
+  void _setAsset(PhotoAsset asset) {
+    final old = _assets[asset.id];
+    if (old != null) _countAsset(old, -1);
+    _assets[asset.id] = asset;
+    _checkpointAssets[asset.id] = asset;
+    _countAsset(asset, 1);
+  }
+
+  void _setOperation(String operation) {
+    _heartbeat?.cancel();
+    _currentOperation = operation;
+    _currentWaitSeconds = 0;
+    _heartbeat = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!_disposed && _isScanning) {
+        _currentWaitSeconds++;
+        // Never rebuild a 42k-asset snapshot for a waiting heartbeat.
+        notifyListeners();
+      }
+    });
+  }
+
+  void _startBudget(Duration duration) {
+    _budgetReached = false;
+    _budgetTimer = Timer(duration, () {
+      _budgetReached = true;
+      _abortWait?.call(_RoundBudgetExpired());
+    });
+    _snapshotClock.reset();
+    _snapshotClock.start();
+  }
+
+  void _stopRound() {
+    _heartbeat?.cancel();
+    _budgetTimer?.cancel();
+    _budgetReached = false;
+    _isVerifyingOriginals = false;
+    _currentOperation = null;
+    _currentWaitSeconds = 0;
+    _snapshotClock.stop();
+  }
+
+  Future<void> _publishAnalysisBatch(int runId, {bool first = false}) async {
+    // Publish the first usable batch immediately, then at most once per second.
+    // This bounds snapshot/group work independently of library size or callbacks.
+    if (first || _snapshotClock.elapsedMilliseconds >= 1000) {
+      _publish();
+      await _refreshGroups(runId);
+      _snapshotClock.reset();
+    } else {
+      notifyListeners();
+    }
+  }
+
+  Future<void> _analyzeLocalPreviews(int runId) async {
+    if (!_nativeAvailable) return;
+    final pending = _assets.values
+        .where(
+          (asset) => asset.type == AssetType.image && asset.analysisPending,
+        )
+        .toList();
+    // Resume first covers the untouched tail instead of re-running slow/cloud
+    // photos at the head. A later round can retry unavailable previews.
+    final ids = [
+      ...pending.where((asset) => !asset.analysisAttempted).map((a) => a.id),
+      ...pending.where((asset) => asset.analysisAttempted).map((a) => a.id),
+    ];
+    _startBudget(_previewRoundBudget);
+    for (var offset = 0; offset < ids.length; offset += 8) {
+      _checkRun(runId);
+      final batch = ids.sublist(offset, math.min(offset + 8, ids.length));
+      final token = '$_instanceId:$runId:preview:$offset';
+      _setOperation('讀取本機預覽（${batch.length} 張）');
+      Map<dynamic, dynamic>? data;
+      try {
+        data = await _awaitRun(
+          _resourceChannel.invokeMapMethod<String, dynamic>('inspectPreviews', {
+            'assetIds': batch,
+            'token': token,
+          }),
+          runId,
+          timeout: _previewTimeout,
+        );
+      } on MissingPluginException {
+        _nativeAvailable = false;
+        break;
+      } on TimeoutException {
+        _cancelNative(token, exact: true);
+      } on PlatformException {
+        // An unavailable batch stays retryable; do not call the slow original API.
+      }
+      _checkRun(runId);
+      final rows = <String, Map>{};
+      final nativeRows = data?['assets'];
+      if (nativeRows is List) {
+        for (final row in nativeRows) {
+          if (row is Map && batch.contains(row['assetId'])) {
+            rows[row['assetId'] as String] = row;
+          }
+        }
+      }
+      final bytes = <String, Uint8List>{};
+      for (final id in batch) {
+        final row = rows[id];
+        final thumbnail = row?['thumbnail'];
+        if (thumbnail is Uint8List && thumbnail.isNotEmpty) {
+          bytes[id] = thumbnail;
+        }
+        _setAsset(
+          _assets[id]!.copyWith(
+            analysisAttempted: true,
+            pendingReason: row?['status'] as String? ?? 'timeout',
+          ),
+        );
+      }
+      // Attempts are visible even while the CPU worker is analyzing the bytes.
+      _scanProgress =
+          0.45 +
+          0.55 * _attemptedCount / math.max(1, _analyzedCount + _pendingCount);
+      notifyListeners();
+      if (bytes.isNotEmpty) {
+        _setOperation('分析本機預覽（${bytes.length} 張）');
+        Map<String, Map<String, Object>> analyzed;
+        try {
+          analyzed = await _computeRun(
+            _analyzeThumbnailBatch,
+            bytes,
+            runId,
+            timeout: const Duration(seconds: 3),
+          );
+        } on TimeoutException {
+          _checkRun(runId);
+          for (final id in bytes.keys) {
+            _setAsset(_assets[id]!.copyWith(pendingReason: 'analysis_timeout'));
+          }
+          await _publishAnalysisBatch(runId, first: offset == 0);
+          continue;
+        }
+        _checkRun(runId);
+        for (final entry in analyzed.entries) {
+          final signature = ContentSignature.fromMap(entry.value);
+          _signatures[entry.key] = signature;
+          _checkpointSignatures[entry.key] = signature;
+          final degraded = rows[entry.key]?['thumbnailDegraded'] == true;
+          final quality =
+              signature.isValid && !signature.isLowInformation && !degraded;
+          _setAsset(
+            _assets[entry.key]!.copyWith(
+              analysisPending: !signature.isValid,
+              previewDegraded: degraded,
+              qualityScore: quality ? signature.qualityScore : 0,
+              qualityReasons: degraded
+                  ? const ['縮圖較粗糙，未提供畫面品質建議']
+                  : signature.qualityReasons,
+              isBlurry: quality && signature.isBlurry,
+              isDark: quality && signature.isDark,
+              isOverexposed: quality && signature.isOverexposed,
+            ),
+          );
+        }
+      }
+      await _publishAnalysisBatch(runId, first: offset == 0);
+      await Future<void>.delayed(Duration.zero);
+      _checkRun(runId);
+    }
+  }
+
+  Future<void> _verifyLocalResources(int runId) async {
+    if (!_nativeAvailable) return;
+    final pending = _assets.values
+        .where((a) => a.resourceAnalysisPending)
+        .toList();
+    final ids = [
+      ...pending.where((a) => !a.resourceAnalysisAttempted).map((a) => a.id),
+      ...pending.where((a) => a.resourceAnalysisAttempted).map((a) => a.id),
+    ];
+    _startBudget(_resourceRoundBudget);
+    var processed = 0;
+    for (final id in ids) {
+      _checkRun(runId);
+      _setOperation('驗證本機原始素材');
+      final token = '$_instanceId:$runId:original:$id';
+      Map<dynamic, dynamic>? data;
+      try {
+        data = await _awaitRun(
+          _resourceChannel.invokeMapMethod<String, dynamic>('inspectAsset', {
+            'assetId': id,
+            'token': token,
+            'includeHash': _assets[id]!.type == AssetType.image,
+            'includeThumbnail': false,
+            'resourceTimeoutMs': 4000,
+            'maxBytes': 64 * 1024 * 1024,
+          }),
+          runId,
+          timeout: _resourceTimeout,
+        );
+      } on MissingPluginException {
+        _nativeAvailable = false;
+        break;
+      } on TimeoutException {
+        _cancelNative(token, exact: true);
+      } on PlatformException {
+        // Never treat a partial stream as verified size or content.
+      }
+      _checkRun(runId);
+      final size = data?['size'];
+      final hash = data?['hash'];
+      final known =
+          data?['complete'] == true &&
+          data?['sizeKnown'] == true &&
+          size is num &&
+          size > 0;
+      final verifiedHash =
+          known && hash is String && RegExp(r'^[a-f0-9]{64}$').hasMatch(hash)
+          ? hash
+          : null;
+      _setAsset(
+        _assets[id]!.copyWith(
+          size: known ? size.toInt() : 0,
+          sizeKnown: known,
+          hash: verifiedHash,
+          clearHash: verifiedHash == null,
+          resourceAnalysisAttempted: true,
+          resourcePendingReason:
+              data?['pendingReason'] as String? ?? 'resource_timeout',
+          clearResourcePendingReason:
+              known &&
+              (_assets[id]!.type != AssetType.image || verifiedHash != null),
+          resourceAnalysisPending:
+              !known ||
+              (_assets[id]!.type == AssetType.image && verifiedHash == null),
+        ),
+      );
+      processed++;
+      _scanProgress = 0.45 + 0.55 * processed / math.max(1, ids.length);
+      await _publishAnalysisBatch(runId, first: processed == 1);
+      await Future<void>.delayed(Duration.zero);
+      _checkRun(runId);
+    }
+  }
+
+  /// A single bounded worker, killed on cancellation/deadline. Unlike an
+  /// abandoned compute Future it cannot accumulate expensive old group runs.
+  Future<R> _computeRun<Q, R>(
+    R Function(Q) callback,
+    Q message,
+    int runId, {
+    required Duration timeout,
+  }) async {
+    _checkRun(runId);
+    final reply = ReceivePort();
+    final result = Completer<R>();
+    final subscription = reply.listen((dynamic envelope) {
+      if (result.isCompleted) return;
+      final values = envelope as List;
+      if (values[0] == true) {
+        result.complete(values[1] as R);
+      } else {
+        result.completeError(StateError(values[1].toString()));
+      }
+    });
+    Isolate? worker;
+    try {
+      worker = await Isolate.spawn(_analysisWorker, <Object>[
+        reply.sendPort,
+        callback,
+        message as Object,
+      ]);
+      return await _awaitRun(result.future, runId, timeout: timeout);
+    } finally {
+      worker?.kill(priority: Isolate.immediate);
+      await subscription.cancel();
+      reply.close();
     }
   }
 
@@ -514,12 +824,16 @@ class PhotoScannerService extends ChangeNotifier {
     _checkRun(runId);
     final result = Completer<T>();
     Timer? timer;
+    late void Function(Object) abort;
     void fail(Object error, [StackTrace? stack]) {
       if (result.isCompleted) return;
       timer?.cancel();
+      if (identical(_abortWait, abort)) _abortWait = null;
       result.completeError(error, stack);
     }
 
+    abort = (error) => fail(error);
+    _abortWait = abort;
     if (timeout != null) {
       timer = Timer(
         timeout,
@@ -529,15 +843,17 @@ class PhotoScannerService extends ChangeNotifier {
     future.then((value) {
       if (result.isCompleted) return;
       timer?.cancel();
+      if (identical(_abortWait, abort)) _abortWait = null;
       result.complete(value);
     }, onError: (Object error, StackTrace stack) => fail(error, stack));
-    _cancellation!.future.then((_) => fail(_ScanCancelled()));
+
     return result.future;
   }
 
   bool _active(int runId) => !_disposed && _isScanning && _scanRunId == runId;
   void _checkRun(int runId) {
     if (!_active(runId)) throw _ScanCancelled();
+    if (_budgetReached) throw _RoundBudgetExpired();
   }
 
   void _cancelNative(String token, {bool exact = false}) {
@@ -550,12 +866,19 @@ class PhotoScannerService extends ChangeNotifier {
     );
   }
 
-  void _finish(int runId, {bool completed = true}) {
+  Future<void> _finish(
+    int runId, {
+    bool completed = true,
+    bool refresh = true,
+  }) async {
+    if (!_active(runId)) return;
+    if (refresh) await _refreshGroups(runId);
     if (!_active(runId)) return;
     _hasCompletedScan = completed;
     _isScanning = false;
-    _cancellation?.complete();
-    _cancellation = null;
+    _stopRound();
+    _abortWait?.call(_ScanCancelled());
+    _abortWait = null;
     _currentPhase = ScanPhase.done;
     if (completed) _scanProgress = 1;
     _publish(groups: true);
@@ -591,73 +914,152 @@ class PhotoScannerService extends ChangeNotifier {
 
   List<PhotoAsset> _recommended(List<PhotoAsset> assets) =>
       List<PhotoAsset>.from(assets)..sort((a, b) {
+        final preview = (a.previewDegraded ? 1 : 0).compareTo(
+          b.previewDegraded ? 1 : 0,
+        );
+        if (preview != 0) return preview;
         final quality = (b.qualityScore ?? -1).compareTo(a.qualityScore ?? -1);
         if (quality != 0) return quality;
         final resolution = (b.width * b.height).compareTo(a.width * a.height);
         return resolution != 0 ? resolution : a.id.compareTo(b.id);
       });
 
+  Future<void> _refreshGroups(int runId) async {
+    _checkRun(runId);
+    final assets = _assets.values.toList();
+    var duplicateGroups = <DuplicateGroup>[];
+    var similarGroups = <SimilarGroup>[];
+
+    final buckets = <String, List<PhotoAsset>>{};
+    for (final asset in assets) {
+      if (asset.type == AssetType.image &&
+          asset.sizeKnown &&
+          asset.hash != null) {
+        buckets.putIfAbsent(asset.hash!, () => []).add(asset);
+      }
+    }
+    duplicateGroups = buckets.entries
+        .where((entry) => entry.value.length > 1)
+        .map((entry) {
+          final ordered = _recommended(entry.value);
+          return DuplicateGroup(
+            hash: entry.key,
+            assets: ordered,
+            bestAssetId: ordered.first.id,
+            bestReason: _bestReason(ordered.first, exact: true),
+          );
+        })
+        .toList();
+    final exactIds = duplicateGroups
+        .expand((group) => group.assets)
+        .map((asset) => asset.id)
+        .toSet();
+    final candidates = assets
+        .where(
+          (asset) =>
+              asset.type == AssetType.image &&
+              !asset.analysisPending &&
+              !exactIds.contains(asset.id),
+        )
+        .map(
+          (asset) => AnalyzedPhoto(
+            id: asset.id,
+            width: asset.width,
+            height: asset.height,
+            createDate: asset.createDate,
+            signature: _signatures[asset.id],
+          ),
+        )
+        .toList();
+    if (candidates.length >= 2) _setOperation('整理視覺相似候選');
+    final groupedIds = candidates.length < 2
+        ? <List<String>>[]
+        : await _computeRun(
+            groupSimilarPhotos,
+            candidates,
+            runId,
+            timeout: const Duration(seconds: 5),
+          );
+    _checkRun(runId);
+    similarGroups = groupedIds.map((ids) {
+      final ordered = _recommended(ids.map((id) => _assets[id]!).toList());
+      final distance = visualDistance(
+        _signatures[ordered[0].id]!,
+        _signatures[ordered[1].id]!,
+      );
+      return SimilarGroup(
+        assets: ordered,
+        hammingDistance: distance ?? 0,
+        bestAssetId: ordered.any((a) => !a.previewDegraded)
+            ? ordered.first.id
+            : null,
+        bestReason: ordered.any((a) => !a.previewDegraded)
+            ? _bestReason(ordered.first, exact: false)
+            : null,
+      );
+    }).toList();
+    _checkRun(runId);
+    _duplicateGroups = duplicateGroups;
+    _similarGroups = similarGroups;
+    _publish();
+  }
+
   void _publish({bool groups = false}) {
     if (_disposed) return;
-    final assets = _assets.values.toList()
-      ..sort((a, b) => b.createDate.compareTo(a.createDate));
-    var duplicateGroups = _scanResult.duplicateGroups;
-    var similarGroups = _scanResult.similarGroups;
+    final assets = _orderedIds == null
+        ? _assets.values.toList()
+        : _orderedIds!
+              .map((id) => _assets[id])
+              .whereType<PhotoAsset>()
+              .toList();
+    var duplicateGroups = _duplicateGroups;
+    var similarGroups = _similarGroups;
     if (groups) {
-      final buckets = <String, List<PhotoAsset>>{};
-      for (final asset in assets) {
-        if (asset.type == AssetType.image &&
-            asset.sizeKnown &&
-            asset.hash != null) {
-          buckets.putIfAbsent(asset.hash!, () => []).add(asset);
-        }
-      }
-      duplicateGroups = buckets.entries
-          .where((entry) => entry.value.length > 1)
-          .map((entry) {
-            final ordered = _recommended(entry.value);
+      // Cancellation and deletion only filter the last published groups. Full
+      // visual grouping is a separate, guarded background-isolate operation.
+      duplicateGroups = duplicateGroups
+          .map((group) {
+            final remaining = group.assets
+                .map((a) => _assets[a.id])
+                .whereType<PhotoAsset>()
+                .toList();
+            if (remaining.length < 2) return null;
+            final keep = remaining.any((a) => a.id == group.bestAssetId)
+                ? group.bestAssetId
+                : remaining.first.id;
             return DuplicateGroup(
-              hash: entry.key,
-              assets: ordered,
-              bestAssetId: ordered.first.id,
-              bestReason: _bestReason(ordered.first, exact: true),
+              hash: group.hash,
+              assets: remaining,
+              bestAssetId: keep,
+              bestReason: group.bestReason,
             );
           })
+          .whereType<DuplicateGroup>()
           .toList();
-      final exactIds = duplicateGroups
-          .expand((group) => group.assets)
-          .map((asset) => asset.id)
-          .toSet();
-      final candidates = assets
-          .where(
-            (asset) =>
-                asset.type == AssetType.image &&
-                !asset.analysisPending &&
-                !exactIds.contains(asset.id),
-          )
-          .map(
-            (asset) => AnalyzedPhoto(
-              id: asset.id,
-              width: asset.width,
-              height: asset.height,
-              createDate: asset.createDate,
-              signature: _signatures[asset.id],
-            ),
-          )
+      similarGroups = similarGroups
+          .map((group) {
+            final remaining = group.assets
+                .map((a) => _assets[a.id])
+                .whereType<PhotoAsset>()
+                .toList();
+            if (remaining.length < 2) return null;
+            final eligible = remaining
+                .where((a) => !a.previewDegraded)
+                .toList();
+            final keep = eligible.any((a) => a.id == group.bestAssetId)
+                ? group.bestAssetId
+                : (eligible.isEmpty ? null : eligible.first.id);
+            return SimilarGroup(
+              assets: remaining,
+              hammingDistance: group.hammingDistance,
+              bestAssetId: keep,
+              bestReason: keep == null ? null : group.bestReason,
+            );
+          })
+          .whereType<SimilarGroup>()
           .toList();
-      similarGroups = groupSimilarPhotos(candidates).map((ids) {
-        final ordered = _recommended(ids.map((id) => _assets[id]!).toList());
-        final distance = visualDistance(
-          _signatures[ordered[0].id]!,
-          _signatures[ordered[1].id]!,
-        );
-        return SimilarGroup(
-          assets: ordered,
-          hammingDistance: distance ?? 0,
-          bestAssetId: ordered.first.id,
-          bestReason: _bestReason(ordered.first, exact: false),
-        );
-      }).toList();
+      _duplicateGroups = duplicateGroups;
+      _similarGroups = similarGroups;
     }
     _scanResult = ScanResult(
       allAssets: assets,
@@ -692,9 +1094,13 @@ class PhotoScannerService extends ChangeNotifier {
       if (_disposed) return deleted;
       final indexedDeleted = deleted.where(_assets.containsKey).length;
       for (final id in deleted) {
-        _assets.remove(id);
+        final removed = _assets.remove(id);
+        if (removed != null) _countAsset(removed, -1);
         _entities.remove(id);
         _signatures.remove(id);
+        _checkpointAssets.remove(id);
+        _checkpointEntities.remove(id);
+        _checkpointSignatures.remove(id);
       }
       _nextAssetOffset = math.max(0, _nextAssetOffset - indexedDeleted);
       if (_availableAssetCount != null) {
@@ -726,10 +1132,22 @@ class PhotoScannerService extends ChangeNotifier {
     final prefix = '$_instanceId:$_scanRunId:';
     _disposed = true;
     _isScanning = false;
+    _stopRound();
     _scanRunId++;
-    _cancellation?.complete();
-    _cancellation = null;
+    _abortWait?.call(_ScanCancelled());
+    _abortWait = null;
     _cancelNative(prefix);
+    _assets.clear();
+    _entities.clear();
+    _signatures.clear();
+    _checkpointAssets.clear();
+    _checkpointEntities.clear();
+    _checkpointSignatures.clear();
+    _duplicateGroups = [];
+    _similarGroups = [];
+    _orderedIds = null;
+    _scanResult = ScanResult.empty;
+    _resetCounters();
     super.dispose();
   }
 }

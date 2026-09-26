@@ -26,6 +26,9 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   final Set<String> _selectedIds = {};
   final Set<String> _dismissedSuggestions = {};
   bool _isDeleting = false;
+  ScanResult? _cachedResult;
+  ScanResult? _selectionSource;
+  final Map<int, List<PhotoAsset>> _cachedAssets = {};
 
   static const _categories = ['照片', '真重複', '視覺相似', '截圖', '影片', '大檔'];
   static const _categoryIds = [
@@ -49,26 +52,38 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     _selectedCategory = index < 0 ? 0 : index;
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final scanner = context.watch<PhotoScannerService>();
-    if (!scanner.isScanning) {
-      _selectedIds.retainAll(
-        scanner.scanResult.allAssets.map((asset) => asset.id).toSet(),
-      );
+  void _updateSnapshot(PhotoScannerService scanner) {
+    final result = scanner.scanResult;
+    if (!identical(_cachedResult, result)) {
+      _cachedResult = result;
+      _cachedAssets.clear();
+    }
+    if (!scanner.isScanning && !identical(_selectionSource, result)) {
+      _selectionSource = result;
+      if (_selectedIds.isEmpty) return;
+      _selectedIds.retainAll(result.allAssets.map((asset) => asset.id).toSet());
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final scanner = context.watch<PhotoScannerService>();
+    context.select<PhotoScannerService, Object>(
+      (scanner) => (scanner.scanResult, scanner.isScanning, scanner.isDeleting),
+    );
+    final scanner = context.read<PhotoScannerService>();
+    _updateSnapshot(scanner);
     final sub = context.watch<SubscriptionManager>();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('智慧清理'),
         actions: [
+          if (scanner.isScanning)
+            IconButton(
+              tooltip: '取消掃描並保留進度',
+              icon: const Icon(Icons.stop_circle_outlined),
+              onPressed: scanner.cancelScan,
+            ),
           if (scanner.scanResult.allAssets.isNotEmpty)
             IconButton(
               tooltip: '滑動清理',
@@ -97,10 +112,10 @@ class _SmartCleanViewState extends State<SmartCleanView> {
             _videoSortBar(),
           const Divider(height: 16),
           Expanded(
-            child: scanner.scanResult.allAssets.isEmpty && !scanner.isScanning
-                ? _emptyState(scanner)
-                : scanner.isScanning
-                ? _scanningState(scanner)
+            child: scanner.scanResult.allAssets.isEmpty
+                ? scanner.isScanning
+                      ? _scanningState(scanner)
+                      : _emptyState(scanner)
                 : _content(scanner),
           ),
           if (scanner.scanResult.allAssets.isNotEmpty &&
@@ -197,7 +212,10 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   Widget _sortChip(String label, int index) {
     final selected = _videoSort == index;
     return GestureDetector(
-      onTap: () => setState(() => _videoSort = index),
+      onTap: () => setState(() {
+        _videoSort = index;
+        _cachedAssets.remove(4);
+      }),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
@@ -314,20 +332,37 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (scanner.isScanning) ...[
+                      ScanProgressPanel(scanner: scanner, compact: true),
+                      const SizedBox(height: 12),
+                      const Text(
+                        '照片與截圖可先預覽；掃描期間暫停選取、刪除及影片壓縮。',
+                        style: AppTheme.caption,
+                      ),
+                    ],
                     if (scanner.scanNotice != null)
                       Text(scanner.scanNotice!, style: AppTheme.caption),
                     Text(
                       _selectedCategory == 1
-                          ? '真重複：已比對原始檔案內容。保留建議可撤回，請自行勾選要刪除的項目。'
+                          ? '真重複僅包括已完成原始素材驗證的項目，其餘不會推定重複。保留建議可撤回。'
                           : _selectedCategory == 2
-                          ? '視覺相似：依照片畫面比較，內容可能不同。保留建議僅供參考，請逐張確認。'
+                          ? '視覺相似依已完成的本機畫面分析逐步整理，內容可能不同。保留建議僅供參考。'
                           : _selectedCategory == 5
                           ? '依已取得的原始檔案容量排序。這是檔案大小，實際回收空間以系統為準。'
                           : '只會刪除你手動勾選並再次確認的項目。',
                       style: AppTheme.caption,
                     ),
-                    if (scanner.wasCancelled ||
-                        scanner.pendingAnalysisCount > 0)
+                    if (!scanner.isScanning && scanner.pendingResourceCount > 0)
+                      TextButton.icon(
+                        onPressed: scanner.isDeleting
+                            ? null
+                            : scanner.verifyOriginals,
+                        icon: const Icon(Icons.verified_outlined),
+                        label: const Text('驗證本機原始素材：確認真重複與容量'),
+                      ),
+                    if (!scanner.isScanning &&
+                        (scanner.wasCancelled ||
+                            scanner.pendingAnalysisCount > 0))
                       TextButton.icon(
                         onPressed: scanner.isDeleting
                             ? null
@@ -363,10 +398,13 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                 ),
               )
             else
-              const SliverToBoxAdapter(
+              SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Text('目前已完成分析的項目中沒有這個分類', textAlign: TextAlign.center),
+                  padding: const EdgeInsets.all(32),
+                  child: Text(
+                    _emptyCategoryMessage(scanner),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
           ],
@@ -433,14 +471,34 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     );
   }
 
+  String _emptyCategoryMessage(PhotoScannerService scanner) {
+    if ((_selectedCategory == 1 || _selectedCategory == 5) &&
+        scanner.pendingResourceCount > 0) {
+      return '尚有原始素材待驗證，目前不能判定是否有真重複或大型檔案。照片與截圖可先預覽。';
+    }
+    if (_selectedCategory == 2 && scanner.pendingAnalysisCount > 0) {
+      return '照片畫面仍有待處理項目，視覺相似結果會逐步整理。照片與截圖可先預覽。';
+    }
+    if (scanner.isScanning &&
+        scanner.currentPhase == ScanPhase.fetchingAssets) {
+      return '相簿目錄仍在讀取，此分類將隨讀取進度更新。';
+    }
+    return '目前已完成分析或驗證的項目中沒有這個分類。';
+  }
+
   Widget _thumbnail(PhotoAsset asset, {bool recommended = false}) {
+    final scanner = context.read<PhotoScannerService>();
     final selected = _selectedIds.contains(asset.id);
     return GestureDetector(
       key: ValueKey('select-${asset.id}'),
       behavior: HitTestBehavior.opaque,
-      onTap: () => setState(() {
-        selected ? _selectedIds.remove(asset.id) : _selectedIds.add(asset.id);
-      }),
+      onTap: scanner.isScanning || scanner.isDeleting
+          ? null
+          : () => setState(() {
+              selected
+                  ? _selectedIds.remove(asset.id)
+                  : _selectedIds.add(asset.id);
+            }),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -467,17 +525,18 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                       right: 4,
                       child: _badge('建議保留', AppTheme.success),
                     ),
-                  Positioned(
-                    bottom: 4,
-                    right: 4,
-                    child: Icon(
-                      selected
-                          ? Icons.check_circle_rounded
-                          : Icons.circle_outlined,
-                      color: selected ? AppTheme.danger : Colors.white,
-                      size: 24,
+                  if (!scanner.isScanning)
+                    Positioned(
+                      bottom: 4,
+                      right: 4,
+                      child: Icon(
+                        selected
+                            ? Icons.check_circle_rounded
+                            : Icons.circle_outlined,
+                        color: selected ? AppTheme.danger : Colors.white,
+                        size: 24,
+                      ),
                     ),
-                  ),
                   Positioned(
                     bottom: 0,
                     left: 0,
@@ -513,7 +572,9 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                     minWidth: 32,
                     minHeight: 32,
                   ),
-                  onPressed: () => _openCompression(asset),
+                  onPressed: scanner.isScanning || scanner.isDeleting
+                      ? null
+                      : () => _openCompression(asset),
                 ),
             ],
           ),
@@ -655,8 +716,24 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     );
   }
 
-  int _countFor(int category, PhotoScannerService scanner) =>
-      _assetsFor(category, scanner).length;
+  int _countFor(int category, PhotoScannerService scanner) {
+    final result = scanner.scanResult;
+    return switch (category) {
+      0 => _assetsFor(0, scanner).length,
+      1 => result.duplicateGroups.fold<int>(
+        0,
+        (sum, group) => sum + group.assets.length,
+      ),
+      2 => result.similarGroups.fold<int>(
+        0,
+        (sum, group) => sum + group.assets.length,
+      ),
+      3 => result.screenshots.length,
+      4 => result.videos.length,
+      5 => result.largeFiles.length,
+      _ => 0,
+    };
+  }
 
   List<_ReviewGroup> _groupsFor(int category, PhotoScannerService scanner) {
     if (category == 1) {
@@ -688,18 +765,21 @@ class _SmartCleanViewState extends State<SmartCleanView> {
 
   List<PhotoAsset> _assetsFor(int category, PhotoScannerService scanner) {
     final result = scanner.scanResult;
-    return switch (category) {
-      0 =>
-        result.allAssets
-            .where((asset) => asset.type == AssetType.image)
-            .toList(),
-      1 => result.duplicateGroups.expand((group) => group.assets).toList(),
-      2 => result.similarGroups.expand((group) => group.assets).toList(),
-      3 => result.screenshots,
-      4 => _sortedVideos(result.videos),
-      5 => result.largeFiles,
-      _ => [],
-    };
+    return _cachedAssets.putIfAbsent(
+      category,
+      () => switch (category) {
+        0 =>
+          result.allAssets
+              .where((asset) => asset.type == AssetType.image)
+              .toList(),
+        1 => result.duplicateGroups.expand((group) => group.assets).toList(),
+        2 => result.similarGroups.expand((group) => group.assets).toList(),
+        3 => result.screenshots,
+        4 => _sortedVideos(result.videos),
+        5 => result.largeFiles,
+        _ => [],
+      },
+    );
   }
 
   List<PhotoAsset> _sortedVideos(List<PhotoAsset> videos) {

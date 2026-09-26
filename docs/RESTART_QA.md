@@ -200,6 +200,38 @@ assets and check the Photos app after each destructive operation.
 
 ## Remaining release gates
 
+### Build 39 scan-stall follow-up
+
+On 2026-09-27 the iPhone test indexed 42,683 items but showed zero content
+analyses. The user confirmed cancellation still returned to usable controls.
+The pipeline waited for sequential complete original-resource streams before
+requesting previews and committing a batch. This can starve visual progress;
+the precise device Photos/iCloud condition is not captured in the screenshot.
+
+- [x] Separate cached current-preview batches from explicit original verification.
+      A preview never proves identical original content or measured resource size.
+- [x] Bound a preview analysis round to 30 seconds and an original verification
+      round to 60 seconds after indexing. Index all accessible items, with no
+      fixed item cap. Resume unattempted items first, preserve hidden checkpoints
+      across interrupted re-indexing, and invalidate edits/revoked access.
+- [x] Use cancellable analysis isolates, cached progress counters, amortized
+      snapshots, and bounded thumbnail memory. Wait heartbeats do not re-filter
+      the whole library. Preview indexed media while scan mutation is disabled.
+- [x] Native deadlines/results do not wait for the Photos state queue or native
+      cancellation. Original reads stop at 4 seconds / 64 MiB by default;
+      oversized, slow, cloud-only or incomplete material stays unverified.
+- [x] Local preflight: zero analysis issues, all 111 Flutter tests, and plist /
+      Android media-permission checks pass. Includes 42,683-item indexing,
+      timeout-heavy scans, slow first resources, continuation fairness, late
+      cancellation, interrupted re-indexing, and phone/iPad progress layouts.
+- [ ] Run all 10 native XCTest cases on the Mac CI simulator before signing and
+      uploading the next internal build. Six use a real simulator Photos fixture;
+      tests never create/delete fixture media on physical devices.
+- [ ] Update iPhone and iPad to the next verified internal build and re-test the
+      real 42,683-item library. Check processed/visual/cloud counts, previews,
+      cancellation and continuation. Do not treat a 30-second analysis round as
+      a promise that indexing or the whole library finishes in 30 seconds.
+
 - [ ] Finish the candidate's Mac CI and iPhone/iPad checklist above before treating
       the new functionality as release-ready.
 - [ ] Attach correct paywall review screenshots and subscriptions to submission.

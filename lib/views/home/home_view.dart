@@ -42,8 +42,16 @@ class _HomeViewState extends State<HomeView>
 
   @override
   Widget build(BuildContext context) {
-    final scanner = context.watch<PhotoScannerService>();
-    final isPro = context.watch<SubscriptionManager>().isPro;
+    context.select<PhotoScannerService, Object>(
+      (scanner) => (
+        scanner.scanResult,
+        scanner.isScanning,
+        scanner.isDeleting,
+        scanner.hasCompletedScan,
+      ),
+    );
+    final scanner = context.read<PhotoScannerService>();
+    final isPro = context.select<SubscriptionManager, bool>((sub) => sub.isPro);
 
     return Scaffold(
       body: SafeArea(
@@ -66,6 +74,19 @@ class _HomeViewState extends State<HomeView>
               if (scanner.isScanning) ...[
                 const SizedBox(height: AppTheme.s12),
                 _buildProgress(scanner),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    TextButton(
+                      onPressed: () => _openReview('photos'),
+                      child: const Text('查看已讀取照片'),
+                    ),
+                    TextButton(
+                      onPressed: () => _openReview('screenshots'),
+                      child: const Text('查看已讀取截圖'),
+                    ),
+                  ],
+                ),
               ],
               if (scanner.hasCompletedScan) ...[
                 const SizedBox(height: AppTheme.s16),
@@ -358,11 +379,16 @@ class _HomeViewState extends State<HomeView>
         const SizedBox(height: 6),
         Text(
           s.scanNotice ??
-              '內容分析已完成 ${s.analyzedAssetCount} 個，待處理 ${s.pendingAnalysisCount} 個。保留建議可撤回，刪除由你決定。',
+              '視覺分析成功 ${s.analyzedAssetCount} 個，原始素材已驗證 ${s.verifiedOriginalCount} 個。保留建議可撤回，刪除由你決定。',
           style: AppTheme.small,
         ),
         const SizedBox(height: 8),
         TextButton(onPressed: _openReview, child: const Text('預覽並整理')),
+        if (!s.isScanning && s.pendingResourceCount > 0)
+          TextButton(
+            onPressed: s.isDeleting ? null : s.verifyOriginals,
+            child: const Text('驗證本機原始素材：確認真重複與容量'),
+          ),
         if (s.wasCancelled || s.pendingAnalysisCount > 0)
           TextButton(
             onPressed: s.isDeleting ? null : s.resumeScan,
@@ -378,7 +404,7 @@ class _HomeViewState extends State<HomeView>
 
   // ── Tool List ──
   Widget _buildToolList(PhotoScannerService s) {
-    final hasScanned = s.hasCompletedScan;
+    final hasScanned = s.hasCompletedScan || s.scannedAssetCount > 0;
     final ts = s.scanResult.similarGroups.fold<int>(
       0,
       (a, g) => a + g.assets.length,
@@ -392,10 +418,15 @@ class _HomeViewState extends State<HomeView>
         'duplicates',
         Icons.copy_all_rounded,
         '真重複照片',
-        _photoCountLabel(duplicateCount, hasScanned),
+        _resourceCountLabel(
+          duplicateCount,
+          s.pendingResourceCount,
+          hasScanned,
+          '張',
+        ),
         duplicateCount > 0
             ? _Status.warn
-            : hasScanned
+            : hasScanned && s.pendingResourceCount == 0
             ? _Status.done
             : _Status.scan,
         AppTheme.primary,
@@ -404,10 +435,18 @@ class _HomeViewState extends State<HomeView>
         'similar',
         Icons.photo_library_rounded,
         '視覺相似照片',
-        _photoCountLabel(ts, hasScanned),
+        !hasScanned
+            ? '尚未掃描'
+            : s.pendingAnalysisCount > 0
+            ? ts > 0
+                  ? '$ts 張（部分結果）'
+                  : '尚待畫面分析'
+            : ts > 0
+            ? '$ts 張'
+            : '已分析項目中未發現',
         ts > 0
             ? _Status.warn
-            : hasScanned
+            : hasScanned && s.pendingAnalysisCount == 0
             ? _Status.done
             : _Status.scan,
         const Color(0xFFF0997B),
@@ -428,10 +467,15 @@ class _HomeViewState extends State<HomeView>
         'largeFiles',
         Icons.photo_size_select_large_rounded,
         '大型檔案',
-        _itemCountLabel(s.scanResult.largeFiles.length, hasScanned),
+        _resourceCountLabel(
+          s.scanResult.largeFiles.length,
+          s.pendingResourceCount,
+          hasScanned,
+          '個',
+        ),
         s.scanResult.largeFiles.isNotEmpty
             ? _Status.minor
-            : hasScanned
+            : hasScanned && s.pendingResourceCount == 0
             ? _Status.done
             : _Status.scan,
         const Color(0xFFE5A31A),
@@ -464,9 +508,15 @@ class _HomeViewState extends State<HomeView>
     return count > 0 ? '$count 張' : '未發現';
   }
 
-  String _itemCountLabel(int count, bool hasScanned) {
+  String _resourceCountLabel(
+    int count,
+    int pending,
+    bool hasScanned,
+    String unit,
+  ) {
     if (!hasScanned) return '尚未掃描';
-    return count > 0 ? '$count 個' : '未發現';
+    if (pending > 0) return count > 0 ? '已確認 $count $unit，仍有待驗證' : '尚待原始素材驗證';
+    return count > 0 ? '$count $unit' : '已驗證項目中未發現';
   }
 
   Widget _buildToolRow(_Tool t) {
