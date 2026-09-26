@@ -7,7 +7,9 @@ describes features that are not included in this restart build.
 
 - App Store version 1.1.2 is READY_FOR_SALE.
 - Version 1.1.3 is PREPARE_FOR_SUBMISSION.
-- Latest uploaded build 36 is VALID but expired for TestFlight.
+- Build 37 (1.1.3) is VALID and not expired, with internal state IN_BETA_TESTING.
+- The existing Internal Testing group includes build 37; external state is
+  READY_FOR_BETA_SUBMISSION. No new tester invitations were sent.
 - Weekly and yearly subscriptions are READY_TO_SUBMIT, not approved for sale.
 - RevenueCat default offering returns the matching Apple weekly/yearly products.
 
@@ -39,7 +41,10 @@ Mocks do not establish that real purchases or photo deletion work on a device.
 
 ## Release gates still outstanding
 
-- [ ] Upload a new build using one CI provider; don't run both simultaneously.
+- [x] Upload build 37 using GitHub iOS Release; run 36250081707 succeeded.
+      Local and cloud analyze passed, with all 24 tests passing in both.
+      App code is commit 04296b3; these results were checked at
+      2026-09-26T15:06:05Z. Real-device acceptance remains unchecked.
 - [ ] Attach correct paywall review screenshots and subscriptions to the submission.
 - [ ] Review all localized store descriptions/screenshots against the current scope.
 - [ ] Connect a real product analytics destination and verify events arriving there.
