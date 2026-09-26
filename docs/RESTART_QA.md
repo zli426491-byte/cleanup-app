@@ -2,9 +2,10 @@
 
 This checklist describes the new full-library photo-review and video-compression
 candidate. The older PRELAUNCH_QA describes dormant tools and is not the release
-scope. Build 38 remains a historical TestFlight baseline. The new Build 39 has
-passed Mac CI and upload, is VALID, and is available in the existing internal
-TestFlight group. Native-device acceptance remains required below.
+scope. Builds 38 and 39 are historical TestFlight baselines; Build 39 contains
+the reported 42,683-item scan stall. Repair candidate 1.1.3 build 40 at e682a3b
+passed Mac CI and upload. Apple upload processing and internal availability are
+still being verified. Native-device acceptance remains required below.
 
 ## Backend baseline and build history
 
@@ -220,10 +221,14 @@ the precise device Photos/iCloud condition is not captured in the screenshot.
 - [x] Native deadlines/results do not wait for the Photos state queue or native
       cancellation. Original reads stop at 4 seconds / 64 MiB by default;
       oversized, slow, cloud-only or incomplete material stays unverified.
-- [x] Local preflight: zero analysis issues, all 112 Flutter tests, and plist /
+- [x] Local preflight: zero analysis issues, all 114 Flutter tests, and plist /
       Android media-permission checks pass. Includes 42,683-item indexing,
       timeout-heavy scans, slow first resources, continuation fairness, late
       cancellation, interrupted re-indexing, and phone/iPad progress layouts.
+- [x] Keep partial Home results and continuation controls visible after timeout
+      or cancellation. Both actions resume instead of clearing the checkpoint;
+      actual-scanner UI regressions retain verified video data and continue at
+      the untouched photo tail, including cancellation before any asset loads.
 - [x] Reduce worst-case candidate comparisons without changing the similarity
       thresholds: validate immutable features once and stop accumulating squared
       spatial differences once rejection is certain. Preserve public malformed
@@ -232,9 +237,33 @@ the precise device Photos/iCloud condition is not captured in the screenshot.
       from about 13 seconds to about one second; result parity is checked. These
       measurements do not establish iPhone timing. The first Mac run was
       cancelled before signing/upload so this fix is included in the next run.
-- [ ] Run all 10 native XCTest cases on the Mac CI simulator before signing and
-      uploading the next internal build. Six use a real simulator Photos fixture;
-      tests never create/delete fixture media on physical devices.
+- [x] Pass the real full-access Photos UI bootstrap and all 10 native XCTest
+      cases on the Mac CI simulator before signing/uploading the next build.
+      Six cases require real simulator Photos IO; four pure native cases passed
+      previously, while fixture authorization failed. A legacy simctl grant did
+      not establish modern authorization. The simulator-only Debug launch flag
+      now requests modern read/write access, and a dedicated UI test taps the
+      real system Full Access choice before running the unchanged IO assertions.
+      The fixture helper requires modern authorized status; no legacy fallback
+      or fabricated permission state is accepted. UI bootstrap and physical
+      fixture creation are prohibited on real devices. Run 36263497365 at
+      e682a3b passed the actual Full Access UI test and all ten native cases,
+      with zero failures/skips. Six fixture cases report modern authorized=3;
+      original SHA/size and preview use actual Photos IO, while four fixture
+      cases inject controlled resource IO for blocking/cancel/byte/late-ID races.
+      Common real fixture metadata is prepared before reader timers; complete
+      SHA/size passed in 0.291s. All assertions and production deadlines remain.
+      Exact source/toolchain caching skips no case; failed gates do not upload.
+- [x] Archive and upload repair candidate 1.1.3 build 40 from e682a3b through
+      successful Mac run 36263497365. Cloud analyze has zero issues; all 114
+      Flutter cases, one real authorization UI case and ten native cases pass.
+      Downloaded IPA is com.cleanupapp.cleaner, iPhone/iPad, iOS 13.0 minimum,
+      with photo read/save usage strings and embedded profile/signature resources.
+      Windows metadata inspection does not cryptographically verify the signature.
+      Apple accepted receipt 4a72219b-4b2b-48ed-a38b-b6cc341cb079; its BuildUpload
+      state is PROCESSING at 2026-09-26T19:06:53Z, with no processing errors.
+- [ ] Confirm build 40 becomes VALID and IN_BETA_TESTING, and is included in
+      the existing internal group. An accepted upload is not availability.
 - [ ] Update iPhone and iPad to the next verified internal build and re-test the
       real 42,683-item library. Check processed/visual/cloud counts, previews,
       cancellation and continuation. Do not treat a 30-second analysis round as
