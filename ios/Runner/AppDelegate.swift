@@ -8,6 +8,9 @@ import UIKit
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
+    if let resourceRegistrar = registrar(forPlugin: "PhotoResourceInspector") {
+      PhotoResourceInspector.register(with: resourceRegistrar)
+    }
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }

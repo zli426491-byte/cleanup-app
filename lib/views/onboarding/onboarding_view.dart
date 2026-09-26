@@ -22,14 +22,14 @@ class _OnboardingViewState extends State<OnboardingView>
     _PageData(
       Icons.auto_awesome_rounded,
       '智慧清理',
-      '快速整理近期照片與影片\n先預覽，再決定保留或刪除',
+      '掃描你允許存取的照片與影片\n先預覽，再決定保留或刪除',
       Color(0xFF4F6EF7),
       Color(0xFF7B93FF),
     ),
     _PageData(
       Icons.photo_library_rounded,
       '照片整理',
-      '查看截圖與待確認的照片分組\n逐張確認重要回憶',
+      '依內容查看重複與相似照片\n保留建議仍需由你逐張確認',
       Color(0xFFFFAA33),
       Color(0xFFFFD700),
     ),
@@ -43,7 +43,7 @@ class _OnboardingViewState extends State<OnboardingView>
     _PageData(
       Icons.check_circle_outline_rounded,
       '由你決定',
-      '掃描與預覽免費使用\n批次刪除需訂閱 Pro，刪除前會再次確認',
+      '掃描與照片預覽免費使用\n刪除與影片壓縮需 Pro，原片不會自動刪除',
       Color(0xFF9D6AFF),
       Color(0xFFC084FC),
     ),

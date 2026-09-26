@@ -54,9 +54,10 @@ void main() {
   });
 
   for (final category in {
-    '待確認照片分組': 'review',
+    '真重複照片': 'duplicates',
+    '視覺相似照片': 'similar',
     '螢幕截圖': 'screenshots',
-    '高解析度照片': 'highResolution',
+    '大型檔案': 'largeFiles',
   }.entries) {
     testWidgets('home ${category.key} opens its matching category', (
       tester,

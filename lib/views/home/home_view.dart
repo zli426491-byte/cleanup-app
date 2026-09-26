@@ -6,6 +6,7 @@ import '../../services/subscription_manager.dart';
 import '../../models/storage_info.dart';
 import '../../utils/app_theme.dart';
 import '../scanner/smart_clean_view.dart';
+import '../scanner/scan_progress_panel.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -317,7 +318,7 @@ class _HomeViewState extends State<HomeView>
                             ? '掃描中...'
                             : s.isDeleting
                             ? '刪除中...'
-                            : '快速整理近期照片',
+                            : '掃描全部可存取照片與影片',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: Colors.white,
@@ -337,58 +338,7 @@ class _HomeViewState extends State<HomeView>
   );
 
   // ── Progress ──
-  Widget _buildProgress(PhotoScannerService s) {
-    final names = {
-      'fetchingAssets': '讀取照片',
-      'computingHashes': '分析照片',
-      'findingDuplicates': '尋找重複照片',
-      'findingSimilar': '尋找相似照片',
-      'collectingScreenshots': '偵測截圖',
-      'findingLargeFiles': '尋找大檔',
-      'scanningVideos': '掃描影片',
-      'done': '完成',
-    };
-    return Container(
-      padding: const EdgeInsets.all(AppTheme.s14),
-      decoration: BoxDecoration(
-        color: AppTheme.cardBg,
-        borderRadius: BorderRadius.circular(AppTheme.r12),
-        border: Border.all(color: AppTheme.border, width: 0.5),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 28,
-            height: 28,
-            child: CircularProgressIndicator(
-              value: s.scanProgress,
-              strokeWidth: 3,
-              color: AppTheme.primary,
-              backgroundColor: AppTheme.primaryLight,
-            ),
-          ),
-          const SizedBox(width: AppTheme.s12),
-          Expanded(
-            child: Text(
-              names[s.currentPhase.name] ?? '掃描中...',
-              style: AppTheme.body.copyWith(
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
-          ),
-          Text(
-            '${(s.scanProgress * 100).toInt()}%',
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 14,
-              color: AppTheme.primary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildProgress(PhotoScannerService s) => ScanProgressPanel(scanner: s);
 
   // ── Results ──
   Widget _buildResults(PhotoScannerService s) => Container(
@@ -406,9 +356,18 @@ class _HomeViewState extends State<HomeView>
           style: AppTheme.body.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 6),
-        Text(s.scanNotice ?? '照片分組僅供審核，請預覽後再決定是否刪除。', style: AppTheme.small),
+        Text(
+          s.scanNotice ??
+              '內容分析已完成 ${s.analyzedAssetCount} 個，待處理 ${s.pendingAnalysisCount} 個。保留建議可撤回，刪除由你決定。',
+          style: AppTheme.small,
+        ),
         const SizedBox(height: 8),
         TextButton(onPressed: _openReview, child: const Text('預覽並整理')),
+        if (s.wasCancelled || s.pendingAnalysisCount > 0)
+          TextButton(
+            onPressed: s.isDeleting ? null : s.resumeScan,
+            child: const Text('繼續掃描／重試待處理項目'),
+          ),
       ],
     ),
   );
@@ -424,11 +383,27 @@ class _HomeViewState extends State<HomeView>
       0,
       (a, g) => a + g.assets.length,
     );
+    final duplicateCount = s.scanResult.duplicateGroups.fold<int>(
+      0,
+      (sum, group) => sum + group.assets.length,
+    );
     final items = [
       _Tool(
-        'review',
+        'duplicates',
+        Icons.copy_all_rounded,
+        '真重複照片',
+        _photoCountLabel(duplicateCount, hasScanned),
+        duplicateCount > 0
+            ? _Status.warn
+            : hasScanned
+            ? _Status.done
+            : _Status.scan,
+        AppTheme.primary,
+      ),
+      _Tool(
+        'similar',
         Icons.photo_library_rounded,
-        '待確認照片分組',
+        '視覺相似照片',
         _photoCountLabel(ts, hasScanned),
         ts > 0
             ? _Status.warn
@@ -450,9 +425,9 @@ class _HomeViewState extends State<HomeView>
         const Color(0xFF1D9E75),
       ),
       _Tool(
-        'highResolution',
+        'largeFiles',
         Icons.photo_size_select_large_rounded,
-        '高解析度照片',
+        '大型檔案',
         _itemCountLabel(s.scanResult.largeFiles.length, hasScanned),
         s.scanResult.largeFiles.isNotEmpty
             ? _Status.minor
@@ -547,7 +522,7 @@ class _HomeViewState extends State<HomeView>
             borderRadius: BorderRadius.circular(AppTheme.r50),
           ),
           child: Text(
-            '建議清理',
+            '待確認',
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
@@ -563,7 +538,7 @@ class _HomeViewState extends State<HomeView>
             borderRadius: BorderRadius.circular(AppTheme.r50),
           ),
           child: Text(
-            '可清理',
+            '可檢視',
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
@@ -579,7 +554,7 @@ class _HomeViewState extends State<HomeView>
             borderRadius: BorderRadius.circular(AppTheme.r50),
           ),
           child: Text(
-            '可清理',
+            '可檢視',
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,

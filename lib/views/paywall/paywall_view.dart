@@ -325,8 +325,8 @@ class _PaywallViewState extends State<PaywallView> {
   }
 
   static const _features = [
-    _PaywallFeature(Icons.copy, '照片分組與逐張確認', AppTheme.danger),
-    _PaywallFeature(Icons.photo_library, '截圖、高解析度照片與影片篩選', AppTheme.warning),
+    _PaywallFeature(Icons.copy, '重複與相似照片分組、逐張確認', AppTheme.danger),
+    _PaywallFeature(Icons.compress, '影片壓縮、預覽與另存副本', AppTheme.warning),
     _PaywallFeature(Icons.swipe, '滑動式快速清理體驗', Colors.teal),
   ];
 }

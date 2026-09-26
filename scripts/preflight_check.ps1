@@ -23,6 +23,7 @@ plist = Path("ios/Runner/Info.plist")
 data = plistlib.loads(plist.read_bytes())
 required = [
     "NSPhotoLibraryUsageDescription",
+    "NSPhotoLibraryAddUsageDescription",
     "NSUserTrackingUsageDescription",
 ]
 missing = [key for key in required if not data.get(key)]

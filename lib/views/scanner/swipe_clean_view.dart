@@ -5,6 +5,7 @@ import '../../services/subscription_manager.dart';
 import '../../utils/app_theme.dart';
 import '../paywall/paywall_view.dart';
 import 'asset_thumbnail.dart';
+import 'photo_asset_labels.dart';
 
 /// Tinder-style swipe to delete/keep photos
 class SwipeCleanView extends StatefulWidget {
@@ -105,179 +106,194 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
   Widget _buildSwipeView() {
     final asset = _currentAsset!;
 
-    return Column(
-      children: [
-        // Progress bar
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: SizedBox(
+          height:
+              constraints.maxHeight <
+                  (MediaQuery.textScalerOf(context).scale(12) > 16 ? 660 : 520)
+              ? (MediaQuery.textScalerOf(context).scale(12) > 16 ? 660 : 520)
+              : constraints.maxHeight,
+          child: Column(
             children: [
-              Text(
-                '${_currentIndex + 1}/${widget.assets.length}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.textMuted,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(50),
-                  child: LinearProgressIndicator(
-                    value: _progress,
-                    minHeight: 4,
-                    backgroundColor: Colors.grey.withValues(alpha: 0.1),
-                    valueColor: const AlwaysStoppedAnimation(AppTheme.primary),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        // Stats bar
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _statChip(
-                Icons.delete_rounded,
-                '${_toDelete.length} 刪除',
-                AppTheme.danger,
-              ),
-              const SizedBox(width: 12),
-              _statChip(
-                Icons.favorite_rounded,
-                '${_toKeep.length} 保留',
-                AppTheme.success,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Card stack
-        Expanded(
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Next card (background)
-              if (_currentIndex + 1 < widget.assets.length)
-                _buildCard(
-                  widget.assets[_currentIndex + 1],
-                  isBackground: true,
-                ),
-
-              // Current card (draggable)
-              GestureDetector(
-                onPanUpdate: (d) => setState(() {
-                  if (_isAnimating) return;
-                  _dragX += d.delta.dx;
-                  _dragY += d.delta.dy * 0.3;
-                }),
-                onPanEnd: (_) => _onDragEnd(),
-                child: AnimatedBuilder(
-                  animation: _animController,
-                  builder: (_, child) => Transform.translate(
-                    offset: Offset(
-                      _isAnimating ? _animX.value : _dragX,
-                      _isAnimating ? _animY.value : _dragY,
+              // Progress bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    Text(
+                      '${_currentIndex + 1}/${widget.assets.length}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textMuted,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    child: Transform.rotate(
-                      angle: (_isAnimating ? _animX.value : _dragX) / 800,
-                      child: Stack(
-                        children: [
-                          _buildCard(asset, isBackground: false),
-                          // Swipe label overlay
-                          if (_swipeLabel.isNotEmpty)
-                            Positioned.fill(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(28),
-                                  border: Border.all(
-                                    color: _swipeColor,
-                                    width: 4,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Transform.rotate(
-                                    angle: _dragX > 0 ? -0.3 : 0.3,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(50),
+                        child: LinearProgressIndicator(
+                          value: _progress,
+                          minHeight: 4,
+                          backgroundColor: Colors.grey.withValues(alpha: 0.1),
+                          valueColor: const AlwaysStoppedAnimation(
+                            AppTheme.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // Stats bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 12,
+                  runSpacing: 8,
+                  children: [
+                    _statChip(
+                      Icons.delete_rounded,
+                      '${_toDelete.length} 刪除',
+                      AppTheme.danger,
+                    ),
+                    _statChip(
+                      Icons.favorite_rounded,
+                      '${_toKeep.length} 保留',
+                      AppTheme.success,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Card stack
+              Expanded(
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Next card (background)
+                    if (_currentIndex + 1 < widget.assets.length)
+                      _buildCard(
+                        widget.assets[_currentIndex + 1],
+                        isBackground: true,
+                      ),
+
+                    // Current card (draggable)
+                    GestureDetector(
+                      onPanUpdate: (d) => setState(() {
+                        if (_isAnimating) return;
+                        _dragX += d.delta.dx;
+                        _dragY += d.delta.dy * 0.3;
+                      }),
+                      onPanEnd: (_) => _onDragEnd(),
+                      child: AnimatedBuilder(
+                        animation: _animController,
+                        builder: (_, child) => Transform.translate(
+                          offset: Offset(
+                            _isAnimating ? _animX.value : _dragX,
+                            _isAnimating ? _animY.value : _dragY,
+                          ),
+                          child: Transform.rotate(
+                            angle: (_isAnimating ? _animX.value : _dragX) / 800,
+                            child: Stack(
+                              children: [
+                                _buildCard(asset, isBackground: false),
+                                // Swipe label overlay
+                                if (_swipeLabel.isNotEmpty)
+                                  Positioned.fill(
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 24,
-                                        vertical: 10,
-                                      ),
                                       decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(28),
                                         border: Border.all(
                                           color: _swipeColor,
-                                          width: 3,
+                                          width: 4,
                                         ),
-                                        borderRadius: BorderRadius.circular(12),
                                       ),
-                                      child: Text(
-                                        _swipeLabel,
-                                        style: TextStyle(
-                                          color: _swipeColor,
-                                          fontSize: 32,
-                                          fontWeight: FontWeight.w900,
+                                      child: Center(
+                                        child: Transform.rotate(
+                                          angle: _dragX > 0 ? -0.3 : 0.3,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 24,
+                                              vertical: 10,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              border: Border.all(
+                                                color: _swipeColor,
+                                                width: 3,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              _swipeLabel,
+                                              style: TextStyle(
+                                                color: _swipeColor,
+                                                fontSize: 32,
+                                                fontWeight: FontWeight.w900,
+                                              ),
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ),
+                              ],
                             ),
-                        ],
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
+                ),
+              ),
+
+              // Bottom buttons
+              Padding(
+                padding: const EdgeInsets.fromLTRB(40, 12, 40, 24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // Delete button
+                    _actionButton(
+                      icon: Icons.close_rounded,
+                      color: AppTheme.danger,
+                      size: 64,
+                      onTap: () => _swipeAway(-1),
+                    ),
+                    // Undo button
+                    _actionButton(
+                      icon: Icons.undo_rounded,
+                      color: AppTheme.warning,
+                      size: 48,
+                      onTap: _undo,
+                    ),
+                    // Keep button
+                    _actionButton(
+                      icon: Icons.favorite_rounded,
+                      color: AppTheme.success,
+                      size: 64,
+                      onTap: () => _swipeAway(1),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
-
-        // Bottom buttons
-        Padding(
-          padding: const EdgeInsets.fromLTRB(40, 12, 40, 24),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              // Delete button
-              _actionButton(
-                icon: Icons.close_rounded,
-                color: AppTheme.danger,
-                size: 64,
-                onTap: () => _swipeAway(-1),
-              ),
-              // Undo button
-              _actionButton(
-                icon: Icons.undo_rounded,
-                color: AppTheme.warning,
-                size: 48,
-                onTap: _undo,
-              ),
-              // Keep button
-              _actionButton(
-                icon: Icons.favorite_rounded,
-                color: AppTheme.success,
-                size: 64,
-                onTap: () => _swipeAway(1),
-              ),
-            ],
-          ),
-        ),
-      ],
+      ),
     );
   }
 
   Widget _buildCard(PhotoAsset asset, {required bool isBackground}) {
     return Container(
-      width: MediaQuery.of(context).size.width - 48,
-      height: MediaQuery.of(context).size.height * 0.52,
+      width: (MediaQuery.of(context).size.width - 48).clamp(200, 600),
+      height: 360,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
@@ -310,28 +326,30 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${asset.width} × ${asset.height}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                          color: AppTheme.textPrimary,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${asset.width} × ${asset.height}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            color: AppTheme.textPrimary,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '請確認照片內容後再選擇',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.textMuted,
+                        const SizedBox(height: 2),
+                        Text(
+                          assetSizeLabel(asset),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -453,7 +471,12 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
   }
 
   void _undo() {
-    if (_currentIndex == 0 || _isAnimating || _isDeleting) return;
+    if (_currentIndex == 0 ||
+        _isAnimating ||
+        _isDeleting ||
+        _deletedCount > 0) {
+      return;
+    }
     setState(() {
       _currentIndex--;
       final asset = widget.assets[_currentIndex];
@@ -465,7 +488,7 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
   // --- Done ---
 
   Widget _buildDoneView() {
-    return Center(
+    return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
@@ -505,10 +528,15 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
               style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
             ),
             const SizedBox(height: 32),
+            TextButton.icon(
+              onPressed: _isDeleting || _deletedCount > 0 ? null : _undo,
+              icon: const Icon(Icons.undo_rounded),
+              label: const Text('撤回上一個選擇'),
+            ),
             // Delete button
             Container(
               width: double.infinity,
-              height: 52,
+              constraints: const BoxConstraints(minHeight: 52),
               decoration: BoxDecoration(
                 gradient: AppTheme.dangerGradient,
                 borderRadius: BorderRadius.circular(50),
@@ -521,7 +549,8 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
                   onTap: _isDeleting || _toDelete.isEmpty
                       ? null
                       : _confirmDelete,
-                  child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
                     child: Text(
                       '刪除 ${_toDelete.length} 張照片',
                       style: const TextStyle(
@@ -551,6 +580,13 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
   }
 
   Future<void> _confirmDelete() async {
+    final scanner = context.read<PhotoScannerService>();
+    if (_isDeleting ||
+        scanner.isScanning ||
+        scanner.isDeleting ||
+        _toDelete.isEmpty) {
+      return;
+    }
     final sub = context.read<SubscriptionManager>();
     if (!sub.isPro) {
       await Navigator.push(
@@ -577,12 +613,12 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
       ),
     );
     if (!mounted || confirmed != true) return;
-    if (!sub.isPro) return;
+    if (!sub.isPro || _isDeleting || scanner.isScanning || scanner.isDeleting) {
+      return;
+    }
     setState(() => _isDeleting = true);
     final requested = _toDelete.length;
-    final deletedIds = await context
-        .read<PhotoScannerService>()
-        .deleteAssetsWithResult(_toDelete);
+    final deletedIds = await scanner.deleteAssetsWithResult(_toDelete);
     if (!mounted) return;
     setState(() {
       _isDeleting = false;

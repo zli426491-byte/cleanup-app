@@ -6,8 +6,11 @@ import '../../services/photo_scanner_service.dart';
 import '../../services/subscription_manager.dart';
 import '../../utils/app_theme.dart';
 import '../paywall/paywall_view.dart';
+import '../components/video_compression_view.dart';
 import 'swipe_clean_view.dart';
 import 'asset_thumbnail.dart';
+import 'photo_asset_labels.dart';
+import 'scan_progress_panel.dart';
 
 class SmartCleanView extends StatefulWidget {
   final String initialCategory;
@@ -21,21 +24,28 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   int _selectedCategory = 0;
   int _videoSort = 0;
   final Set<String> _selectedIds = {};
+  final Set<String> _dismissedSuggestions = {};
   bool _isDeleting = false;
 
-  static const _categories = ['照片', '待比較照片', '截圖', '影片', '高解析度照片'];
+  static const _categories = ['照片', '真重複', '視覺相似', '截圖', '影片', '大檔'];
   static const _categoryIds = [
     'photos',
-    'review',
+    'duplicates',
+    'similar',
     'screenshots',
     'videos',
-    'highResolution',
+    'largeFiles',
   ];
 
   @override
   void initState() {
     super.initState();
-    final index = _categoryIds.indexOf(widget.initialCategory);
+    final category = switch (widget.initialCategory) {
+      'review' => 'similar',
+      'highResolution' => 'largeFiles',
+      _ => widget.initialCategory,
+    };
+    final index = _categoryIds.indexOf(category);
     _selectedCategory = index < 0 ? 0 : index;
   }
 
@@ -83,25 +93,9 @@ class _SmartCleanViewState extends State<SmartCleanView> {
       body: Column(
         children: [
           _categoryBar(scanner),
-          if (_selectedCategory == 3 && scanner.scanResult.videos.isNotEmpty)
+          if (_selectedCategory == 4 && scanner.scanResult.videos.isNotEmpty)
             _videoSortBar(),
           const Divider(height: 16),
-          if (!scanner.isScanning && scanner.scanNotice != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                scanner.scanNotice!,
-                style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
-              ),
-            ),
-          if (!scanner.isScanning && _selectedCategory == 1)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                '依拍攝時間、尺寸或名稱整理的待比較項目，尚未比對照片內容。請逐張確認後再選擇刪除。',
-                style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
-              ),
-            ),
           Expanded(
             child: scanner.scanResult.allAssets.isEmpty && !scanner.isScanning
                 ? _emptyState(scanner)
@@ -120,7 +114,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
 
   Widget _categoryBar(PhotoScannerService scanner) {
     return SizedBox(
-      height: 44,
+      height: 44 + (MediaQuery.textScalerOf(context).scale(12) - 12) * 2,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -192,7 +186,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          _sortChip('解析度', 0),
+          _sortChip('檔案容量', 0),
           const SizedBox(width: 6),
           _sortChip('最新', 1),
         ],
@@ -227,7 +221,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   Widget _emptyState(PhotoScannerService scanner) {
     final error = scanner.lastError;
 
-    return Center(
+    return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(28),
         child: Column(
@@ -257,7 +251,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
             ),
             const SizedBox(height: 6),
             Text(
-              error ?? '整理照片、截圖與影片，逐張確認保留或刪除。本次最多讀取 900 個可存取項目。',
+              error ?? '掃描全部可存取的照片與影片，以檔案內容確認真重複，再找出視覺相似照片。請逐張確認後決定。',
               textAlign: TextAlign.center,
               style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
             ),
@@ -271,12 +265,16 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                 color: Colors.transparent,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(50),
-                  onTap: scanner.startFullScan,
-                  child: const Padding(
+                  onTap: scanner.isDeleting
+                      ? null
+                      : scanner.wasCancelled
+                      ? scanner.resumeScan
+                      : scanner.startFullScan,
+                  child: Padding(
                     padding: EdgeInsets.symmetric(horizontal: 28, vertical: 12),
                     child: Text(
-                      '開始掃描',
-                      style: TextStyle(
+                      scanner.wasCancelled ? '繼續掃描' : '開始掃描',
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
                       ),
@@ -291,104 +289,98 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     );
   }
 
-  Widget _scanningState(PhotoScannerService scanner) {
-    final phaseName = switch (scanner.currentPhase) {
-      ScanPhase.fetchingAssets => '讀取相簿',
-      ScanPhase.computingHashes => '分析項目',
-      ScanPhase.findingDuplicates => '尋找重複照片',
-      ScanPhase.findingSimilar => '尋找相似照片',
-      ScanPhase.collectingScreenshots => '整理截圖',
-      ScanPhase.findingLargeFiles => '尋找大型檔案',
-      ScanPhase.scanningVideos => '整理影片',
-      ScanPhase.done => '完成',
-      ScanPhase.idle => '準備掃描',
-    };
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(
-            width: 48,
-            height: 48,
-            child: CircularProgressIndicator(
-              strokeWidth: 3,
-              color: AppTheme.primary,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            phaseName,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${(scanner.scanProgress * 100).clamp(0, 100).toInt()}%',
-            style: const TextStyle(
-              color: AppTheme.primary,
-              fontWeight: FontWeight.w800,
-              fontSize: 18,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              '本次最多讀取 900 個可存取項目，完成後請確認照片再刪除。',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _scanningState(PhotoScannerService scanner) => SingleChildScrollView(
+    padding: const EdgeInsets.all(16),
+    child: ScanProgressPanel(scanner: scanner),
+  );
 
   Widget _content(PhotoScannerService scanner) {
     final groups = _groupsFor(_selectedCategory, scanner);
     final assets = _assetsFor(_selectedCategory, scanner);
-
-    if (groups.isNotEmpty) {
-      return ListView.builder(
-        padding: const EdgeInsets.only(bottom: 12),
-        itemCount: groups.length,
-        itemBuilder: (context, index) => _groupRow(groups[index]),
-      );
-    }
-
-    if (assets.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.check_circle_rounded, size: 50, color: AppTheme.success),
-            SizedBox(height: 12),
-            Text(
-              '已讀取的項目中沒有這個分類',
-              style: TextStyle(color: AppTheme.textMuted, fontSize: 14),
+    final textScale = MediaQuery.textScalerOf(context).scale(12) / 12;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns =
+            (constraints.maxWidth / (120 * textScale.clamp(1.0, 1.6)))
+                .floor()
+                .clamp(2, 8);
+        final tileWidth =
+            (constraints.maxWidth - 24 - 6 * (columns - 1)) / columns;
+        return CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (scanner.scanNotice != null)
+                      Text(scanner.scanNotice!, style: AppTheme.caption),
+                    Text(
+                      _selectedCategory == 1
+                          ? '真重複：已比對原始檔案內容。保留建議可撤回，請自行勾選要刪除的項目。'
+                          : _selectedCategory == 2
+                          ? '視覺相似：依照片畫面比較，內容可能不同。保留建議僅供參考，請逐張確認。'
+                          : _selectedCategory == 5
+                          ? '依已取得的原始檔案容量排序。這是檔案大小，實際回收空間以系統為準。'
+                          : '只會刪除你手動勾選並再次確認的項目。',
+                      style: AppTheme.caption,
+                    ),
+                    if (scanner.wasCancelled ||
+                        scanner.pendingAnalysisCount > 0)
+                      TextButton.icon(
+                        onPressed: scanner.isDeleting
+                            ? null
+                            : scanner.resumeScan,
+                        icon: const Icon(Icons.play_arrow_rounded),
+                        label: const Text('繼續掃描／重試待處理項目'),
+                      ),
+                  ],
+                ),
+              ),
             ),
+            if (groups.isNotEmpty)
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _groupRow(groups[index]),
+                  childCount: groups.length,
+                ),
+              )
+            else if (assets.isNotEmpty)
+              SliverPadding(
+                padding: const EdgeInsets.all(12),
+                sliver: SliverGrid(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    crossAxisSpacing: 6,
+                    mainAxisSpacing: 10,
+                    mainAxisExtent: tileWidth + 45 * textScale,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => _thumbnail(assets[index]),
+                    childCount: assets.length,
+                  ),
+                ),
+              )
+            else
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Text('目前已完成分析的項目中沒有這個分類', textAlign: TextAlign.center),
+                ),
+              ),
           ],
-        ),
-      );
-    }
-
-    return GridView.builder(
-      padding: const EdgeInsets.all(12),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 6,
-        mainAxisSpacing: 6,
-      ),
-      itemCount: assets.length,
-      itemBuilder: (context, index) => _thumbnail(assets[index]),
+        );
+      },
     );
   }
 
-  Widget _groupRow(DuplicateGroup group) {
-    final candidates = group.assets;
-    final candidateIds = candidates.map((asset) => asset.id).toSet();
-    final allSelected = candidateIds.every(_selectedIds.contains);
-
+  Widget _groupRow(_ReviewGroup group) {
+    final suggested = !_dismissedSuggestions.contains(group.key)
+        ? group.bestAssetId
+        : null;
+    final textScale = MediaQuery.textScalerOf(context).scale(12) / 12;
+    final tileWidth = 112 * textScale.clamp(1.0, 1.5);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       padding: const EdgeInsets.all(14),
@@ -400,52 +392,40 @@ class _SmartCleanViewState extends State<SmartCleanView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
-                '${group.assets.length} 張待比較照片',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '請逐張確認',
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppTheme.danger,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () => setState(() {
-                  allSelected
-                      ? _selectedIds.removeAll(candidateIds)
-                      : _selectedIds.addAll(candidateIds);
-                }),
-                child: Icon(
-                  allSelected
-                      ? Icons.check_circle_rounded
-                      : Icons.circle_outlined,
-                  color: AppTheme.primary,
-                  size: 22,
-                ),
-              ),
-            ],
+          Text(
+            '${group.assets.length} 張${_selectedCategory == 1 ? '真重複' : '視覺相似'}照片',
+            style: const TextStyle(fontWeight: FontWeight.w700),
           ),
+          if (group.bestAssetId != null) ...[
+            if (suggested != null)
+              Text(
+                '建議保留：${group.bestReason ?? '此張照片在這組中較適合保留。'}',
+                style: AppTheme.caption,
+              ),
+            TextButton(
+              onPressed: () => setState(() {
+                suggested == null
+                    ? _dismissedSuggestions.remove(group.key)
+                    : _dismissedSuggestions.add(group.key);
+              }),
+              child: Text(suggested == null ? '重新顯示保留建議' : '撤回保留建議'),
+            ),
+          ],
+          const Text('保留建議不會自動勾選；點選縮圖標記刪除。', style: AppTheme.caption),
           const SizedBox(height: 10),
           SizedBox(
-            height: 80,
+            height: tileWidth + 52 * textScale,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: group.assets.length,
-              separatorBuilder: (context, index) => const SizedBox(width: 6),
-              itemBuilder: (context, index) {
-                final asset = group.assets[index];
-                return _thumbnail(asset, compact: true);
-              },
+              separatorBuilder: (context, index) => const SizedBox(width: 8),
+              itemBuilder: (context, index) => SizedBox(
+                width: tileWidth,
+                child: _thumbnail(
+                  group.assets[index],
+                  recommended: suggested == group.assets[index].id,
+                ),
+              ),
             ),
           ),
         ],
@@ -453,75 +433,96 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     );
   }
 
-  Widget _thumbnail(
-    PhotoAsset asset, {
-    bool compact = false,
-    bool locked = false,
-  }) {
+  Widget _thumbnail(PhotoAsset asset, {bool recommended = false}) {
     final selected = _selectedIds.contains(asset.id);
-
     return GestureDetector(
-      onTap: locked
-          ? null
-          : () => setState(() {
-              selected
-                  ? _selectedIds.remove(asset.id)
-                  : _selectedIds.add(asset.id);
-            }),
-      child: Container(
-        width: compact ? 80 : null,
-        height: compact ? 80 : null,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          border: selected
-              ? Border.all(color: AppTheme.primary, width: 2.5)
-              : locked
-              ? Border.all(color: AppTheme.success, width: 2)
-              : null,
-          color: Colors.grey[100],
-        ),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(13),
-              child: AssetThumbnail(asset: asset),
-            ),
-            if (locked)
-              Positioned(
-                top: 4,
-                left: 4,
-                child: _badge('保留', AppTheme.success),
+      key: ValueKey('select-${asset.id}'),
+      behavior: HitTestBehavior.opaque,
+      onTap: () => setState(() {
+        selected ? _selectedIds.remove(asset.id) : _selectedIds.add(asset.id);
+      }),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: selected
+                    ? Border.all(color: AppTheme.danger, width: 2.5)
+                    : null,
+                color: Colors.grey[100],
               ),
-            if (_selectedCategory == 4)
-              Positioned(
-                top: 4,
-                left: 4,
-                child: _badge(
-                  '${asset.width} × ${asset.height}',
-                  Colors.black54,
-                ),
-              ),
-            if (!locked)
-              Positioned(
-                bottom: 4,
-                right: 4,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? AppTheme.primary
-                        : Colors.black.withValues(alpha: 0.3),
-                    shape: BoxShape.circle,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(13),
+                    child: AssetThumbnail(asset: asset),
                   ),
-                  child: selected
-                      ? const Icon(Icons.check, color: Colors.white, size: 13)
-                      : null,
+                  if (recommended)
+                    Positioned(
+                      top: 4,
+                      left: 4,
+                      right: 4,
+                      child: _badge('建議保留', AppTheme.success),
+                    ),
+                  Positioned(
+                    bottom: 4,
+                    right: 4,
+                    child: Icon(
+                      selected
+                          ? Icons.check_circle_rounded
+                          : Icons.circle_outlined,
+                      color: selected ? AppTheme.danger : Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    child: IconButton(
+                      tooltip: '放大預覽',
+                      icon: const Icon(
+                        Icons.zoom_in_rounded,
+                        color: Colors.white,
+                      ),
+                      onPressed: () => _previewAsset(asset),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  assetSizeLabel(asset),
+                  style: const TextStyle(fontSize: 11),
+                  maxLines: 2,
                 ),
               ),
-          ],
-        ),
+              if (asset.type == AssetType.video)
+                IconButton(
+                  tooltip: '壓縮此影片',
+                  icon: const Icon(Icons.compress_rounded, size: 20),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
+                  onPressed: () => _openCompression(asset),
+                ),
+            ],
+          ),
+          if (asset.analysisPending)
+            const Text(
+              '內容待分析',
+              style: TextStyle(fontSize: 10, color: AppTheme.textSecondary),
+            ),
+        ],
       ),
     );
   }
@@ -539,6 +540,40 @@ class _SmartCleanViewState extends State<SmartCleanView> {
           color: Colors.white,
           fontSize: 8,
           fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  void _previewAsset(PhotoAsset asset) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => Dialog(
+        child: SizedBox(
+          width: 720,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: InteractiveViewer(
+                    child: AssetThumbnail(asset: asset, previewSize: 1200),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  '${asset.width} × ${asset.height} · ${assetSizeLabel(asset)}',
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('返回繼續比較'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -572,7 +607,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
             const SizedBox(height: 8),
             Container(
               width: double.infinity,
-              height: 48,
+              constraints: const BoxConstraints(minHeight: 48),
               decoration: BoxDecoration(
                 gradient: AppTheme.dangerGradient,
                 borderRadius: BorderRadius.circular(50),
@@ -584,9 +619,13 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                   onTap: _isDeleting || scanner.isScanning || scanner.isDeleting
                       ? null
                       : () => _previewDelete(scanner, sub),
-                  child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Icon(
                           Icons.visibility_rounded,
@@ -594,12 +633,14 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                           size: 18,
                         ),
                         const SizedBox(width: 6),
-                        Text(
-                          '預覽並刪除 ${_selectedIds.length} 個項目',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
+                        Flexible(
+                          child: Text(
+                            '預覽並刪除 ${_selectedIds.length} 個項目',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ],
@@ -614,28 +655,35 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     );
   }
 
-  int _countFor(int category, PhotoScannerService scanner) {
-    final result = scanner.scanResult;
-    return switch (category) {
-      0 =>
-        result.allAssets.where((asset) => asset.type == AssetType.image).length,
-      1 => result.similarGroups.fold<int>(
-        0,
-        (sum, group) => sum + group.assets.length,
-      ),
-      2 => result.screenshots.length,
-      3 => result.videos.length,
-      4 => result.largeFiles.length,
-      _ => 0,
-    };
-  }
+  int _countFor(int category, PhotoScannerService scanner) =>
+      _assetsFor(category, scanner).length;
 
-  List<DuplicateGroup> _groupsFor(int category, PhotoScannerService scanner) {
-    return category == 1
-        ? scanner.scanResult.similarGroups
-              .map((group) => DuplicateGroup(hash: '', assets: group.assets))
-              .toList()
-        : [];
+  List<_ReviewGroup> _groupsFor(int category, PhotoScannerService scanner) {
+    if (category == 1) {
+      return scanner.scanResult.duplicateGroups
+          .map(
+            (group) => _ReviewGroup(
+              key: 'duplicate:${group.hash}',
+              assets: group.assets,
+              bestAssetId: group.bestAssetId,
+              bestReason: group.bestReason,
+            ),
+          )
+          .toList();
+    }
+    if (category == 2) {
+      return scanner.scanResult.similarGroups
+          .map(
+            (group) => _ReviewGroup(
+              key: 'similar:${group.assets.map((asset) => asset.id).join(',')}',
+              assets: group.assets,
+              bestAssetId: group.bestAssetId,
+              bestReason: group.bestReason,
+            ),
+          )
+          .toList();
+    }
+    return [];
   }
 
   List<PhotoAsset> _assetsFor(int category, PhotoScannerService scanner) {
@@ -645,10 +693,11 @@ class _SmartCleanViewState extends State<SmartCleanView> {
         result.allAssets
             .where((asset) => asset.type == AssetType.image)
             .toList(),
-      1 => result.similarGroups.expand((group) => group.assets).toList(),
-      2 => result.screenshots,
-      3 => _sortedVideos(result.videos),
-      4 => result.largeFiles,
+      1 => result.duplicateGroups.expand((group) => group.assets).toList(),
+      2 => result.similarGroups.expand((group) => group.assets).toList(),
+      3 => result.screenshots,
+      4 => _sortedVideos(result.videos),
+      5 => result.largeFiles,
       _ => [],
     };
   }
@@ -681,6 +730,20 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     );
   }
 
+  void _openCompression(PhotoAsset asset) {
+    final scanner = context.read<PhotoScannerService>();
+    final subscription = context.read<SubscriptionManager>();
+    if (_isDeleting || scanner.isScanning || scanner.isDeleting) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => subscription.isPro
+            ? VideoCompressionView(asset: asset)
+            : const PaywallView(),
+      ),
+    );
+  }
+
   void _previewDelete(PhotoScannerService scanner, SubscriptionManager sub) {
     if (_isDeleting || scanner.isScanning || scanner.isDeleting) return;
     if (!sub.isPro) {
@@ -701,36 +764,39 @@ class _SmartCleanViewState extends State<SmartCleanView> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('確認要刪除這些項目嗎？'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '共 ${toDelete.length} 個項目。請先確認縮圖再刪除，照片內容不會自動判定為重複。刪除後的空間以系統為準。',
-                style: const TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: 13,
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 220,
-                child: GridView.builder(
-                  itemCount: toDelete.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 6,
-                    mainAxisSpacing: 6,
-                  ),
-                  itemBuilder: (context, index) => ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: AssetThumbnail(asset: toDelete[index]),
+        content: SingleChildScrollView(
+          child: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '共 ${toDelete.length} 個項目。請確認選取內容與保留建議後再刪除；實際回收空間以系統為準。',
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 13,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 220,
+                  child: GridView.builder(
+                    itemCount: toDelete.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 6,
+                          mainAxisSpacing: 6,
+                        ),
+                    itemBuilder: (context, index) => ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: AssetThumbnail(asset: toDelete[index]),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
@@ -773,4 +839,17 @@ class _SmartCleanViewState extends State<SmartCleanView> {
       ),
     );
   }
+}
+
+class _ReviewGroup {
+  final String key;
+  final List<PhotoAsset> assets;
+  final String? bestAssetId;
+  final String? bestReason;
+  const _ReviewGroup({
+    required this.key,
+    required this.assets,
+    this.bestAssetId,
+    this.bestReason,
+  });
 }
