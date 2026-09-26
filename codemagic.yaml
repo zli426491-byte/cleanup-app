@@ -10,7 +10,7 @@ workflows:
       vars:
         BUNDLE_ID: com.cleanupapp.cleaner
         APP_STORE_APP_ID: 6764532900
-      flutter: stable
+      flutter: 3.41.7
       xcode: latest
       cocoapods: default
 
@@ -39,14 +39,18 @@ workflows:
 
       - name: Set bundle version
         script: |
-          LATEST_BUILD=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APP_ID" || echo 0)
-          agvtool new-version -all $((LATEST_BUILD + 1))
-        working_directory: ios
+          set -e
+          LATEST_BUILD=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APP_ID")
+          case "$LATEST_BUILD" in
+            ''|*[!0-9]*) echo "Cannot determine the latest Apple build number" >&2; exit 1 ;;
+          esac
+          echo "IOS_BUILD_NUMBER=$((LATEST_BUILD + 1))" >> "$CM_ENV"
 
       - name: Build iOS
         script: |
           flutter build ipa \
             --release \
+            --build-number="$IOS_BUILD_NUMBER" \
             --dart-define=REVENUECAT_IOS_API_KEY=$REVENUECAT_IOS_API_KEY \
             --export-options-plist=/Users/builder/export_options.plist
 

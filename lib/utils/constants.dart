@@ -20,6 +20,8 @@ class AppConstants {
   static const int largeFileThresholdBytes = 5000000; // 5MB
 
   // URLs
-  static const String privacyPolicyUrl = 'https://zli426491-byte.github.io/cleanup-app/';
-  static const String termsUrl = 'https://zli426491-byte.github.io/cleanup-app/';
+  static const String privacyPolicyUrl =
+      'https://zli426491-byte.github.io/cleanup-app/';
+  static const String termsUrl =
+      'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
 }

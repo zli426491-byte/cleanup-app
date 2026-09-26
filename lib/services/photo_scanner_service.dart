@@ -150,46 +150,76 @@ class PhotoScannerService extends ChangeNotifier {
   ScanResult _scanResult = ScanResult.empty;
   String? _lastError;
   int _scanRunId = 0;
+  int? _availableAssetCount;
+  bool _hasCompletedScan = false;
+  bool _hasLimitedAccess = false;
 
   bool get isScanning => _isScanning;
   double get scanProgress => _scanProgress;
   ScanPhase get currentPhase => _currentPhase;
   ScanResult get scanResult => _scanResult;
   String? get lastError => _lastError;
+  int? get availableAssetCount => _availableAssetCount;
+  bool get hasCompletedScan => _hasCompletedScan;
+  String? get scanNotice {
+    if (_lastError != null) return _lastError;
+    if (!_hasCompletedScan) return null;
+    final scope = _availableAssetCount;
+    final scanned = _scanResult.allAssets.length;
+    if (scope != null && scanned < scope) {
+      return '已讀取 $scanned / $scope 個可存取項目，本次最多讀取 $_maxAssetsToScan 個。';
+    }
+    if (_hasLimitedAccess) return '僅整理你允許存取的照片，未讀取整個相簿。';
+    return null;
+  }
 
   // -----------------------------------------------------------------------
   // Public API
   // -----------------------------------------------------------------------
 
-  /// Run a full device scan: fetch assets, hash, find duplicates/similar,
-  /// screenshots, large files, and videos.
+  /// Index up to 900 accessible assets. Metadata groups require visual review;
+  /// this scan does not verify identical content or calculate file sizes.
   Future<void> startFullScan() async {
+    if (_isScanning) return;
     AnalyticsManager.instance.track(AnalyticsEvent.scanStarted.name);
     _isScanning = true;
     final runId = ++_scanRunId;
     _scanProgress = 0.0;
     _currentPhase = ScanPhase.fetchingAssets;
     _lastError = null;
+    _availableAssetCount = null;
+    _hasCompletedScan = false;
+    _hasLimitedAccess = false;
     notifyListeners();
 
     final rawAssets = <AssetEntity>[];
     final screenshotIds = <String>{};
     var timedOut = false;
-
+    Timer? watchdog;
     try {
+      // Permission confirmation is a user action, not a scan stall.
+      final permitted = await PhotoManager.requestPermissionExtend();
+      if (!_isActiveScan(runId)) return;
+      _hasLimitedAccess = permitted.isLimited;
+      if (!permitted.hasAccess) {
+        _lastError = '尚未取得相簿權限，請在設定中允許存取照片後重試。';
+        _finishScanResult(ScanResult.empty);
+        return;
+      }
+      final watchdogResult = Completer<ScanResult>();
+      watchdog = Timer(_mainScanWatchdog, () {
+        timedOut = true;
+        watchdogResult.complete(
+          _buildQuickResult(rawAssets: rawAssets, screenshotIds: screenshotIds),
+        );
+      });
       final result = await Future.any<ScanResult>([
         _runQuickIndexScan(
           runId: runId,
           rawAssets: rawAssets,
           screenshotIds: screenshotIds,
         ),
-        Future<ScanResult>.delayed(_mainScanWatchdog, () {
-          timedOut = true;
-          return _buildQuickResult(
-            rawAssets: rawAssets,
-            screenshotIds: screenshotIds,
-          );
-        }),
+        watchdogResult.future,
       ]);
 
       if (!_isActiveScan(runId)) return;
@@ -197,22 +227,29 @@ class PhotoScannerService extends ChangeNotifier {
     } catch (e) {
       if (!_isActiveScan(runId)) return;
       debugPrint('PhotoScannerService.startFullScan error: $e');
-      _lastError = '掃描中斷，已用安全模式完成。';
+      _lastError = '讀取相簿中斷，目前只顯示已讀取的項目，請重試。';
       _finishScanResult(
         _buildQuickResult(rawAssets: rawAssets, screenshotIds: screenshotIds),
         timedOut: true,
       );
+    } finally {
+      watchdog?.cancel();
     }
   }
 
   /// Delete a list of assets from the device.
-  Future<bool> deleteAssets(List<PhotoAsset> assets) async {
+  Future<bool> deleteAssets(List<PhotoAsset> assets) async =>
+      (await deleteAssetsWithResult(assets)).isNotEmpty;
+
+  /// Return only IDs confirmed by the OS. A cancelled request returns no IDs.
+  Future<Set<String>> deleteAssetsWithResult(List<PhotoAsset> assets) async {
+    final ids = assets.map((a) => a.id).toSet();
+    if (ids.isEmpty) return <String>{};
     try {
-      final ids = assets.map((a) => a.id).toList();
-      final result = await PhotoManager.editor.deleteWithIds(ids);
-      if (result.isNotEmpty) {
+      final result = await PhotoManager.editor.deleteWithIds(ids.toList());
+      final deletedIds = result.toSet().intersection(ids);
+      if (deletedIds.isNotEmpty) {
         // Remove deleted assets from the current scan result.
-        final deletedIds = result.toSet();
         final remainingAssets = _scanResult.allAssets
             .where((a) => !deletedIds.contains(a.id))
             .toList();
@@ -262,15 +299,21 @@ class PhotoScannerService extends ChangeNotifier {
         );
         AnalyticsManager.instance.track(
           AnalyticsEvent.photosDeleted.name,
-          properties: {'count': result.length},
+          properties: {'count': deletedIds.length},
         );
+        if (_availableAssetCount != null) {
+          _availableAssetCount = math.max(
+            0,
+            _availableAssetCount! - deletedIds.length,
+          );
+        }
         notifyListeners();
-        return true;
+        return deletedIds;
       }
-      return false;
+      return <String>{};
     } catch (e) {
       debugPrint('PhotoScannerService.deleteAssets error: $e');
-      return false;
+      return <String>{};
     }
   }
 
@@ -336,29 +379,9 @@ class PhotoScannerService extends ChangeNotifier {
     required List<PhotoAsset> screenshots,
     required List<PhotoAsset> largeFiles,
   }) {
-    int total = 0;
-
-    // For duplicates, keep the first and remove the rest.
-    for (final group in duplicateGroups) {
-      for (var i = 1; i < group.assets.length; i++) {
-        total += group.assets[i].size;
-      }
-    }
-
-    // Similar groups are review-first suggestions; estimate savings by keeping
-    // the newest item in each group.
-    for (final group in similarGroups) {
-      for (var i = 1; i < group.assets.length; i++) {
-        total += group.assets[i].size;
-      }
-    }
-
-    // For large files, estimate 50 % compression savings.
-    for (final f in largeFiles) {
-      total += f.size ~/ 2;
-    }
-
-    return total;
+    // Pixel dimensions do not reveal compressed file size, video size, or
+    // device storage recovered after deletion. Do not advertise savings.
+    return 0;
   }
 
   // -----------------------------------------------------------------------
@@ -370,24 +393,25 @@ class PhotoScannerService extends ChangeNotifier {
     required List<AssetEntity> rawAssets,
     required Set<String> screenshotIds,
   }) async {
-    final permitted = await PhotoManager.requestPermissionExtend();
-    if (!_isActiveScan(runId) || !permitted.isAuth) {
-      return _buildQuickResult(
-        rawAssets: rawAssets,
-        screenshotIds: screenshotIds,
-      );
-    }
+    if (!_isActiveScan(runId)) return ScanResult.empty;
 
     _scanProgress = 0.08;
     notifyListeners();
 
-    final albums = await PhotoManager.getAssetPathList(
-      type: RequestType.common,
-      filterOption: FilterOptionGroup(
-        imageOption: const FilterOption(needTitle: false),
-        videoOption: const FilterOption(needTitle: false),
-      ),
-    ).timeout(_assetPageTimeout, onTimeout: () => const <AssetPathEntity>[]);
+    final albums =
+        await PhotoManager.getAssetPathList(
+          type: RequestType.common,
+          filterOption: FilterOptionGroup(
+            imageOption: const FilterOption(needTitle: false),
+            videoOption: const FilterOption(needTitle: false),
+          ),
+        ).timeout(
+          _assetPageTimeout,
+          onTimeout: () {
+            if (_isActiveScan(runId)) _lastError = '讀取相簿逾時，請重試。';
+            return const <AssetPathEntity>[];
+          },
+        );
     if (!_isActiveScan(runId) || albums.isEmpty) {
       return _buildQuickResult(
         rawAssets: rawAssets,
@@ -399,7 +423,10 @@ class PhotoScannerService extends ChangeNotifier {
     final allAlbum = allAlbums.isNotEmpty ? allAlbums.first : albums.first;
     final count = await allAlbum.assetCountAsync.timeout(
       _assetPageTimeout,
-      onTimeout: () => 0,
+      onTimeout: () {
+        if (_isActiveScan(runId)) _lastError = '讀取相簿數量逾時，請重試。';
+        return 0;
+      },
     );
     if (!_isActiveScan(runId) || count <= 0) {
       return _buildQuickResult(
@@ -408,6 +435,7 @@ class PhotoScannerService extends ChangeNotifier {
       );
     }
 
+    _availableAssetCount = count;
     final cappedCount = count > _maxAssetsToScan ? _maxAssetsToScan : count;
     for (var start = 0; start < cappedCount; start += _assetPageSize) {
       if (!_isActiveScan(runId)) break;
@@ -416,7 +444,15 @@ class PhotoScannerService extends ChangeNotifier {
           : start + _assetPageSize;
       final assets = await allAlbum
           .getAssetListRange(start: start, end: end)
-          .timeout(_assetPageTimeout, onTimeout: () => const <AssetEntity>[]);
+          .timeout(
+            _assetPageTimeout,
+            onTimeout: () {
+              if (_isActiveScan(runId)) {
+                _lastError = '部分照片讀取逾時，目前只顯示已讀取的項目，請重試。';
+              }
+              return const <AssetEntity>[];
+            },
+          );
       if (!_isActiveScan(runId)) break;
 
       rawAssets.addAll(assets);
@@ -425,6 +461,7 @@ class PhotoScannerService extends ChangeNotifier {
       await Future<void>.delayed(Duration.zero);
     }
 
+    if (!_isActiveScan(runId)) return ScanResult.empty;
     _currentPhase = ScanPhase.collectingScreenshots;
     _scanProgress = 0.78;
     notifyListeners();
@@ -442,6 +479,13 @@ class PhotoScannerService extends ChangeNotifier {
   }
 
   bool _isActiveScan(int runId) => _isScanning && _scanRunId == runId;
+
+  @override
+  void dispose() {
+    _isScanning = false;
+    _scanRunId++;
+    super.dispose();
+  }
 
   ScanResult _buildQuickResult({
     required List<AssetEntity> rawAssets,
@@ -487,15 +531,23 @@ class PhotoScannerService extends ChangeNotifier {
     final screenshots = _collectScreenshots(photoAssets, uniqueMap);
     const largeThreshold = 5 * 1024 * 1024;
     final largeFiles =
-        photoAssets.where((a) => a.size > largeThreshold).toList()
+        photoAssets
+            .where((a) => a.type == AssetType.image && a.size > largeThreshold)
+            .toList()
           ..sort((a, b) => b.size.compareTo(a.size));
     final videos = photoAssets.where((a) => a.type == AssetType.video).toList()
       ..sort((a, b) => b.size.compareTo(a.size));
-    final duplicateGroups = _findMetadataDuplicates(photoAssets);
-    final duplicateIds = duplicateGroups
+    final metadataGroups = _findMetadataDuplicates(photoAssets);
+    final metadataIds = metadataGroups
         .expand((group) => group.assets.map((asset) => asset.id))
         .toSet();
-    final similarGroups = _findMetadataSimilar(photoAssets, duplicateIds);
+    final similarGroups = [
+      ...metadataGroups.map(
+        (group) => SimilarGroup(assets: group.assets, hammingDistance: 0),
+      ),
+      ..._findMetadataSimilar(photoAssets, metadataIds),
+    ];
+    const duplicateGroups = <DuplicateGroup>[];
 
     return ScanResult(
       allAssets: photoAssets,
@@ -626,7 +678,10 @@ class PhotoScannerService extends ChangeNotifier {
     _currentPhase = ScanPhase.done;
     _scanProgress = 1.0;
     _isScanning = false;
-    _lastError = timedOut ? '掃描已先完成，部分深度分析已略過。' : null;
+    _hasCompletedScan = true;
+    if (timedOut && _lastError == null) {
+      _lastError = '讀取相簿逾時，目前只顯示已讀取的項目，請重試。';
+    }
     AnalyticsManager.instance.track(
       AnalyticsEvent.scanCompleted.name,
       properties: {

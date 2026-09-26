@@ -105,6 +105,8 @@ enum AnalyticsEvent {
   // Monetisation
   paywallShown('paywall_shown'),
   paywallClosed('paywall_closed'),
+  // Client purchase completion confirms access, not trial status or revenue.
+  purchaseCompleted('purchase_completed'),
   trialStarted('trial_started'),
   subscriptionStarted('subscription_started'),
 
@@ -197,7 +199,8 @@ class AnalyticsManager {
   /// Call this after your custom pre-permission screen.
   Future<void> requestATT() async {
     try {
-      final status = await AppTrackingTransparency.requestTrackingAuthorization();
+      final status =
+          await AppTrackingTransparency.requestTrackingAuthorization();
       _log('ATT status: $status');
 
       // TODO: Forward decision to Adjust when adjust_sdk is added
@@ -328,8 +331,10 @@ class AnalyticsManager {
 
   void _assertConfigured() {
     if (!_configured) {
-      _log('WARNING: AnalyticsManager.configure() not called yet. '
-          'Ignoring event. Call configure() at app startup.');
+      _log(
+        'WARNING: AnalyticsManager.configure() not called yet. '
+        'Ignoring event. Call configure() at app startup.',
+      );
       return;
     }
   }

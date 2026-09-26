@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
@@ -33,7 +34,7 @@ class _PaywallViewState extends State<PaywallView> {
       AnalyticsEvent.paywallShown.name,
       properties: {'source': widget.fromOnboarding ? 'onboarding' : 'in_app'},
     );
-    _loadBuildNumber();
+    if (kDebugMode) _loadBuildNumber();
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadPlans());
   }
 
@@ -41,7 +42,8 @@ class _PaywallViewState extends State<PaywallView> {
   Widget build(BuildContext context) {
     final sub = context.watch<SubscriptionManager>();
     final plans = _sortedPlans(sub);
-    final canPurchase = !sub.isPlaceholder &&
+    final canPurchase =
+        !sub.isPlaceholder &&
         _selectedPlan != null &&
         !sub.isLoading &&
         !_isPurchasing;
@@ -77,17 +79,17 @@ class _PaywallViewState extends State<PaywallView> {
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
-              if (_buildNumber != null) ...[
+              if (kDebugMode && _buildNumber != null) ...[
                 const SizedBox(height: 4),
                 Text(
-                  'TestFlight Build $_buildNumber',
+                  'Build $_buildNumber',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.grey[500], fontSize: 12),
                 ),
               ],
               const SizedBox(height: 6),
               Text(
-                '解鎖完整清理工具，快速找出可釋放的照片、影片與檔案空間。',
+                '解鎖照片與影片整理，預覽後選擇要刪除的項目。',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey[600]),
               ),
@@ -125,9 +127,11 @@ class _PaywallViewState extends State<PaywallView> {
                       subtitle: _subtitleFor(plan),
                       price: plan.product.priceString,
                       isSelected:
-                          plan.product.identifier == _selectedPlan?.product.identifier,
+                          plan.product.identifier ==
+                          _selectedPlan?.product.identifier,
                       isBestValue:
-                          plan.product.identifier == AppConstants.yearlyProductId,
+                          plan.product.identifier ==
+                          AppConstants.yearlyProductId,
                       onTap: () => setState(() => _selectedPlan = plan),
                     ),
                   ),
@@ -151,20 +155,19 @@ class _PaywallViewState extends State<PaywallView> {
                 spacing: 4,
                 children: [
                   TextButton(
-                    onPressed:
-                        sub.isPlaceholder || sub.isLoading ? null : () => _restore(sub),
+                    onPressed: sub.isPlaceholder || sub.isLoading
+                        ? null
+                        : () => _restore(sub),
                     child: const Text('恢復購買', style: TextStyle(fontSize: 12)),
                   ),
                   TextButton(
-                    onPressed: () => launchUrl(
-                      Uri.parse('https://zli426491-byte.github.io/cleanup-app/'),
-                    ),
+                    onPressed: () =>
+                        launchUrl(Uri.parse(AppConstants.privacyPolicyUrl)),
                     child: const Text('隱私權政策', style: TextStyle(fontSize: 12)),
                   ),
                   TextButton(
-                    onPressed: () => launchUrl(
-                      Uri.parse('https://zli426491-byte.github.io/cleanup-app/'),
-                    ),
+                    onPressed: () =>
+                        launchUrl(Uri.parse(AppConstants.termsUrl)),
                     child: const Text('使用條款', style: TextStyle(fontSize: 12)),
                   ),
                 ],
@@ -207,17 +210,14 @@ class _PaywallViewState extends State<PaywallView> {
     setState(() => _isPurchasing = false);
 
     if (didPurchase) {
-      if (plan.product.introductoryPrice != null) {
-        AnalyticsManager.instance.track(AnalyticsEvent.trialStarted.name);
-      }
+      // A successful client flow confirms access, not trial eligibility or
+      // money collected. RevenueCat transactions own lifecycle and revenue.
       AnalyticsManager.instance.track(
-        AnalyticsEvent.subscriptionStarted.name,
-        properties: {'product_id': plan.product.identifier},
-      );
-      AnalyticsManager.instance.trackRevenue(
-        plan.product.identifier,
-        plan.product.price,
-        plan.product.currencyCode,
+        AnalyticsEvent.purchaseCompleted.name,
+        properties: {
+          'product_id': plan.product.identifier,
+          'pro_unlocked': true,
+        },
       );
       _dismiss(context);
     } else {
@@ -242,7 +242,9 @@ class _PaywallViewState extends State<PaywallView> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _dismiss(BuildContext context) async {
@@ -302,18 +304,15 @@ class _PaywallViewState extends State<PaywallView> {
 
   static String _subtitleFor(_PlanOption plan) {
     return switch (plan.product.identifier) {
-      AppConstants.yearlyProductId => '最適合長期清理與壓縮照片影片',
+      AppConstants.yearlyProductId => '全年整理照片與影片',
       AppConstants.weeklyProductId => '短期整理相簿時使用',
       _ => plan.product.identifier,
     };
   }
 
   static const _features = [
-    _PaywallFeature(Icons.copy, '重複與相似照片整理', AppTheme.danger),
-    _PaywallFeature(Icons.photo_library, '截圖、大型照片與影片篩選', AppTheme.warning),
-    _PaywallFeature(Icons.compress, '影片壓縮節省空間', AppTheme.accent),
-    _PaywallFeature(Icons.people, '聯絡人清理工具', AppTheme.primary),
-    _PaywallFeature(Icons.lock, '私密空間保護重要照片', AppTheme.success),
+    _PaywallFeature(Icons.copy, '照片分組與逐張確認', AppTheme.danger),
+    _PaywallFeature(Icons.photo_library, '截圖、高解析度照片與影片篩選', AppTheme.warning),
     _PaywallFeature(Icons.swipe, '滑動式快速清理體驗', Colors.teal),
   ];
 }
@@ -370,7 +369,9 @@ class _EmptyPlans extends StatelessWidget {
     if (isLoading) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 24),
-        child: Center(child: CircularProgressIndicator(color: AppTheme.primary)),
+        child: Center(
+          child: CircularProgressIndicator(color: AppTheme.primary),
+        ),
       );
     }
 

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/photo_scanner_service.dart';
+import '../../services/subscription_manager.dart';
 import '../../utils/app_theme.dart';
+import '../paywall/paywall_view.dart';
+import 'asset_thumbnail.dart';
 
 /// Tinder-style swipe to delete/keep photos
 class SwipeCleanView extends StatefulWidget {
@@ -14,7 +17,8 @@ class SwipeCleanView extends StatefulWidget {
   State<SwipeCleanView> createState() => _SwipeCleanViewState();
 }
 
-class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStateMixin {
+class _SwipeCleanViewState extends State<SwipeCleanView>
+    with TickerProviderStateMixin {
   int _currentIndex = 0;
   final List<PhotoAsset> _toDelete = [];
   final List<PhotoAsset> _toKeep = [];
@@ -26,11 +30,16 @@ class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStat
   late Animation<double> _animX;
   late Animation<double> _animY;
   bool _isAnimating = false;
+  bool _isDeleting = false;
+  int _deletedCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _animController = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
     _animController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         setState(() {
@@ -51,8 +60,10 @@ class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStat
   }
 
   bool get _isDone => _currentIndex >= widget.assets.length;
-  PhotoAsset? get _currentAsset => _isDone ? null : widget.assets[_currentIndex];
-  double get _progress => widget.assets.isEmpty ? 1.0 : _currentIndex / widget.assets.length;
+  PhotoAsset? get _currentAsset =>
+      _isDone ? null : widget.assets[_currentIndex];
+  double get _progress =>
+      widget.assets.isEmpty ? 1.0 : _currentIndex / widget.assets.length;
 
   // Swipe direction indicator
   String get _swipeLabel {
@@ -80,7 +91,10 @@ class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStat
         actions: [
           TextButton(
             onPressed: _isDone ? null : () => _showResultDialog(),
-            child: Text('完成 (${_toDelete.length})', style: const TextStyle(fontWeight: FontWeight.w700)),
+            child: Text(
+              '完成 (${_toDelete.length})',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -90,9 +104,6 @@ class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStat
 
   Widget _buildSwipeView() {
     final asset = _currentAsset!;
-    final x = _isAnimating ? _animX.value : _dragX;
-    final y = _isAnimating ? _animY.value : _dragY;
-    final angle = x / 800;
 
     return Column(
       children: [
@@ -101,8 +112,14 @@ class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStat
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             children: [
-              Text('${_currentIndex + 1}/${widget.assets.length}',
-                  style: const TextStyle(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.w600)),
+              Text(
+                '${_currentIndex + 1}/${widget.assets.length}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.textMuted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: ClipRRect(
@@ -126,9 +143,17 @@ class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStat
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _statChip(Icons.delete_rounded, '${_toDelete.length} 刪除', AppTheme.danger),
+              _statChip(
+                Icons.delete_rounded,
+                '${_toDelete.length} 刪除',
+                AppTheme.danger,
+              ),
               const SizedBox(width: 12),
-              _statChip(Icons.favorite_rounded, '${_toKeep.length} 保留', AppTheme.success),
+              _statChip(
+                Icons.favorite_rounded,
+                '${_toKeep.length} 保留',
+                AppTheme.success,
+              ),
             ],
           ),
         ),
@@ -141,12 +166,15 @@ class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStat
             children: [
               // Next card (background)
               if (_currentIndex + 1 < widget.assets.length)
-                _buildCard(widget.assets[_currentIndex + 1], isBackground: true),
+                _buildCard(
+                  widget.assets[_currentIndex + 1],
+                  isBackground: true,
+                ),
 
               // Current card (draggable)
               GestureDetector(
-                onPanStart: (_) => setState(() => _isAnimating = false),
                 onPanUpdate: (d) => setState(() {
+                  if (_isAnimating) return;
                   _dragX += d.delta.dx;
                   _dragY += d.delta.dy * 0.3;
                 }),
@@ -154,9 +182,12 @@ class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStat
                 child: AnimatedBuilder(
                   animation: _animController,
                   builder: (_, child) => Transform.translate(
-                    offset: Offset(x, y),
+                    offset: Offset(
+                      _isAnimating ? _animX.value : _dragX,
+                      _isAnimating ? _animY.value : _dragY,
+                    ),
                     child: Transform.rotate(
-                      angle: angle,
+                      angle: (_isAnimating ? _animX.value : _dragX) / 800,
                       child: Stack(
                         children: [
                           _buildCard(asset, isBackground: false),
@@ -166,20 +197,34 @@ class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStat
                               child: Container(
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(28),
-                                  border: Border.all(color: _swipeColor, width: 4),
+                                  border: Border.all(
+                                    color: _swipeColor,
+                                    width: 4,
+                                  ),
                                 ),
                                 child: Center(
                                   child: Transform.rotate(
                                     angle: _dragX > 0 ? -0.3 : 0.3,
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 24,
+                                        vertical: 10,
+                                      ),
                                       decoration: BoxDecoration(
-                                        border: Border.all(color: _swipeColor, width: 3),
+                                        border: Border.all(
+                                          color: _swipeColor,
+                                          width: 3,
+                                        ),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
-                                      child: Text(_swipeLabel,
-                                          style: TextStyle(color: _swipeColor,
-                                              fontSize: 32, fontWeight: FontWeight.w900)),
+                                      child: Text(
+                                        _swipeLabel,
+                                        style: TextStyle(
+                                          color: _swipeColor,
+                                          fontSize: 32,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -253,9 +298,11 @@ class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStat
               child: Container(
                 width: double.infinity,
                 color: Colors.grey[100],
-                child: asset.thumbnail != null
-                    ? Image.memory(asset.thumbnail!, fit: BoxFit.cover)
-                    : Center(child: Icon(Icons.image_rounded, size: 60, color: Colors.grey[300])),
+                child: AssetThumbnail(
+                  key: ValueKey(asset.id),
+                  asset: asset,
+                  previewSize: 800,
+                ),
               ),
             ),
             // Info bar
@@ -266,23 +313,41 @@ class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStat
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(_formatSize(asset.size),
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.textPrimary)),
+                      Text(
+                        '${asset.width} × ${asset.height}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
                       const SizedBox(height: 2),
-                      Text('${asset.width} × ${asset.height}',
-                          style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                      Text(
+                        '請確認照片內容後再選擇',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
                     ],
                   ),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(50),
                     ),
                     child: Text(
                       '${asset.createDate.month}/${asset.createDate.day}',
-                      style: const TextStyle(fontSize: 11, color: AppTheme.primary, fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -294,7 +359,12 @@ class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStat
     );
   }
 
-  Widget _actionButton({required IconData icon, required Color color, required double size, required VoidCallback onTap}) {
+  Widget _actionButton({
+    required IconData icon,
+    required Color color,
+    required double size,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -304,8 +374,15 @@ class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStat
           color: Colors.white,
           shape: BoxShape.circle,
           boxShadow: [
-            BoxShadow(color: color.withValues(alpha: 0.2), blurRadius: 16, offset: const Offset(0, 4)),
-            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10),
+            BoxShadow(
+              color: color.withValues(alpha: 0.2),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+            ),
           ],
         ),
         child: Icon(icon, color: color, size: size * 0.4),
@@ -325,7 +402,14 @@ class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStat
         children: [
           Icon(icon, size: 14, color: color),
           const SizedBox(width: 4),
-          Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
         ],
       ),
     );
@@ -338,12 +422,15 @@ class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStat
       _swipeAway(_dragX > 0 ? 1 : -1);
     } else {
       // Snap back
-      setState(() { _dragX = 0; _dragY = 0; });
+      setState(() {
+        _dragX = 0;
+        _dragY = 0;
+      });
     }
   }
 
   void _swipeAway(int direction) {
-    if (_isDone) return;
+    if (_isDone || _isAnimating) return;
 
     final asset = _currentAsset!;
     if (direction > 0) {
@@ -352,17 +439,21 @@ class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStat
       _toDelete.add(asset);
     }
 
-    _animX = Tween<double>(begin: _dragX, end: direction * 500.0)
-        .animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
-    _animY = Tween<double>(begin: _dragY, end: _dragY - 50)
-        .animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
+    _animX = Tween<double>(
+      begin: _dragX,
+      end: direction * 500.0,
+    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
+    _animY = Tween<double>(
+      begin: _dragY,
+      end: _dragY - 50,
+    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
 
     _isAnimating = true;
     _animController.forward();
   }
 
   void _undo() {
-    if (_currentIndex == 0) return;
+    if (_currentIndex == 0 || _isAnimating || _isDeleting) return;
     setState(() {
       _currentIndex--;
       final asset = widget.assets[_currentIndex];
@@ -374,8 +465,6 @@ class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStat
   // --- Done ---
 
   Widget _buildDoneView() {
-    final totalBytes = _toDelete.fold<int>(0, (s, a) => s + a.size);
-
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -383,43 +472,77 @@ class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStat
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 80, height: 80,
+              width: 80,
+              height: 80,
               decoration: BoxDecoration(
                 gradient: AppTheme.primaryGradient,
                 shape: BoxShape.circle,
                 boxShadow: [AppTheme.colorShadow(AppTheme.primary)],
               ),
-              child: const Icon(Icons.check_rounded, color: Colors.white, size: 40),
+              child: const Icon(
+                Icons.check_rounded,
+                color: Colors.white,
+                size: 40,
+              ),
             ),
             const SizedBox(height: 24),
-            const Text('審核完成！', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+            const Text(
+              '審核完成！',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.textPrimary,
+              ),
+            ),
             const SizedBox(height: 12),
-            Text('${_toDelete.length} 張要刪除 · ${_toKeep.length} 張保留',
-                style: const TextStyle(color: AppTheme.textMuted, fontSize: 14)),
+            Text(
+              '${_toDelete.length} 張要刪除 · ${_toKeep.length} 張保留',
+              style: const TextStyle(color: AppTheme.textMuted, fontSize: 14),
+            ),
             const SizedBox(height: 4),
-            Text('可釋放 ${_formatSize(totalBytes)}',
-                style: const TextStyle(color: AppTheme.primary, fontSize: 16, fontWeight: FontWeight.w700)),
+            const Text(
+              '刪除後的空間以系統為準',
+              style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
+            ),
             const SizedBox(height: 32),
             // Delete button
             Container(
-              width: double.infinity, height: 52,
-              decoration: BoxDecoration(gradient: AppTheme.dangerGradient, borderRadius: BorderRadius.circular(50),
-                boxShadow: [AppTheme.colorShadow(AppTheme.danger)]),
-              child: Material(color: Colors.transparent, child: InkWell(
+              width: double.infinity,
+              height: 52,
+              decoration: BoxDecoration(
+                gradient: AppTheme.dangerGradient,
                 borderRadius: BorderRadius.circular(50),
-                onTap: () async {
-                  final scanner = context.read<PhotoScannerService>();
-                  await scanner.deleteAssets(_toDelete);
-                  if (mounted) Navigator.pop(context, _toDelete.length);
-                },
-                child: Center(child: Text('刪除 ${_toDelete.length} 張照片',
-                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700))),
-              )),
+                boxShadow: [AppTheme.colorShadow(AppTheme.danger)],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(50),
+                  onTap: _isDeleting || _toDelete.isEmpty
+                      ? null
+                      : _confirmDelete,
+                  child: Center(
+                    child: Text(
+                      '刪除 ${_toDelete.length} 張照片',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: 12),
             TextButton(
-              onPressed: () => Navigator.pop(context, 0),
-              child: const Text('返回', style: TextStyle(color: AppTheme.textMuted)),
+              onPressed: _isDeleting
+                  ? null
+                  : () => Navigator.pop(context, _deletedCount),
+              child: const Text(
+                '返回',
+                style: TextStyle(color: AppTheme.textMuted),
+              ),
             ),
           ],
         ),
@@ -427,35 +550,109 @@ class _SwipeCleanViewState extends State<SwipeCleanView> with TickerProviderStat
     );
   }
 
+  Future<void> _confirmDelete() async {
+    final sub = context.read<SubscriptionManager>();
+    if (!sub.isPro) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const PaywallView()),
+      );
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('確認刪除已標記的照片？'),
+        content: Text('將刪除 ${_toDelete.length} 張你已審核的照片，請確認保留項目已正確選擇。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('確認刪除'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+    setState(() => _isDeleting = true);
+    final requested = _toDelete.length;
+    final deletedIds = await context
+        .read<PhotoScannerService>()
+        .deleteAssetsWithResult(_toDelete);
+    if (!mounted) return;
+    setState(() {
+      _isDeleting = false;
+      _deletedCount += deletedIds.length;
+      _toDelete.removeWhere((asset) => deletedIds.contains(asset.id));
+    });
+    if (deletedIds.length == requested) {
+      Navigator.pop(context, _deletedCount);
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          deletedIds.isEmpty
+              ? '未刪除任何照片，可能已取消或刪除未成功。'
+              : '已刪除 ${deletedIds.length} 張，剩餘照片尚未刪除。',
+        ),
+      ),
+    );
+  }
+
   void _showExitDialog() {
-    showDialog(context: context, builder: (ctx) => AlertDialog(
-      title: const Text('確定離開？'),
-      content: Text('你已標記 ${_toDelete.length} 張照片要刪除，離開將不會執行。'),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('繼續審核')),
-        TextButton(onPressed: () { Navigator.pop(ctx); Navigator.pop(context); },
-            child: const Text('離開', style: TextStyle(color: AppTheme.danger))),
-      ],
-    ));
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('確定離開？'),
+        content: Text('你已標記 ${_toDelete.length} 張照片要刪除，離開將不會執行。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('繼續審核'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.pop(context);
+            },
+            child: const Text('離開', style: TextStyle(color: AppTheme.danger)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showResultDialog() {
     final remaining = widget.assets.length - _currentIndex;
-    showDialog(context: context, builder: (ctx) => AlertDialog(
-      title: const Text('跳過剩餘照片？'),
-      content: Text('還有 $remaining 張未審核，要直接刪除已標記的 ${_toDelete.length} 張嗎？'),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('繼續審核')),
-        TextButton(onPressed: () { Navigator.pop(ctx); setState(() => _currentIndex = widget.assets.length); },
-            child: const Text('完成', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w700))),
-      ],
-    ));
-  }
-
-  String _formatSize(int b) {
-    if (b < 1024) return '$b B';
-    if (b < 1048576) return '${(b / 1024).toStringAsFixed(1)} KB';
-    if (b < 1073741824) return '${(b / 1048576).toStringAsFixed(1)} MB';
-    return '${(b / 1073741824).toStringAsFixed(1)} GB';
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('跳過剩餘照片？'),
+        content: Text('還有 $remaining 張未審核，要直接刪除已標記的 ${_toDelete.length} 張嗎？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('繼續審核'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() => _currentIndex = widget.assets.length);
+            },
+            child: const Text(
+              '完成',
+              style: TextStyle(
+                color: AppTheme.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

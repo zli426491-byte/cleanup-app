@@ -8,9 +8,11 @@ Set-Location $Root
 
 Write-Host "== Flutter analyze =="
 & $Flutter analyze
+if ($LASTEXITCODE -ne 0) { throw "Flutter analyze failed ($LASTEXITCODE)" }
 
 Write-Host "== Flutter test =="
 & $Flutter test
+if ($LASTEXITCODE -ne 0) { throw "Flutter test failed ($LASTEXITCODE)" }
 
 Write-Host "== iOS Info.plist parse =="
 @'
@@ -28,6 +30,7 @@ if missing:
     raise SystemExit(f"Missing plist keys: {', '.join(missing)}")
 print("OK")
 '@ | python -
+if ($LASTEXITCODE -ne 0) { throw "iOS plist validation failed ($LASTEXITCODE)" }
 
 Write-Host "== Android media permissions =="
 $manifest = Get-Content "android\app\src\main\AndroidManifest.xml" -Raw

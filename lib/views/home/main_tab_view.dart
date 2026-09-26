@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../home/home_view.dart';
 import '../scanner/smart_clean_view.dart';
-import '../contacts/contacts_cleanup_view.dart';
-import '../secret_space/secret_space_view.dart';
 import '../settings/settings_view.dart';
 import '../../utils/app_theme.dart';
 
@@ -14,7 +12,7 @@ class MainTabView extends StatefulWidget {
 
 class _MainTabViewState extends State<MainTabView> {
   int _i = 0;
-  final _pages = const [HomeView(), SmartCleanView(), ContactsCleanupView(), SecretSpaceView(), SettingsView()];
+  final _pages = const [HomeView(), SmartCleanView(), SettingsView()];
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +21,9 @@ class _MainTabViewState extends State<MainTabView> {
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: AppTheme.cardBg,
-          border: const Border(top: BorderSide(color: AppTheme.border, width: 0.5)),
+          border: const Border(
+            top: BorderSide(color: AppTheme.border, width: 0.5),
+          ),
         ),
         child: SafeArea(
           child: Padding(
@@ -32,10 +32,13 @@ class _MainTabViewState extends State<MainTabView> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _tab(0, Icons.home_outlined, Icons.home_rounded, '首頁'),
-                _tab(1, Icons.auto_awesome_outlined, Icons.auto_awesome_rounded, '清理'),
-                _tab(2, Icons.people_outline_rounded, Icons.people_rounded, '聯絡人'),
-                _tab(3, Icons.shield_outlined, Icons.shield_rounded, '安全'),
-                _tab(4, Icons.settings_outlined, Icons.settings_rounded, '設定'),
+                _tab(
+                  1,
+                  Icons.auto_awesome_outlined,
+                  Icons.auto_awesome_rounded,
+                  '清理',
+                ),
+                _tab(2, Icons.settings_outlined, Icons.settings_rounded, '設定'),
               ],
             ),
           ),
@@ -51,16 +54,25 @@ class _MainTabViewState extends State<MainTabView> {
       onTap: () => setState(() => _i = idx),
       child: SizedBox(
         width: 56,
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(selected ? filled : outline, size: 22,
-            color: selected ? AppTheme.primary : AppTheme.textMuted),
-          const SizedBox(height: 3),
-          Text(label, style: TextStyle(
-            fontSize: 10,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-            color: selected ? AppTheme.primary : AppTheme.textMuted,
-          )),
-        ]),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              selected ? filled : outline,
+              size: 22,
+              color: selected ? AppTheme.primary : AppTheme.textMuted,
+            ),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? AppTheme.primary : AppTheme.textMuted,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
