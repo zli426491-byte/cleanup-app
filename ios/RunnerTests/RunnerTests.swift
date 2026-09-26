@@ -37,7 +37,30 @@ private final class ControlledResourceIO: NativeResourceIO {
 
 final class RunnerTests: XCTestCase {
   private static var fixtureIdentifier: String?
+  private static var preparedFixtureIdentifier: String?
   private static var authorizationRequested = false
+
+  private func prepareSimulatorPhotoMetadata(_ identifier: String) throws -> String {
+    if Self.preparedFixtureIdentifier == identifier { return identifier }
+    // Fixture creation can finish before PhotoKit has loaded original metadata.
+    // Keep that cold setup outside the reader/cancellation assertion budgets.
+    // Production still fetches its own asset/resources and retains its deadline.
+    XCTAssertTrue(Thread.isMainThread, "Prepare the disposable Photos fixture on the main test thread.")
+    let began = ProcessInfo.processInfo.systemUptime
+    let asset = try XCTUnwrap(PHAsset.fetchAssets(
+      withLocalIdentifiers: [identifier], options: nil).firstObject)
+    let fetched = ProcessInfo.processInfo.systemUptime
+    let resources = PHAssetResource.assetResources(for: asset)
+    let enumerated = ProcessInfo.processInfo.systemUptime
+    print("Simulator Photos fixture metadata ready: fetch=\(fetched - began)s, resources=\(enumerated - fetched)s, count=\(resources.count)")
+    guard !resources.isEmpty,
+      resources.contains(where: { $0.type == .photo }), asset.mediaType == .image else {
+      XCTFail("The real simulator fixture must expose an original photo resource before reader tests start.")
+      throw NSError(domain: "CleanupNativeTests", code: 3)
+    }
+    Self.preparedFixtureIdentifier = identifier
+    return identifier
+  }
 
   private func simulatorPhoto() throws -> String {
     #if targetEnvironment(simulator)
@@ -75,7 +98,7 @@ final class RunnerTests: XCTestCase {
       XCTFail("Simulator Photos readWrite=\(status.rawValue), legacy=\(legacyStatus.rawValue), addOnly=\(addStatus), host=\(host), tests=\(testBundle). Grant access after installing the final test host.")
       throw NSError(domain: "CleanupNativeTests", code: 1)
     }
-    if let existing = Self.fixtureIdentifier { return existing }
+    if let existing = Self.fixtureIdentifier { return try prepareSimulatorPhotoMetadata(existing) }
     let image = UIGraphicsImageRenderer(size: CGSize(width: 320, height: 240)).image { context in
       UIColor.blue.setFill(); context.fill(CGRect(x: 0, y: 0, width: 320, height: 240))
       UIColor.yellow.setFill(); context.fill(CGRect(x: 15, y: 20, width: 120, height: 90))
@@ -99,7 +122,7 @@ final class RunnerTests: XCTestCase {
     Self.fixtureIdentifier = value
     // The isolated CI simulator is disposable. Avoid a Photos delete prompt
     // and never risk deleting any device/user media during these tests.
-    return value
+    return try prepareSimulatorPhotoMetadata(value)
     #else
     throw XCTSkip("Photos fixtures are restricted to an isolated simulator.")
     #endif
@@ -199,10 +222,7 @@ final class RunnerTests: XCTestCase {
 
   func testStalledOriginalDoesNotBlockRealPhotosPreview() throws {
     let identifier = try simulatorPhoto()
-    // Warm metadata separately: this tests a stalled resource reader, not the
-    // first Photos database fetch or simulator cold-start scheduling latency.
-    let asset = try XCTUnwrap(PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil).firstObject)
-    XCTAssertFalse(PHAssetResource.assetResources(for: asset).isEmpty)
+    // simulatorPhoto prepares real metadata before any reader assertion budget.
     let io = ControlledResourceIO()
     let started = expectation(description: "Injected native original read starts")
     let originalReply = expectation(description: "Original reaches independent time budget")

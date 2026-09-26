@@ -190,7 +190,7 @@ fi
 wait "$SCREENSHOT_CAPTURE" || true
 record_photos_permission after-test || true
 xcrun simctl spawn "$SIMULATOR_ID" log show --style compact --last 5m --info --debug \
-  --predicate 'process == "tccd" OR process == "photolibraryd"' \
+  --predicate 'process == "tccd" OR process == "photolibraryd" OR process == "assetsd" OR process == "Runner"' \
   > "$RUN_DIRECTORY/simulator-photos-system.log" 2>&1 || true
 /usr/bin/log show --style compact --last 5m --info --debug \
   --predicate 'process == "tccd" AND (eventMessage CONTAINS "Runner" OR eventMessage CONTAINS "cleanup" OR eventMessage CONTAINS "Simulator")' \
