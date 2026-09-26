@@ -1,77 +1,220 @@
-# Restart acceptance — 2026-09-26
+# Restart acceptance — 2026-09-27
 
-This checklist reflects the current photo-review build. The older PRELAUNCH_QA
-describes features that are not included in this restart build.
+This checklist describes the new full-library photo-review and video-compression
+candidate. The older PRELAUNCH_QA describes dormant tools and is not the release
+scope. Build 38 remains a historical TestFlight baseline. The new Build 39 has
+passed Mac CI and upload, is VALID, and is available in the existing internal
+TestFlight group. Native-device acceptance remains required below.
 
-## Confirmed by read-only backend checks
+## Backend baseline and build history
+
+Read-only checks at 2026-09-26T15:35:50Z established:
 
 - App Store version 1.1.2 is READY_FOR_SALE.
 - Version 1.1.3 is PREPARE_FOR_SUBMISSION.
-- Build 38 (1.1.3) is VALID and not expired, with internal state IN_BETA_TESTING.
+- Build 38 (1.1.3) is VALID, not expired, and IN_BETA_TESTING internally.
 - The existing Internal Testing group includes build 38; external state is
   READY_FOR_BETA_SUBMISSION. No new tester invitations were sent.
 - Weekly and yearly subscriptions are READY_TO_SUBMIT, not approved for sale.
-- RevenueCat default offering returns the matching Apple weekly/yearly products.
+- RevenueCat's default offering returns the matching Apple weekly/yearly products.
+- Weekly availability includes the USA but excludes Taiwan; yearly includes both.
+  Check the tester's actual StoreKit storefront rather than assuming both plans
+  appear on every device.
 
-## Automated checks
+Build 37 used commit 04296b3 and successful GitHub iOS Release run 36250081707;
+local/cloud analyze and 24 tests passed. Build 38 used commit bef47ac and
+successful run 36251714219; local/cloud analyze and 48 tests passed. Those
+results apply to those builds, not to the candidate described below.
 
-Build 38 contains the bug fixes from commit bef47ac, following the build 37
-audit. GitHub iOS Release run 36251714219 succeeded. Local and cloud analyze
-passed, with all 48 tests passing in both. Apple status and internal group access
-were checked at 2026-09-26T15:35:50Z. Native device acceptance is still required.
+## Implemented candidate scope
+
+- Scan all accessible photo/video IDs in pages without a fixed library-size cap.
+  Reading and analysis show separate counts. Work can be cancelled and resumed
+  within the app session; resuming reindexes accessible IDs and retains analyses
+  only for unchanged items. Force-quitting the app is not a promised background
+  continuation or persistent-resume feature.
+- On iOS, the Photos resource bridge streams local resources in bounded chunks
+  to measure their bytes. It does not enable iCloud downloads. Unknown resource
+  types, incomplete resource reads, unavailable originals, and timeouts stay
+  pending instead of becoming zero-byte measurements or duplicate evidence.
+- True duplicate photo groups require a complete SHA-256 fingerprint of all
+  original/current/adjustment resources. Live Photo paired movies and edited
+  renders are included. Matching names, dates, dimensions, or thumbnails alone
+  do not establish true duplication. These groups concern photo assets; video
+  duplicate detection is not included.
+- Visual similarity uses image evidence from bounded current thumbnails, not
+  metadata buckets. Thumbnail-derived quality/brightness/sharpness measurements
+  support reversible keep suggestions. A suggestion is neither a guarantee of
+  visual quality nor an automatic deletion selection.
+- Separate categories expose photos, true duplicates, visual similarity,
+  screenshots, videos, and large files. Large files use measured resource bytes;
+  unknown sizes display "容量未取得" and unavailable content displays pending.
+  Measured resource bytes and actual device space reclaimed are different values.
+- Users can enlarge previews, withdraw/re-display keep suggestions, and manually
+  mark assets for deletion. Pro, app confirmation, native confirmation, actual
+  OS-returned deletion IDs, and scan/delete mutual exclusion remain required.
+- Pro video compression creates a separate preview with audio requested and the
+  original retained. Users can compare original/output playback before explicit
+  saving. The service checks readable output, measured size reduction, and
+  reasonable duration agreement; sound, orientation, HDR/color, and subjective
+  quality still require native-device checks. Cancellation, failed encoding,
+  failed saves, and retry must not remove the original.
+- Saving the compressed video adds a new Photos asset. The original is never
+  automatically deleted. Saving twice must not create duplicate copies of the
+  same prepared output; unresolved saves remain busy until their result settles.
+- Contacts, email/calendar cleanup, vault/import, and charging demo remain hidden.
+  Product analytics still needs a real destination before acquisition.
+
+The resource bridge is iOS-specific. Non-iOS behavior must disclose unavailable
+native resource analysis; do not claim Windows widget tests prove Photos reads,
+native encoding, StoreKit, or actual deletion work.
+
+## Automated and Mac CI gates
 
 Run `scripts/preflight_check.ps1` before a new cloud build. It fails on analyze,
 test, plist, or Android permission validation errors.
 
-Coverage includes purchase/restore waiting past 12 seconds, cancellation and
-concurrent purchases, partial scan disclosure, permission denial/limited access,
-metadata matches treated as review candidates, and actual OS-confirmed deletion.
-Mocks do not establish that real purchases or photo deletion work on a device.
+- [x] Candidate commit dac59c2: local preflight passes analyze with zero issues,
+      all 97 tests, plist validation (including video save usage), and media
+      permission checks. GitHub iOS Release run 36254933611 succeeded at commit
+      dac59c2, with zero analyze issues and all 97 cloud tests passing.
+- [x] Compile the Swift resource bridge on macOS, including its Runner target
+      membership, registration, Photos APIs, CryptoKit, and video plugin linkage.
+- [x] Run cloud analyze/tests and archive the candidate with the correct bundle
+      ID, version, incremented build number, export options, and signing profile.
+      Downloaded IPA is version 1.1.3 build 39, com.cleanupapp.cleaner, iPhone/iPad.
+- [x] Verify GitHub's accepted TestFlight upload result and Apple's VALID build
+      state/internal group visibility separately. Upload success alone is not
+      native-device acceptance.
+      Upload receipt aef90a08-4387-4c9a-892f-57cb9e9088ce was accepted; Apple
+      processing state is VALID, internal state IN_BETA_TESTING, and the existing
+      internal group includes it at 2026-09-26T16:30:22Z. External state is
+      READY_FOR_BETA_SUBMISSION; no app/subscriptions were submitted for review.
 
-## Real-device acceptance (iPhone and iPad)
+Automated coverage should include libraries beyond the old partial-index range,
+content fingerprints versus metadata coincidences, visual false positives,
+quality suggestions, pending cloud resources, cancellation/resume, edit
+invalidation, actual deletion IDs, and compression output/save/cancellation
+races. Mocks cannot establish real native permission, photo/video behavior,
+encoder output quality, billing, or storage recovery.
 
-- [ ] Fresh install shows photo-review onboarding; no dormant tool claims.
-- [ ] Free scan and preview work; deleting opens paywall for non-Pro users.
-- [ ] Denied and limited photo access give accurate, actionable results.
-- [ ] 500 and 5,000+ asset libraries disclose the scan scope (maximum 900).
-- [ ] iCloud-only thumbnails either load or show a clear fallback without hanging.
-- [ ] Visually different images with matching metadata are never labelled verified duplicates.
-- [ ] Photos are previewed before selection; cancelling OS deletion keeps selection.
-- [ ] Only OS-confirmed deleted items disappear; a partial deletion shows its true count.
-- [ ] Swipe card changes show the correct photo and require Pro before deletion.
-- [ ] Weekly/yearly prices and periods match the device's StoreKit products.
-- [ ] Sandbox purchase, cancellation, restore, expiry and renewal update Pro correctly.
-- [ ] Tablet layout and native confirmation dialogs work in portrait and landscape.
-- [ ] Privacy/EULA links work, and settings show the actual installed version/build.
-- [ ] Slow/offline startup still shows the app; failed plans can be reloaded explicitly.
-- [ ] Onboarding remains usable in phone landscape and small iPad windows.
-- [ ] Repeated taps while completing onboarding open only one paywall.
-- [ ] A free account has no PRO badge, and home tools open their matching categories.
-- [ ] Large system text works on a small phone; the supported theme remains light.
-- [ ] A slow iCloud preview keeps loading and can be retried on the same screen.
-- [ ] Scan/delete cannot overlap; returning from swipe deletion clears stale selections.
-- [ ] Loading products during an unfinished restore never permits a second transaction.
+## iPhone and iPad native acceptance
 
-Photo library changes made outside this app currently require a manual home
-rescan. Automatic library-change refresh is not included in this restart scope.
+Run on both iPhone and iPad, recording device/model, iOS version, installed build,
+Photos permission, library size, and StoreKit storefront. Use expendable test
+assets and check the Photos app after each destructive operation.
 
-## Release gates still outstanding
+### Onboarding, layout, and subscriptions
 
-- [x] Upload build 37 using GitHub iOS Release; run 36250081707 succeeded.
-      Local and cloud analyze passed, with all 24 tests passing in both.
-      App code is commit 04296b3; these results were checked at
-      2026-09-26T15:06:05Z. Real-device acceptance remains unchecked.
-- [ ] Attach correct paywall review screenshots and subscriptions to the submission.
-- [ ] Review all localized store descriptions/screenshots against the current scope.
-- [ ] Connect a real product analytics destination and verify events arriving there.
-- [ ] Verify real trial/charge/renewal/refund events via transaction data; do not infer
-      revenue from a client `purchase_completed` event or displayed list price.
-- [ ] Review current privacy disclosures for the final enabled SDKs.
-- [ ] Receive App Review approval for app and subscriptions before paid acquisition.
+- [ ] Fresh install completes the current onboarding; free scanning/previews work
+      and destructive/paid operations open the paywall for a non-Pro account.
+- [ ] Slow/offline startup still displays the app. Failed plans can be reloaded;
+      product loading during an unfinished purchase/restore cannot unlock a
+      second transaction. Repeated onboarding taps open one paywall.
+- [ ] A free account has no PRO badge. Every home tool opens its matching category.
+- [ ] Small-phone large text, phone portrait/landscape, iPad portrait/landscape,
+      and small iPad multitasking windows keep content and controls reachable.
+      Supported appearance remains light even with a dark system appearance.
+- [ ] Privacy/EULA links work; settings show the actual installed version/build.
+- [ ] Sandbox prices/periods match StoreKit products. Purchase, cancellation,
+      restore, expiry, and renewal update Pro correctly on both device types.
 
-## Scope explicitly deferred
+### Full index, permissions, and continuation
 
-Verified content-based duplicate detection, blurry/dark analysis, complete-library
-background scanning, actual storage byte measurements, compression, contacts,
-email/calendar cleanup, and vault security/import remain separate work items.
-Legacy source/data is preserved; hidden features have not been deleted.
+- [ ] Use small and 5,000+ asset libraries. Compare all accessible IDs/counts with
+      Photos; reaching a large count must not silently truncate the scan.
+- [ ] Read count/total and analyzed/pending counts remain accurate during pages,
+      analysis, cancellation, resume, empty libraries, and permission errors.
+- [ ] Denied access gives an actionable message. Limited access indexes only the
+      allowed assets. After changing the allowed set, resume/manual rescan drops
+      inaccessible IDs and finds newly allowed ones.
+- [ ] Cancel during indexing, an image resource read, a large video read, and
+      thumbnail analysis. UI responds, retains settled results, starts no delete,
+      and ignores stale completions. Resume preserves unchanged successful work
+      and retries pending work without duplicate IDs/groups.
+- [ ] Background/foreground and device lock do not hang the UI or turn incomplete
+      work into completed analysis. If iOS suspends work, resume/manual rescan is
+      available; do not assume full background execution.
+- [ ] Delete/add/edit assets in Photos between scans. Resume/manual rescan updates
+      the ID set and modified assets rather than reusing stale content evidence.
+      External Photos changes currently require manual refresh.
+- [ ] iCloud-only and partially downloaded assets stay pending without forced
+      downloads. Download in Photos, then retry; the item becomes measured only
+      after every required resource is available. Preview fallback can be retried
+      on the same screen.
+
+### True duplicates, similarity, sizes, and safe deletion
+
+- [ ] Copies with exactly identical complete resource sets appear as true
+      duplicates. Different pictures with matching dates/names/dimensions do not.
+- [ ] Two assets with the same original but different edits/crops/filters remain
+      distinct unless their complete resource fingerprints really match. Edited
+      photos missing a current render remain pending. Edit after a scan and
+      verify cached evidence is invalidated on resume/manual rescan.
+- [ ] Live Photos with an identical still but different paired motion are not
+      true duplicates. Missing paired video/current edited motion stays pending.
+      RAW/alternate/adjustment resources must not be silently ignored.
+- [ ] Visually similar re-encoded/resized photos may appear as visual similarity,
+      while unrelated portraits, blank/solid-color images, and repetitive scenes
+      do not become verified duplicates. Review borderline visual groups manually.
+- [ ] Keep suggestions identify one candidate and explain the reason. Withdraw
+      and re-display the suggestion without selecting/deleting any image; manual
+      selection remains under the user's control and enlarging a preview works.
+- [ ] Compare measured local resource bytes with the actual exported resources,
+      including multi-resource Live/edited assets. Unknown/pending capacity never
+      displays a fabricated 0 MB; large-file ranking uses real bytes, not pixels.
+- [ ] Free deletion opens the paywall. Pro deletion previews selected items and
+      requires both confirmations. Cancel keeps selections; only OS-confirmed
+      IDs disappear. Partial/native failures show the actual count.
+- [ ] Scan and native deletion cannot overlap. After swipe deletion, grid
+      selections/counts refresh; cancelling permits retry. Undo before deletion
+      changes the review decision and does not claim to restore deleted assets.
+
+### Video compression, preview, saving, and cleanup
+
+- [ ] Use portrait and landscape clips with speech/music, a silent clip, edited
+      clips, short/long clips, HEVC/HDR where available, and a clip that cannot
+      achieve a smaller output. An unsupported/invalid result is clearly rejected
+      while the original remains playable in Photos.
+- [ ] Confirm original/output length, beginning/end, seek/playback, sound,
+      orientation, aspect ratio, color/HDR, and acceptable picture quality. The
+      "include audio" encoder setting alone is not proof audio is preserved.
+- [ ] Displayed original/output bytes match measured files. No savings claim is
+      made when output is equal/larger, empty, unplayable, or materially shorter.
+- [ ] An iCloud-only video gives the download-first guidance instead of silently
+      forcing a transfer; after downloading the original in Photos, retry works.
+- [ ] Cancel during loading/encoding and retry rapidly/repeatedly. Never run two
+      native encoders at once; late output from a cancelled attempt cannot replace
+      the latest preview. Native and app-owned temporary files are cleaned safely.
+- [ ] Compare original and compressed playback before saving. Saving is permitted
+      only with a usable output preview and active Pro. Repeated save taps and
+      delayed callbacks create one copy; cancellation of compression does not
+      cancel or repeat an already unresolved Photos save.
+- [ ] Test revoked permission, insufficient space, save failure, cancellation,
+      retry, and leaving the view. Original files stay intact; failures do not
+      report success or clean up an output still being read by a native save.
+- [ ] After successful save, Photos contains the new playable copy and the
+      untouched original. Manual rescan finds the new copy and its real size.
+      Saving adds storage use; deleting the original and clearing Recently
+      Deleted is a separate user action. Actual free space is checked in Settings.
+
+## Remaining release gates
+
+- [ ] Finish the candidate's Mac CI and iPhone/iPad checklist above before treating
+      the new functionality as release-ready.
+- [ ] Attach correct paywall review screenshots and subscriptions to submission.
+- [ ] Review every localized description/screenshot against actual enabled scope.
+- [ ] Connect product analytics and verify events arrive at the real destination.
+- [ ] Verify trial/charge/renewal/refund through transaction data; do not infer
+      revenue from client `purchase_completed` events or displayed list prices.
+- [ ] Review final SDK/privacy disclosures and minimum supported iOS requirements.
+- [ ] Receive app/subscription App Review approval before paid acquisition.
+
+## Still outside this candidate
+
+Guaranteed operating-system background scanning, persistent progress after
+force-quit, automatic external-library refresh, device-storage/free-space
+measurements, video duplicate detection, contacts, email/calendar cleanup, and
+vault security/import remain separate work items. Thumbnail quality metrics
+currently support review suggestions; no separate blurry/dark cleanup category
+or perfect image-quality judgment is promised. Legacy source/data is preserved.
