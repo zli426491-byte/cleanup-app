@@ -33,6 +33,7 @@ jobs:
       - name: Identify exact native test product inputs
         id: native-products-key
         run: |
+          set -euo pipefail
           mkdir -p build/native-tests
           flutter build ios --simulator --debug --no-codesign --config-only 2>&1 | tee build/native-tests/cache-configuration.log
           NATIVE_PRODUCTS_KEY="$(bash scripts/native-test-cache-key.sh)"
