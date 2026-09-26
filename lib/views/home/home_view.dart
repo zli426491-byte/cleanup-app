@@ -88,7 +88,11 @@ class _HomeViewState extends State<HomeView>
                   ],
                 ),
               ],
-              if (scanner.hasCompletedScan) ...[
+              if (!scanner.isScanning &&
+                  (scanner.hasCompletedScan ||
+                      scanner.scannedAssetCount > 0 ||
+                      scanner.wasCancelled ||
+                      scanner.lastError != null)) ...[
                 const SizedBox(height: AppTheme.s16),
                 _buildResults(scanner),
               ],
@@ -282,6 +286,11 @@ class _HomeViewState extends State<HomeView>
     ],
   );
 
+  bool _shouldResume(PhotoScannerService scanner) =>
+      scanner.wasCancelled ||
+      scanner.pendingAnalysisCount > 0 ||
+      (scanner.scannedAssetCount > 0 && !scanner.hasCompletedScan);
+
   // ── Scan Button ──
   Widget _buildScanButton(PhotoScannerService s) => AnimatedBuilder(
     animation: _pulse,
@@ -308,7 +317,9 @@ class _HomeViewState extends State<HomeView>
               borderRadius: BorderRadius.circular(AppTheme.r16),
               onTap: s.isScanning || s.isDeleting
                   ? null
-                  : () => s.startFullScan(),
+                  : _shouldResume(s)
+                  ? s.resumeScan
+                  : s.startFullScan,
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -339,6 +350,8 @@ class _HomeViewState extends State<HomeView>
                             ? '掃描中...'
                             : s.isDeleting
                             ? '刪除中...'
+                            : _shouldResume(s)
+                            ? '繼續掃描並保留進度'
                             : '掃描全部可存取照片與影片',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
@@ -389,7 +402,7 @@ class _HomeViewState extends State<HomeView>
             onPressed: s.isDeleting ? null : s.verifyOriginals,
             child: const Text('驗證本機原始素材：確認真重複與容量'),
           ),
-        if (s.wasCancelled || s.pendingAnalysisCount > 0)
+        if (!s.isScanning && _shouldResume(s))
           TextButton(
             onPressed: s.isDeleting ? null : s.resumeScan,
             child: const Text('繼續掃描／重試待處理項目'),

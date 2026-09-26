@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:cleanup_app/services/photo_scanner_service.dart';
 import 'package:cleanup_app/services/subscription_manager.dart';
 import 'package:cleanup_app/views/home/home_view.dart';
 import 'package:cleanup_app/views/scanner/smart_clean_view.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:photo_manager/photo_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
@@ -159,4 +163,222 @@ void main() {
       },
     );
   }
+
+  testWidgets(
+    'deadline partial results expose both real resume actions without clearing checkpoints',
+    (tester) async {
+      const photos = MethodChannel('com.fluttercandies/photo_manager');
+      const resources = MethodChannel('cleanup/photo_resources');
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      final scanner = PhotoScannerService(supportsNativeResources: true);
+      final subscription = SubscriptionManager();
+      List<Map<String, Object>> library = [
+        {
+          'id': 'verified-video',
+          'type': 2,
+          'width': 1920,
+          'height': 1080,
+          'createDt': 1700000000,
+          'modifiedDt': 1700000000,
+        },
+      ];
+      final batches = <List<String>>[];
+      var blockPreview = false;
+      final blockedPreview = Completer<Map<String, Object>>();
+      messenger.setMockMethodCallHandler(photos, (call) async {
+        switch (call.method) {
+          case 'requestPermissionExtend':
+            return PermissionState.authorized.index;
+          case 'getAssetPathList':
+            return {
+              'data': [
+                {
+                  'id': 'all',
+                  'name': 'All',
+                  'isAll': true,
+                  'assetCount': library.length,
+                },
+              ],
+            };
+          case 'getAssetCountFromPath':
+            return library.length;
+          case 'getAssetListRange':
+            final args = call.arguments as Map;
+            return {
+              'data': library.sublist(args['start'] as int, args['end'] as int),
+            };
+          default:
+            throw StateError('Unexpected Photos method ${call.method}');
+        }
+      });
+      messenger.setMockMethodCallHandler(resources, (call) async {
+        if (call.method == 'cancelInspections') return null;
+        if (call.method == 'inspectAsset') {
+          return {'complete': true, 'sizeKnown': true, 'size': 9000000};
+        }
+        final ids = List<String>.from(
+          (call.arguments as Map)['assetIds'] as List,
+        );
+        batches.add(ids);
+        if (blockPreview) return blockedPreview.future;
+        await Future<void>.delayed(const Duration(seconds: 2));
+        return {
+          'assets': ids
+              .map((id) => {'assetId': id, 'status': 'not_local'})
+              .toList(),
+        };
+      });
+      addTearDown(() {
+        scanner.dispose();
+        subscription.dispose();
+        messenger.setMockMethodCallHandler(photos, null);
+        messenger.setMockMethodCallHandler(resources, null);
+      });
+      Future<void> pumpUntil(bool Function() ready) async {
+        for (var i = 0; i < 500 && !ready(); i++) {
+          await tester.pump(const Duration(milliseconds: 2));
+        }
+        expect(ready(), isTrue);
+      }
+
+      final initial = scanner.startFullScan();
+      await pumpUntil(() => !scanner.isScanning);
+      await initial;
+      final verification = scanner.verifyOriginals();
+      await pumpUntil(() => !scanner.isScanning);
+      await verification;
+      expect(scanner.verifiedOriginalCount, 1);
+      library = [
+        library.single,
+        for (var i = 0; i < 400; i++)
+          {
+            'id': 'photo-$i',
+            'type': 1,
+            'width': 3000,
+            'height': 2000,
+            'createDt': 1700000000,
+            'modifiedDt': 1700000000,
+          },
+      ];
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<PhotoScannerService>.value(value: scanner),
+            ChangeNotifierProvider<SubscriptionManager>.value(
+              value: subscription,
+            ),
+          ],
+          child: const MaterialApp(home: HomeView()),
+        ),
+      );
+      final scan = scanner.resumeScan();
+      await pumpUntil(() => batches.isNotEmpty);
+      for (var i = 0; i < 17 && scanner.isScanning; i++) {
+        await tester.pump(const Duration(seconds: 2));
+      }
+      await scan;
+      await tester.pump();
+      expect(scanner.hasCompletedScan, isFalse);
+      expect(scanner.scannedAssetCount, 401);
+      expect(scanner.pendingAnalysisCount, 400);
+      expect(scanner.verifiedOriginalCount, 1);
+      expect(find.textContaining('已讀取 401 個項目'), findsOneWidget);
+      expect(find.textContaining('已達 30 秒'), findsOneWidget);
+      expect(find.text('預覽並整理'), findsOneWidget);
+      expect(find.text('繼續掃描／重試待處理項目'), findsOneWidget);
+      expect(find.text('繼續掃描並保留進度'), findsOneWidget);
+      final processed = scanner.attemptedAnalysisCount;
+      blockPreview = true;
+      final beforeSecondary = batches.length;
+      await tester.ensureVisible(find.text('繼續掃描／重試待處理項目'));
+      await tester.tap(find.text('繼續掃描／重試待處理項目'));
+      await pumpUntil(() => batches.length > beforeSecondary);
+      expect(batches.last.first, 'photo-$processed');
+      expect(scanner.verifiedOriginalCount, 1);
+      expect(scanner.attemptedAnalysisCount, processed);
+      scanner.cancelScan();
+      await tester.pump();
+      final beforePrimary = batches.length;
+      await tester.ensureVisible(find.text('繼續掃描並保留進度'));
+      await tester.tap(find.text('繼續掃描並保留進度'));
+      await pumpUntil(() => batches.length > beforePrimary);
+      expect(batches.last.first, 'photo-$processed');
+      expect(
+        scanner.verifiedOriginalCount,
+        1,
+        reason:
+            'A full restart would erase the previously measured video checkpoint.',
+      );
+      expect(scanner.attemptedAnalysisCount, processed);
+      scanner.cancelScan();
+      blockedPreview.complete({'assets': []});
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets(
+    'home offers an initial scan and resumes a cancellation before any assets load',
+    (tester) async {
+      const photos = MethodChannel('com.fluttercandies/photo_manager');
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      final scanner = PhotoScannerService(supportsNativeResources: false);
+      final subscription = SubscriptionManager();
+      final permission = Completer<int>();
+      var permissionCalls = 0;
+      messenger.setMockMethodCallHandler(photos, (call) async {
+        if (call.method == 'requestPermissionExtend') {
+          permissionCalls++;
+          return permission.future;
+        }
+        if (call.method == 'getAssetPathList') return {'data': []};
+        throw StateError('Unexpected Photos method ${call.method}');
+      });
+      addTearDown(() {
+        scanner.dispose();
+        subscription.dispose();
+        messenger.setMockMethodCallHandler(photos, null);
+      });
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<PhotoScannerService>.value(value: scanner),
+            ChangeNotifierProvider<SubscriptionManager>.value(
+              value: subscription,
+            ),
+          ],
+          child: const MaterialApp(home: HomeView()),
+        ),
+      );
+      expect(find.text('掃描全部可存取照片與影片'), findsOneWidget);
+      expect(find.text('繼續掃描並保留進度'), findsNothing);
+      await tester.tap(find.text('掃描全部可存取照片與影片'));
+      await tester.pump();
+      expect(scanner.isScanning, isTrue);
+      await tester.ensureVisible(find.text('取消掃描並保留進度'));
+      await tester.tap(find.text('取消掃描並保留進度'));
+      await tester.pump();
+      expect(scanner.isScanning, isFalse);
+      expect(scanner.scannedAssetCount, 0);
+      expect(find.textContaining('已暫停'), findsOneWidget);
+      expect(find.text('繼續掃描並保留進度'), findsOneWidget);
+      await tester.ensureVisible(find.text('繼續掃描並保留進度'));
+      await tester.tap(find.text('繼續掃描並保留進度'));
+      await tester.pump();
+      expect(scanner.isScanning, isTrue);
+      expect(permissionCalls, 2);
+      permission.complete(PermissionState.authorized.index);
+      for (var i = 0; i < 30 && scanner.isScanning; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      expect(scanner.isScanning, isFalse);
+      expect(scanner.scannedAssetCount, 0);
+      expect(find.text('掃描全部可存取照片與影片'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 }
