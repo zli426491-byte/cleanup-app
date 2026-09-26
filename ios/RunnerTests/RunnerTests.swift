@@ -45,7 +45,12 @@ final class RunnerTests: XCTestCase {
     else { status = PHPhotoLibrary.authorizationStatus() }
     // Deliberately fail, rather than silently skip CI's Photos integration.
     guard status == .authorized else {
-      XCTFail("Grant simulator Photos access to com.cleanupapp.cleaner before XCTest.")
+      let host = Bundle.main.bundleIdentifier ?? "unknown"
+      let testBundle = Bundle(for: RunnerTests.self).bundleIdentifier ?? "unknown"
+      let addStatus: Int
+      if #available(iOS 14, *) { addStatus = PHPhotoLibrary.authorizationStatus(for: .addOnly).rawValue }
+      else { addStatus = status.rawValue }
+      XCTFail("Simulator Photos readWrite=\(status.rawValue), addOnly=\(addStatus), host=\(host), tests=\(testBundle). Grant access after installing the final test host.")
       throw NSError(domain: "CleanupNativeTests", code: 1)
     }
     if let existing = Self.fixtureIdentifier { return existing }
