@@ -291,6 +291,11 @@ bool _comparable(ContentSignature? signature) =>
 /// evidence/incompatible color or structure. Zero still is NOT byte equality.
 int? visualDistance(ContentSignature a, ContentSignature b) {
   if (!_comparable(a) || !_comparable(b)) return null;
+  return _visualDistanceComparable(a, b);
+}
+
+// Group candidates have already passed validation and their features are immutable.
+int? _visualDistanceComparable(ContentSignature a, ContentSignature b) {
   for (var i = 0; i < 3; i++) {
     if ((a.colorMeans[i] - b.colorMeans[i]).abs() > 0.18) return null;
   }
@@ -303,10 +308,12 @@ int? visualDistance(ContentSignature a, ContentSignature b) {
   var perceptualDistance = 0;
   var gradientDistance = 0;
   for (var i = 0; i < 64; i++) {
-    spatialDifference += math.pow(
-      a.spatialLuminance[i] - b.spatialLuminance[i],
-      2,
-    );
+    final delta = a.spatialLuminance[i] - b.spatialLuminance[i];
+    spatialDifference += delta * delta;
+    // Squared differences are nonnegative, so no later term can restore a
+    // rejected pair. The margin protects the original floating-point boundary;
+    // the original sqrt decision below remains the final acceptance criterion.
+    if (spatialDifference > 0.38 * 0.38 * 64 + 1e-12) return null;
     if (a.perceptualBits[i] != b.perceptualBits[i]) perceptualDistance++;
     if (a.gradientBits[i] != b.gradientBits[i]) gradientDistance++;
   }
@@ -348,7 +355,10 @@ List<List<String>> groupSimilarPhotos(List<AnalyzedPhoto> photos) {
     var bestDistance = 11;
     for (final index in candidates) {
       final representative = groups[index].first.signature!;
-      final distance = visualDistance(representative, photo.signature!);
+      final distance = _visualDistanceComparable(
+        representative,
+        photo.signature!,
+      );
       if (distance != null && distance < bestDistance) {
         bestDistance = distance;
         bestGroup = index;

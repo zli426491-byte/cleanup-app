@@ -238,4 +238,86 @@ void main() {
     expect(groups.single.length, 2500);
     expect(groups.single, isNot(contains('other')));
   });
+
+  test(
+    'crowded immutable candidates preserve distance boundaries and grouping decisions',
+    () {
+      ContentSignature feature(
+        math.Random random, {
+        List<double>? spatial,
+      }) => ContentSignature(
+        isValid: true,
+        isLowInformation: false,
+        perceptualBits: List.generate(64, (i) => i < 8 ? 0 : random.nextInt(2)),
+        gradientBits: List.generate(64, (i) => i < 8 ? 0 : random.nextInt(2)),
+        colorMeans: const [.5, .5, .5],
+        colorHistogram: List.filled(12, .25),
+        spatialLuminance:
+            spatial ?? List.generate(64, (_) => random.nextDouble() * 2 - 1),
+        brightness: .5,
+        sharpness: .02,
+        qualityScore: 75,
+        qualityReasons: const [],
+      );
+
+      // Reference the former spatial decision, including its sqrt boundary and
+      // the established weighted/rounded Hamming distance for these valid inputs.
+      int? referenceDistance(ContentSignature a, ContentSignature b) {
+        var spatial = 0.0;
+        var perceptual = 0;
+        var gradient = 0;
+        for (var i = 0; i < 64; i++) {
+          spatial += math.pow(a.spatialLuminance[i] - b.spatialLuminance[i], 2);
+          if (a.perceptualBits[i] != b.perceptualBits[i]) perceptual++;
+          if (a.gradientBits[i] != b.gradientBits[i]) gradient++;
+        }
+        return math.sqrt(spatial / 64) > .38
+            ? null
+            : ((perceptual * 2 + gradient) / 3).round();
+      }
+
+      for (final seed in [1, 19, 103]) {
+        final random = math.Random(seed);
+        final zero = feature(random, spatial: List.filled(64, 0));
+        for (final boundary in [.38 - 1e-12, .38, .38 + 1e-12]) {
+          final other = feature(random, spatial: List.filled(64, boundary));
+          expect(visualDistance(zero, other), referenceDistance(zero, other));
+        }
+        // All 512 distinct assets share an indexed band, saturating the 128-entry
+        // candidate bucket. Their incompatible structures must remain ungrouped,
+        // while true matching review candidates still join their representatives.
+        final signatures = List.generate(512, (_) => feature(random));
+        for (var i = 1; i < signatures.length; i++) {
+          expect(
+            visualDistance(signatures[0], signatures[i]),
+            referenceDistance(signatures[0], signatures[i]),
+          );
+        }
+        final assets = [
+          for (var i = 0; i < signatures.length; i++)
+            photo('asset-${i.toString().padLeft(4, '0')}', signatures[i]),
+          for (var i = 0; i < 5; i++) photo('copy-$i', signatures[i]),
+        ];
+        final groups = groupSimilarPhotos(assets);
+        expect(groups, hasLength(5));
+        for (var i = 0; i < 5; i++) {
+          expect(
+            groups,
+            contains(
+              unorderedEquals([
+                'asset-${i.toString().padLeft(4, '0')}',
+                'copy-$i',
+              ]),
+            ),
+          );
+        }
+        expect(
+          groupSimilarPhotos(assets.reversed.toList()),
+          groups,
+          reason:
+              'Immutable eligibility validation must preserve deterministic groups.',
+        );
+      }
+    },
+  );
 }

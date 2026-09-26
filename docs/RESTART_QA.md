@@ -220,10 +220,18 @@ the precise device Photos/iCloud condition is not captured in the screenshot.
 - [x] Native deadlines/results do not wait for the Photos state queue or native
       cancellation. Original reads stop at 4 seconds / 64 MiB by default;
       oversized, slow, cloud-only or incomplete material stays unverified.
-- [x] Local preflight: zero analysis issues, all 111 Flutter tests, and plist /
+- [x] Local preflight: zero analysis issues, all 112 Flutter tests, and plist /
       Android media-permission checks pass. Includes 42,683-item indexing,
       timeout-heavy scans, slow first resources, continuation fairness, late
       cancellation, interrupted re-indexing, and phone/iPad progress layouts.
+- [x] Reduce worst-case candidate comparisons without changing the similarity
+      thresholds: validate immutable features once and stop accumulating squared
+      spatial differences once rejection is certain. Preserve public malformed
+      input checks and the final floating-point boundary decision. Desktop AOT
+      stress measurements for 42,683 shared-bucket, dissimilar signatures improve
+      from about 13 seconds to about one second; result parity is checked. These
+      measurements do not establish iPhone timing. The first Mac run was
+      cancelled before signing/upload so this fix is included in the next run.
 - [ ] Run all 10 native XCTest cases on the Mac CI simulator before signing and
       uploading the next internal build. Six use a real simulator Photos fixture;
       tests never create/delete fixture media on physical devices.
