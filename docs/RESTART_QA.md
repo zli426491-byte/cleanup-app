@@ -4,8 +4,8 @@ This checklist describes the new full-library photo-review and video-compression
 candidate. The older PRELAUNCH_QA describes dormant tools and is not the release
 scope. Builds 38 and 39 are historical TestFlight baselines; Build 39 contains
 the reported 42,683-item scan stall. Repair candidate 1.1.3 build 40 at e682a3b
-passed Mac CI and upload. Apple upload processing and internal availability are
-still being verified. Native-device acceptance remains required below.
+passed Mac CI and upload, is VALID and IN_BETA_TESTING, and is included in the
+existing internal group. Native-device acceptance remains required below.
 
 ## Backend baseline and build history
 
@@ -235,11 +235,11 @@ the precise device Photos/iCloud condition is not captured in the screenshot.
       input checks and the final floating-point boundary decision. Desktop AOT
       stress measurements for 42,683 shared-bucket, dissimilar signatures improve
       from about 13 seconds to about one second; result parity is checked. These
-      measurements do not establish iPhone timing. The first Mac run was
-      cancelled before signing/upload so this fix is included in the next run.
+      measurements do not establish iPhone timing. This fix is included in the
+      verified build 40 source.
 - [x] Pass the real full-access Photos UI bootstrap and all 10 native XCTest
       cases on the Mac CI simulator before signing/uploading the next build.
-      Six cases require real simulator Photos IO; four pure native cases passed
+      Six cases require real simulator Photos fixtures; four pure native cases passed
       previously, while fixture authorization failed. A legacy simctl grant did
       not establish modern authorization. The simulator-only Debug launch flag
       now requests modern read/write access, and a dedicated UI test taps the
@@ -260,16 +260,17 @@ the precise device Photos/iCloud condition is not captured in the screenshot.
       Downloaded IPA is com.cleanupapp.cleaner, iPhone/iPad, iOS 13.0 minimum,
       with photo read/save usage strings and embedded profile/signature resources.
       Windows metadata inspection does not cryptographically verify the signature.
-      Apple accepted receipt 4a72219b-4b2b-48ed-a38b-b6cc341cb079; its BuildUpload
-      state is PROCESSING at 2026-09-26T19:06:53Z, with no processing errors.
-- [ ] Confirm build 40 becomes VALID and IN_BETA_TESTING, and is included in
-      the existing internal group. An accepted upload is not availability.
-- [ ] Update iPhone and iPad to the next verified internal build and re-test the
+      Apple accepted receipt 4a72219b-4b2b-48ed-a38b-b6cc341cb079; BuildUpload
+      state is COMPLETE and processing state is VALID.
+- [x] Confirm build 40 is VALID, not expired and IN_BETA_TESTING, and is included
+      in the existing internal group at 2026-09-26T19:13:48Z. External state is
+      READY_FOR_BETA_SUBMISSION; real-device acceptance remains unchecked.
+- [ ] Update iPhone and iPad to 1.1.3 build 40 and re-test the
       real 42,683-item library. Check processed/visual/cloud counts, previews,
       cancellation and continuation. Do not treat a 30-second analysis round as
       a promise that indexing or the whole library finishes in 30 seconds.
 
-- [ ] Finish the candidate's Mac CI and iPhone/iPad checklist above before treating
+- [ ] Finish the remaining iPhone/iPad checklist above before treating
       the new functionality as release-ready.
 - [ ] Attach correct paywall review screenshots and subscriptions to submission.
 - [ ] Review every localized description/screenshot against actual enabled scope.
@@ -277,6 +278,9 @@ the precise device Photos/iCloud condition is not captured in the screenshot.
 - [ ] Verify trial/charge/renewal/refund through transaction data; do not infer
       revenue from client `purchase_completed` events or displayed list prices.
 - [ ] Review final SDK/privacy disclosures and minimum supported iOS requirements.
+      Build 40's Apple upload receipt has warning 90068: its iOS 13.0 deployment
+      target will need review against the reported April 2027 iOS 15.0 minimum.
+      This was an upload warning, not a failure of the current candidate.
 - [ ] Receive app/subscription App Review approval before paid acquisition.
 
 ## Still outside this candidate
