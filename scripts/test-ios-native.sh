@@ -46,13 +46,26 @@ XCODE_ARGUMENTS=(
   -only-testing:RunnerTests \
   "ARCHS=$(uname -m)" \
   ONLY_ACTIVE_ARCH=YES \
-  CODE_SIGNING_ALLOWED=NO \
-  CODE_SIGNING_REQUIRED=NO \
-  CODE_SIGNING_IDENTITY=
+  CODE_SIGNING_ALLOWED=YES \
+  CODE_SIGNING_REQUIRED=YES \
+  CODE_SIGNING_IDENTITY=- \
+  CODE_SIGN_STYLE=Manual \
+  DEVELOPMENT_TEAM=
 )
-# Build once for the selected simulator. Test the exact same installed product.
-xcodebuild build-for-testing "${XCODE_ARGUMENTS[@]}" \
-  2>&1 | tee "$RUN_DIRECTORY/xcodebuild-build.log"
+# An exact source/toolchain cache hit may reuse compiled products. Never use a
+# partial restore or skip the native tests themselves.
+PRODUCTS="$DERIVED_DATA/Build/Products"
+CACHED_TEST_RUNS=("$PRODUCTS"/*.xctestrun)
+if [[ "${NATIVE_TEST_PRODUCTS_CACHE_HIT:-false}" == "true" ]] && \
+   [[ -f "$PRODUCTS/.cleanup-build-succeeded" ]] && \
+   [[ -d "$PRODUCTS/Debug-iphonesimulator/Runner.app/PlugIns/RunnerTests.xctest" ]] && \
+   [[ "${#CACHED_TEST_RUNS[@]}" == "1" ]] && [[ -f "${CACHED_TEST_RUNS[0]}" ]]; then
+  echo "Reusing native test products from an exact source/toolchain cache hit."
+else
+  xcodebuild build-for-testing "${XCODE_ARGUMENTS[@]}" \
+    2>&1 | tee "$RUN_DIRECTORY/xcodebuild-build.log"
+  touch "$PRODUCTS/.cleanup-build-succeeded"
+fi
 python3 - "$SIMULATOR_ID" <<'PY'
 import subprocess, sys
 subprocess.run(['xcrun', 'simctl', 'bootstatus', sys.argv[1], '-b'],
@@ -60,6 +73,13 @@ subprocess.run(['xcrun', 'simctl', 'bootstatus', sys.argv[1], '-b'],
 PY
 TEST_APP="$DERIVED_DATA/Build/Products/Debug-iphonesimulator/Runner.app"
 test -d "$TEST_APP"
+# Verify ad-hoc identity before installing. Simulator signatures use no account
+# credentials and do not change the release IPA's signing configuration.
+codesign --verify --strict "$TEST_APP"
+codesign -dvvv "$TEST_APP" 2>&1 | tee "$RUN_DIRECTORY/host-signature.txt"
+codesign -dr - "$TEST_APP" 2>&1 | tee "$RUN_DIRECTORY/host-requirement.txt"
+codesign -dvvv "$TEST_APP/PlugIns/RunnerTests.xctest" \
+  2>&1 | tee "$RUN_DIRECTORY/test-signature.txt"
 XCTESTRUN_PATH="$(python3 - "$DERIVED_DATA/Build/Products" <<'PY'
 from pathlib import Path
 import sys
@@ -123,6 +143,16 @@ print(json.dumps(result, indent=2))
 PY
 }
 record_photos_permission before-test
+# Capture the isolated simulator during any authorization wait.
+(
+  sleep 30
+  python3 - "$SIMULATOR_ID" "$RUN_DIRECTORY/authorization-screen.png" <<'PY'
+import subprocess, sys
+subprocess.run(['xcrun', 'simctl', 'io', sys.argv[1], 'screenshot', sys.argv[2]],
+               check=True, timeout=15)
+PY
+) &
+SCREENSHOT_CAPTURE=$!
 TEST_EXIT=0
 xcodebuild test-without-building \
   -xctestrun "$XCTESTRUN_PATH" \
@@ -132,5 +162,12 @@ xcodebuild test-without-building \
   -only-testing:RunnerTests \
   -resultBundlePath "$RUN_DIRECTORY/Runner.xcresult" \
   2>&1 | tee "$RUN_DIRECTORY/xcodebuild.log" || TEST_EXIT=$?
+wait "$SCREENSHOT_CAPTURE" || true
 record_photos_permission after-test
+xcrun simctl spawn "$SIMULATOR_ID" log show --style compact --last 5m --info --debug \
+  --predicate 'process == "tccd" OR process == "photolibraryd"' \
+  > "$RUN_DIRECTORY/simulator-photos-system.log" 2>&1 || true
+/usr/bin/log show --style compact --last 5m --info --debug \
+  --predicate 'process == "tccd" AND (eventMessage CONTAINS "Runner" OR eventMessage CONTAINS "cleanup" OR eventMessage CONTAINS "Simulator")' \
+  > "$RUN_DIRECTORY/host-tcc-system.log" 2>&1 || true
 exit "$TEST_EXIT"

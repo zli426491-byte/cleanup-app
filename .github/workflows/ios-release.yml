@@ -30,9 +30,34 @@ jobs:
       - name: Test
         run: flutter test
 
+      - name: Identify exact native test product inputs
+        id: native-products-key
+        run: |
+          mkdir -p build/native-tests
+          flutter build ios --simulator --debug --no-codesign --config-only 2>&1 | tee build/native-tests/cache-configuration.log
+          NATIVE_PRODUCTS_KEY="$(bash scripts/native-test-cache-key.sh)"
+          echo "key=$NATIVE_PRODUCTS_KEY" >> "$GITHUB_OUTPUT"
+
+      - name: Restore exact native test products
+        id: native-products-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: build/native-test-derived-data/Build/Products
+          key: ${{ steps.native-products-key.outputs.key }}
+
       - name: Test native Photos inspection on iOS Simulator
+        id: native-tests
         timeout-minutes: 20
+        env:
+          NATIVE_TEST_PRODUCTS_CACHE_HIT: ${{ steps.native-products-cache.outputs.cache-hit }}
         run: bash scripts/test-ios-native.sh
+
+      - name: Save successfully built native test products
+        if: ${{ always() && steps.native-products-key.outcome == 'success' && steps.native-products-cache.outputs.cache-hit != 'true' && hashFiles('build/native-test-derived-data/Build/Products/.cleanup-build-succeeded') != '' }}
+        uses: actions/cache/save@v4
+        with:
+          path: build/native-test-derived-data/Build/Products
+          key: ${{ steps.native-products-key.outputs.key }}
 
       - name: Upload native test results
         uses: actions/upload-artifact@v4

@@ -46,6 +46,11 @@ final class RunnerTests: XCTestCase {
     else { status = PHPhotoLibrary.authorizationStatus() }
     if status == .notDetermined && !Self.authorizationRequested {
       Self.authorizationRequested = true
+      let device = ProcessInfo.processInfo.environment["SIMULATOR_UDID"] ?? "unknown"
+      print("Simulator Photos request context: main=\(Thread.isMainThread), device=\(device), pid=\(ProcessInfo.processInfo.processIdentifier), host=\(Bundle.main.bundlePath)")
+      DispatchQueue.main.async {
+        print("Simulator Photos main-queue app state: \(UIApplication.shared.applicationState.rawValue)")
+      }
       let authorized = expectation(description: "Resolve simulator read/write Photos authorization")
       let handler: (PHAuthorizationStatus) -> Void = { resolved in
         print("Simulator Photos read/write request resolved: \(resolved.rawValue)")
