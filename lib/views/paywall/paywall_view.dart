@@ -26,7 +26,11 @@ class _PaywallViewState extends State<PaywallView> {
   _PlanOption? _selectedPlan;
   bool _isPurchasing = false;
   bool _hasTrackedClose = false;
+  bool _isDismissing = false;
   String? _buildNumber;
+
+  bool get _pageIsActive =>
+      mounted && !_isDismissing && (ModalRoute.of(context)?.isCurrent ?? true);
 
   @override
   void initState() {
@@ -56,153 +60,178 @@ class _PaywallViewState extends State<PaywallView> {
         !sub.isLoading &&
         !_isPurchasing;
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: const SizedBox(),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.close),
-            tooltip: context.l10n.paywallClose,
-            onPressed: () => _dismiss(context),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ShaderMask(
-                shaderCallback: (bounds) =>
-                    AppTheme.primaryGradient.createShader(bounds),
-                child: const Icon(
-                  Icons.auto_awesome,
-                  size: 60,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                context.l10n.paywallTitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              if (kDebugMode && _buildNumber != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  context.l10n.paywallBuild(_buildNumber!),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                ),
-              ],
-              const SizedBox(height: 6),
-              Text(
-                context.l10n.paywallDescription,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 24),
-              if (sub.statusMessage.isNotEmpty) ...[
-                _StatusBanner(
-                  message: context.localizeServiceMessage(sub.statusMessage),
-                ),
-                const SizedBox(height: 16),
-              ],
-              ..._features.map(
-                (feature) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
-                    children: [
-                      Icon(feature.icon, color: feature.color, size: 22),
-                      const SizedBox(width: 12),
-                      Expanded(child: Text(feature.label)),
-                      const Icon(
-                        Icons.check_circle,
-                        color: AppTheme.success,
-                        size: 18,
+    return PopScope(
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) _isDismissing = true;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const SizedBox(),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.close),
+              tooltip: context.l10n.paywallClose,
+              onPressed: () => _dismiss(context),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ShaderMask(
+                      shaderCallback: (bounds) =>
+                          AppTheme.primaryGradient.createShader(bounds),
+                      child: const Icon(
+                        Icons.auto_awesome,
+                        size: 60,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      context.l10n.paywallTitle,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (kDebugMode && _buildNumber != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        context.l10n.paywallBuild(_buildNumber!),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
-                  ),
+                    const SizedBox(height: 6),
+                    Text(
+                      context.l10n.paywallDescription,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 24),
+                    if (sub.statusMessage.isNotEmpty) ...[
+                      _StatusBanner(
+                        message: context.localizeServiceMessage(
+                          sub.statusMessage,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    ..._features.map(
+                      (feature) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          children: [
+                            Icon(feature.icon, color: feature.color, size: 22),
+                            const SizedBox(width: 12),
+                            Expanded(child: Text(feature.label)),
+                            const Icon(
+                              Icons.check_circle,
+                              color: AppTheme.success,
+                              size: 18,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    if (plans.isEmpty) ...[
+                      _EmptyPlans(isLoading: sub.isLoading),
+                      TextButton.icon(
+                        onPressed: sub.isLoading ? null : () => sub.retry(),
+                        icon: const Icon(Icons.refresh),
+                        label: Text(context.l10n.paywallReloadPlans),
+                      ),
+                    ] else
+                      ...plans.map(
+                        (plan) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _PlanCard(
+                            key: ValueKey(
+                              'paywall-plan-${plan.product.identifier}',
+                            ),
+                            title: _titleFor(plan),
+                            subtitle: _subtitleFor(plan),
+                            price: plan.product.priceString,
+                            isSelected:
+                                plan.product.identifier ==
+                                _selectedPlan?.product.identifier,
+                            isBestValue:
+                                plan.product.identifier ==
+                                AppConstants.yearlyProductId,
+                            onTap: sub.isLoading || _isPurchasing
+                                ? null
+                                : () => setState(() => _selectedPlan = plan),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                    _PurchaseButton(
+                      isEnabled: canPurchase,
+                      isLoading: sub.isLoading || _isPurchasing,
+                      label: sub.isPlaceholder
+                          ? context.l10n.paywallNotConfigured
+                          : context.l10n.paywallContinue,
+                      onTap: () => _purchase(sub),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      context.l10n.paywallStoreNotice,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 4,
+                      children: [
+                        TextButton(
+                          onPressed: sub.isPlaceholder || sub.isLoading
+                              ? null
+                              : () => _restore(sub),
+                          child: Text(
+                            context.l10n.paywallRestorePurchases,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => launchUrl(
+                            Uri.parse(AppConstants.privacyPolicyUrl),
+                          ),
+                          child: Text(
+                            context.l10n.paywallPrivacyPolicy,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () =>
+                              launchUrl(Uri.parse(AppConstants.termsUrl)),
+                          child: Text(
+                            context.l10n.paywallTerms,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 28),
-              if (plans.isEmpty) ...[
-                _EmptyPlans(isLoading: sub.isLoading),
-                TextButton.icon(
-                  onPressed: sub.isLoading ? null : () => sub.retry(),
-                  icon: const Icon(Icons.refresh),
-                  label: Text(context.l10n.paywallReloadPlans),
-                ),
-              ] else
-                ...plans.map(
-                  (plan) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: _PlanCard(
-                      title: _titleFor(plan),
-                      subtitle: _subtitleFor(plan),
-                      price: plan.product.priceString,
-                      isSelected:
-                          plan.product.identifier ==
-                          _selectedPlan?.product.identifier,
-                      isBestValue:
-                          plan.product.identifier ==
-                          AppConstants.yearlyProductId,
-                      onTap: () => setState(() => _selectedPlan = plan),
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 16),
-              _PurchaseButton(
-                isEnabled: canPurchase,
-                isLoading: sub.isLoading || _isPurchasing,
-                label: sub.isPlaceholder
-                    ? context.l10n.paywallNotConfigured
-                    : context.l10n.paywallContinue,
-                onTap: () => _purchase(sub),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                context.l10n.paywallStoreNotice,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey[500], fontSize: 12),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 4,
-                children: [
-                  TextButton(
-                    onPressed: sub.isPlaceholder || sub.isLoading
-                        ? null
-                        : () => _restore(sub),
-                    child: Text(
-                      context.l10n.paywallRestorePurchases,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () =>
-                        launchUrl(Uri.parse(AppConstants.privacyPolicyUrl)),
-                    child: Text(
-                      context.l10n.paywallPrivacyPolicy,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () =>
-                        launchUrl(Uri.parse(AppConstants.termsUrl)),
-                    child: Text(
-                      context.l10n.paywallTerms,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -232,13 +261,19 @@ class _PaywallViewState extends State<PaywallView> {
 
   Future<void> _purchase(SubscriptionManager sub) async {
     final plan = _selectedPlan;
-    if (plan == null || sub.isPlaceholder || _isPurchasing) return;
+    if (!_pageIsActive ||
+        plan == null ||
+        sub.isPlaceholder ||
+        sub.isLoading ||
+        _isPurchasing) {
+      return;
+    }
 
     setState(() => _isPurchasing = true);
     final didPurchase = plan.package == null
         ? await sub.purchaseStoreProduct(plan.product)
         : await sub.purchase(plan.package!);
-    if (!mounted) return;
+    if (!mounted || !_pageIsActive) return;
     setState(() => _isPurchasing = false);
 
     if (didPurchase) {
@@ -262,8 +297,9 @@ class _PaywallViewState extends State<PaywallView> {
   }
 
   Future<void> _restore(SubscriptionManager sub) async {
+    if (!_pageIsActive || sub.isLoading) return;
     final restored = await sub.restorePurchases();
-    if (!mounted) return;
+    if (!mounted || !_pageIsActive) return;
 
     if (restored) {
       _showMessage(context.l10n.paywallRestored);
@@ -284,6 +320,8 @@ class _PaywallViewState extends State<PaywallView> {
   }
 
   Future<void> _dismiss(BuildContext context) async {
+    if (!_pageIsActive) return;
+    _isDismissing = true;
     if (!_hasTrackedClose) {
       _hasTrackedClose = true;
       AnalyticsManager.instance.track(
@@ -292,18 +330,28 @@ class _PaywallViewState extends State<PaywallView> {
       );
     }
 
-    if (widget.fromOnboarding) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('hasCompletedOnboarding', true);
-      if (context.mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const MainTabView()),
-          (route) => false,
-        );
+    try {
+      if (widget.fromOnboarding) {
+        final prefs = await SharedPreferences.getInstance();
+        if (!await prefs.setBool('hasCompletedOnboarding', true)) {
+          throw StateError('Onboarding preference was not saved');
+        }
+        if (context.mounted && (ModalRoute.of(context)?.isCurrent ?? true)) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const MainTabView()),
+            (route) => false,
+          );
+        }
+      } else if (context.mounted &&
+          (ModalRoute.of(context)?.isCurrent ?? true)) {
+        Navigator.pop(context);
       }
-    } else if (context.mounted) {
-      Navigator.pop(context);
+    } catch (_) {
+      if (context.mounted && (ModalRoute.of(context)?.isCurrent ?? true)) {
+        _isDismissing = false;
+        _showMessage(context.l10n.serviceOperationFailed);
+      }
     }
   }
 
@@ -502,6 +550,7 @@ class _PlanCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   const _PlanCard({
+    super.key,
     required this.title,
     required this.subtitle,
     required this.price,
@@ -512,80 +561,98 @@ class _PlanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: isSelected ? AppTheme.primary : Colors.grey[300]!,
-            width: isSelected ? 2 : 1,
-          ),
-          borderRadius: BorderRadius.circular(12),
-          color: isSelected ? AppTheme.primary.withValues(alpha: 0.05) : null,
-        ),
-        child: Row(
-          children: [
-            Icon(
-              isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: isSelected ? AppTheme.primary : AppTheme.textMuted,
-              size: 20,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return MergeSemantics(
+      child: Semantics(
+        button: true,
+        selected: isSelected,
+        inMutuallyExclusiveGroup: true,
+        enabled: onTap != null,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: isSelected ? AppTheme.primary : Colors.grey[300]!,
+                  width: isSelected ? 2 : 1,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                color: isSelected
+                    ? AppTheme.primary.withValues(alpha: 0.05)
+                    : null,
+              ),
+              child: Row(
                 children: [
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      if (isBestValue)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppTheme.warning,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            context.l10n.paywallBestValue,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
+                  Icon(
+                    isSelected
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_off,
+                    color: isSelected ? AppTheme.primary : AppTheme.textMuted,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: [
+                            Text(
+                              title,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
+                            if (isBestValue)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.warning,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  context.l10n.paywallBestValue,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle,
+                          style: const TextStyle(
+                            color: AppTheme.textMuted,
+                            fontSize: 12,
                           ),
                         ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      color: AppTheme.textMuted,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    price,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                        const SizedBox(height: 8),
+                        Text(
+                          price,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

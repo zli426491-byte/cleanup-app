@@ -8,6 +8,7 @@ import 'package:cleanup_app/main.dart';
 import 'package:cleanup_app/services/photo_scanner_service.dart';
 import 'package:cleanup_app/services/subscription_manager.dart';
 import 'package:cleanup_app/utils/app_theme.dart';
+import 'package:cleanup_app/utils/constants.dart';
 import 'package:cleanup_app/views/home/home_view.dart';
 import 'package:cleanup_app/views/home/main_tab_view.dart';
 import 'package:cleanup_app/views/onboarding/onboarding_view.dart';
@@ -20,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -129,7 +131,7 @@ void main() {
         addTearDown(tester.view.resetDevicePixelRatio);
         final controller = LocaleController(initialLocale: option.locale);
         final scanner = _ScanningFixture();
-        final subscriptions = SubscriptionManager();
+        final subscriptions = _LocalizedProducts();
         final rtl = const ['ar', 'he'].contains(option.locale.languageCode);
         for (final viewport in [const Size(320, 568), const Size(1366, 1024)]) {
           tester.view.physicalSize = viewport;
@@ -331,6 +333,33 @@ void main() {
 
 String? preferenceTag(SharedPreferences preferences) =>
     preferences.getString(LocaleController.preferenceKey);
+
+// Exercise actual plan cards as well as empty/loading copy at large text sizes.
+class _LocalizedProducts extends SubscriptionManager {
+  @override
+  bool get isPlaceholder => false;
+  @override
+  bool get isInitializing => true;
+  @override
+  List<StoreProduct> get storeProducts => const [
+    StoreProduct(
+      AppConstants.yearlyProductId,
+      'Annual cleanup',
+      'Annual',
+      990,
+      'NT\$990',
+      'TWD',
+    ),
+    StoreProduct(
+      AppConstants.weeklyProductId,
+      'Weekly cleanup',
+      'Weekly',
+      90,
+      'NT\$90',
+      'TWD',
+    ),
+  ];
+}
 
 class _ScanningFixture extends PhotoScannerService {
   @override

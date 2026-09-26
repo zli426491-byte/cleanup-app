@@ -18,7 +18,13 @@ class _MainTabViewState extends State<MainTabView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _i, children: _pages),
+      body: IndexedStack(
+        index: _i,
+        children: [
+          for (var index = 0; index < _pages.length; index++)
+            TickerMode(enabled: index == _i, child: _pages[index]),
+        ],
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: AppTheme.cardBg,
@@ -61,30 +67,39 @@ class _MainTabViewState extends State<MainTabView> {
   Widget _tab(int idx, IconData outline, IconData filled, String label) {
     final selected = _i == idx;
     return Expanded(
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => setState(() => _i = idx),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                selected ? filled : outline,
-                size: 22,
-                color: selected ? AppTheme.primary : AppTheme.textMuted,
+      child: Semantics(
+        key: ValueKey('main-tab-$idx'),
+        button: true,
+        selected: selected,
+        child: InkWell(
+          onTap: () => setState(() => _i = idx),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 56),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    selected ? filled : outline,
+                    size: 22,
+                    color: selected ? AppTheme.primary : AppTheme.textMuted,
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      color: selected
+                          ? AppTheme.primary
+                          : AppTheme.textSecondary,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 3),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  color: selected ? AppTheme.primary : AppTheme.textMuted,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

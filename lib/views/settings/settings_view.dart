@@ -42,117 +42,126 @@ class _SettingsViewState extends State<SettingsView> {
 
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.settingsTitle)),
-      body: ListView(
-        children: [
-          ListTile(
-            leading: Icon(
-              sub.isPro
-                  ? Icons.workspace_premium
-                  : Icons.workspace_premium_outlined,
-              color: sub.isPro ? Colors.amber : Colors.grey,
-            ),
-            title: Text(
-              sub.isPro
-                  ? context.l10n.settingsProPlan
-                  : context.l10n.settingsFreePlan,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            trailing: sub.isPro
-                ? null
-                : ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.sizeOf(context).width * 0.35,
-                    ),
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const PaywallView()),
-                      ),
-                      child: Text(
-                        context.l10n.settingsUpgrade,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-          ),
-          const Divider(),
-
-          if (_storage != null && !_storage!.isEstimate) ...[
-            _settingsHeader(context.l10n.settingsStorage),
-            _settingsRow(
-              context.l10n.settingsStorageTotal,
-              _storage!.totalSpaceFormatted,
-            ),
-            _settingsRow(
-              context.l10n.settingsStorageUsed,
-              _storage!.usedSpaceFormatted,
-            ),
-            _settingsRow(
-              context.l10n.settingsStorageAvailable,
-              _storage!.freeSpaceFormatted,
-              valueColor: AppTheme.success,
-            ),
-            const Divider(),
-          ],
-
-          _settingsHeader(context.l10n.settingsGeneral),
-          ListTile(
-            leading: const Icon(Icons.language),
-            title: Text(context.l10n.settingsLanguage),
-            subtitle: Text(
-              localeController.locale == null
-                  ? context.l10n.settingsSystemLanguage
-                  : localeController.localeLabel,
-            ),
-            onTap: () => _chooseLanguage(localeController),
-          ),
-          ListTile(
-            title: Text(
-              sub.isLoading
-                  ? context.l10n.settingsProcessingSubscription
-                  : context.l10n.settingsRestorePurchases,
-            ),
-            onTap: sub.isLoading
-                ? null
-                : () async {
-                    final restored = await sub.restorePurchases();
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          restored
-                              ? context.l10n.settingsRestoredPro
-                              : context.localizeServiceMessage(
-                                  sub.statusMessage,
-                                ),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: ListView(
+            children: [
+              ListTile(
+                leading: Icon(
+                  sub.isPro
+                      ? Icons.workspace_premium
+                      : Icons.workspace_premium_outlined,
+                  color: sub.isPro ? Colors.amber : Colors.grey,
+                ),
+                title: Text(
+                  sub.isPro
+                      ? context.l10n.settingsProPlan
+                      : context.l10n.settingsFreePlan,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                trailing: sub.isPro
+                    ? null
+                    : ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: MediaQuery.sizeOf(context).width * 0.35,
+                        ),
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const PaywallView(),
+                            ),
+                          ),
+                          child: Text(
+                            context.l10n.settingsUpgrade,
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ),
-                    );
-                  },
-          ),
-          ListTile(
-            title: Text(context.l10n.settingsPrivacyPolicy),
-            onTap: () => launchUrl(Uri.parse(AppConstants.privacyPolicyUrl)),
-          ),
-          ListTile(
-            title: Text(context.l10n.settingsTerms),
-            onTap: () => launchUrl(Uri.parse(AppConstants.termsUrl)),
-          ),
-          ListTile(
-            title: Text(context.l10n.settingsRateApp),
-            onTap: () async {
-              final review = InAppReview.instance;
-              if (await review.isAvailable()) review.requestReview();
-            },
-          ),
-          const Divider(),
+              ),
+              const Divider(),
 
-          _settingsHeader(context.l10n.settingsAbout),
-          _settingsRow(
-            context.l10n.settingsVersion,
-            _version ?? context.l10n.settingsLoading,
+              if (_storage != null && !_storage!.isEstimate) ...[
+                _settingsHeader(context.l10n.settingsStorage),
+                _settingsRow(
+                  context.l10n.settingsStorageTotal,
+                  _storage!.totalSpaceFormatted,
+                ),
+                _settingsRow(
+                  context.l10n.settingsStorageUsed,
+                  _storage!.usedSpaceFormatted,
+                ),
+                _settingsRow(
+                  context.l10n.settingsStorageAvailable,
+                  _storage!.freeSpaceFormatted,
+                  valueColor: AppTheme.success,
+                ),
+                const Divider(),
+              ],
+
+              _settingsHeader(context.l10n.settingsGeneral),
+              ListTile(
+                leading: const Icon(Icons.language),
+                title: Text(context.l10n.settingsLanguage),
+                subtitle: Text(
+                  localeController.locale == null
+                      ? context.l10n.settingsSystemLanguage
+                      : localeController.localeLabel,
+                ),
+                onTap: () => _chooseLanguage(localeController),
+              ),
+              ListTile(
+                title: Text(
+                  sub.isLoading
+                      ? context.l10n.settingsProcessingSubscription
+                      : context.l10n.settingsRestorePurchases,
+                ),
+                onTap: sub.isLoading
+                    ? null
+                    : () async {
+                        final restored = await sub.restorePurchases();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              restored
+                                  ? context.l10n.settingsRestoredPro
+                                  : context.localizeServiceMessage(
+                                      sub.statusMessage,
+                                    ),
+                            ),
+                          ),
+                        );
+                      },
+              ),
+              ListTile(
+                title: Text(context.l10n.settingsPrivacyPolicy),
+                onTap: () =>
+                    launchUrl(Uri.parse(AppConstants.privacyPolicyUrl)),
+              ),
+              ListTile(
+                title: Text(context.l10n.settingsTerms),
+                onTap: () => launchUrl(Uri.parse(AppConstants.termsUrl)),
+              ),
+              ListTile(
+                title: Text(context.l10n.settingsRateApp),
+                onTap: () async {
+                  final review = InAppReview.instance;
+                  if (await review.isAvailable()) review.requestReview();
+                },
+              ),
+              const Divider(),
+
+              _settingsHeader(context.l10n.settingsAbout),
+              _settingsRow(
+                context.l10n.settingsVersion,
+                _version ?? context.l10n.settingsLoading,
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -233,7 +242,7 @@ class _SettingsViewState extends State<SettingsView> {
         style: const TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.bold,
-          color: Colors.grey,
+          color: AppTheme.textSecondary,
         ),
       ),
     );

@@ -15,25 +15,13 @@ class HomeView extends StatefulWidget {
   State<HomeView> createState() => _HomeViewState();
 }
 
-class _HomeViewState extends State<HomeView>
-    with SingleTickerProviderStateMixin {
+class _HomeViewState extends State<HomeView> {
   StorageInfo? _storage;
-  late AnimationController _pulse;
 
   @override
   void initState() {
     super.initState();
     _loadStorage();
-    _pulse = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _pulse.dispose();
-    super.dispose();
   }
 
   Future<void> _loadStorage() async {
@@ -56,56 +44,62 @@ class _HomeViewState extends State<HomeView>
 
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(isPro),
-              const SizedBox(height: AppTheme.s20),
-              if (_storage != null && !_storage!.isEstimate)
-                _buildStorageCard(_storage!)
-              else
-                Text(
-                  context.l10n.homeStorageUnavailable,
-                  style: AppTheme.caption,
-                ),
-              const SizedBox(height: AppTheme.s16),
-              _buildScanButton(scanner),
-              if (scanner.isScanning) ...[
-                const SizedBox(height: AppTheme.s12),
-                _buildProgress(scanner),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    TextButton(
-                      onPressed: () => _openReview('photos'),
-                      child: Text(context.l10n.homeViewIndexedPhotos),
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(isPro),
+                  const SizedBox(height: AppTheme.s20),
+                  if (_storage != null && !_storage!.isEstimate)
+                    _buildStorageCard(_storage!)
+                  else
+                    Text(
+                      context.l10n.homeStorageUnavailable,
+                      style: AppTheme.caption,
                     ),
-                    TextButton(
-                      onPressed: () => _openReview('screenshots'),
-                      child: Text(context.l10n.homeViewIndexedScreenshots),
+                  const SizedBox(height: AppTheme.s16),
+                  _buildScanButton(scanner),
+                  if (scanner.isScanning) ...[
+                    const SizedBox(height: AppTheme.s12),
+                    _buildProgress(scanner),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        TextButton(
+                          onPressed: () => _openReview('photos'),
+                          child: Text(context.l10n.homeViewIndexedPhotos),
+                        ),
+                        TextButton(
+                          onPressed: () => _openReview('screenshots'),
+                          child: Text(context.l10n.homeViewIndexedScreenshots),
+                        ),
+                      ],
                     ),
                   ],
-                ),
-              ],
-              if (!scanner.isScanning &&
-                  (scanner.hasCompletedScan ||
-                      scanner.scannedAssetCount > 0 ||
-                      scanner.wasCancelled ||
-                      scanner.lastError != null)) ...[
-                const SizedBox(height: AppTheme.s16),
-                _buildResults(scanner),
-              ],
-              const SizedBox(height: AppTheme.s24),
-              _buildSectionHeader(context.l10n.homeCleanupTools),
-              const SizedBox(height: AppTheme.s10),
-              _buildToolList(scanner),
-              const SizedBox(height: AppTheme.s16),
-              _buildSectionHeader(context.l10n.homeQuickActions),
-              const SizedBox(height: AppTheme.s10),
-              _buildQuickActions(),
-            ],
+                  if (!scanner.isScanning &&
+                      (scanner.hasCompletedScan ||
+                          scanner.scannedAssetCount > 0 ||
+                          scanner.wasCancelled ||
+                          scanner.lastError != null)) ...[
+                    const SizedBox(height: AppTheme.s16),
+                    _buildResults(scanner),
+                  ],
+                  const SizedBox(height: AppTheme.s24),
+                  _buildSectionHeader(context.l10n.homeCleanupTools),
+                  const SizedBox(height: AppTheme.s10),
+                  _buildToolList(scanner),
+                  const SizedBox(height: AppTheme.s16),
+                  _buildSectionHeader(context.l10n.homeQuickActions),
+                  const SizedBox(height: AppTheme.s10),
+                  _buildQuickActions(),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -300,83 +294,71 @@ class _HomeViewState extends State<HomeView>
       (scanner.scannedAssetCount > 0 && !scanner.hasCompletedScan);
 
   // ── Scan Button ──
-  Widget _buildScanButton(PhotoScannerService s) => AnimatedBuilder(
-    animation: _pulse,
-    builder: (_, child) {
-      final scale = s.isScanning ? 1.0 : 1.0 - _pulse.value * 0.015;
-      return Transform.scale(
-        scale: scale,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 52),
-          decoration: BoxDecoration(
-            color: AppTheme.primary,
-            borderRadius: BorderRadius.circular(AppTheme.r16),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.primary.withValues(alpha: 0.2),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
+  Widget _buildScanButton(PhotoScannerService s) => Container(
+    constraints: const BoxConstraints(minHeight: 52),
+    decoration: BoxDecoration(
+      color: AppTheme.primary,
+      borderRadius: BorderRadius.circular(AppTheme.r16),
+      boxShadow: [
+        BoxShadow(
+          color: AppTheme.primary.withValues(alpha: 0.2),
+          blurRadius: 16,
+          offset: const Offset(0, 6),
+        ),
+      ],
+    ),
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppTheme.r16),
+        onTap: s.isScanning || s.isDeleting
+            ? null
+            : _shouldResume(s)
+            ? s.resumeScan
+            : s.startFullScan,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (s.isScanning)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              else
+                const Icon(
+                  Icons.play_arrow_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  s.isScanning
+                      ? context.l10n.homeScanning
+                      : s.isDeleting
+                      ? context.l10n.homeDeleting
+                      : _shouldResume(s)
+                      ? context.l10n.homeResumeScan
+                      : context.l10n.homeScanAll,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ],
           ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(AppTheme.r16),
-              onTap: s.isScanning || s.isDeleting
-                  ? null
-                  : _shouldResume(s)
-                  ? s.resumeScan
-                  : s.startFullScan,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (s.isScanning)
-                      const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    else
-                      const Icon(
-                        Icons.play_arrow_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        s.isScanning
-                            ? context.l10n.homeScanning
-                            : s.isDeleting
-                            ? context.l10n.homeDeleting
-                            : _shouldResume(s)
-                            ? context.l10n.homeResumeScan
-                            : context.l10n.homeScanAll,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
         ),
-      );
-    },
+      ),
+    ),
   );
 
   // ── Progress ──
@@ -438,6 +420,9 @@ class _HomeViewState extends State<HomeView>
   // ── Tool List ──
   Widget _buildToolList(PhotoScannerService s) {
     final hasScanned = s.hasCompletedScan || s.scannedAssetCount > 0;
+    final indexComplete =
+        s.availableAssetCount != null &&
+        s.scannedAssetCount >= s.availableAssetCount!;
     final ts = s.scanResult.similarGroups.fold<int>(
       0,
       (a, g) => a + g.assets.length,
@@ -459,7 +444,7 @@ class _HomeViewState extends State<HomeView>
         ),
         duplicateCount > 0
             ? _Status.warn
-            : hasScanned && s.pendingResourceCount == 0
+            : indexComplete && s.pendingResourceCount == 0
             ? _Status.done
             : _Status.scan,
         AppTheme.primary,
@@ -476,10 +461,12 @@ class _HomeViewState extends State<HomeView>
                   : context.l10n.homePendingAnalysis
             : ts > 0
             ? context.l10n.homePhotoCount(ts)
+            : !indexComplete
+            ? context.l10n.scanEmptyIndexing
             : context.l10n.homeNoneAnalyzed,
         ts > 0
             ? _Status.warn
-            : hasScanned && s.pendingAnalysisCount == 0
+            : indexComplete && s.pendingAnalysisCount == 0
             ? _Status.done
             : _Status.scan,
         const Color(0xFFF0997B),
@@ -488,10 +475,14 @@ class _HomeViewState extends State<HomeView>
         'screenshots',
         Icons.screenshot_rounded,
         context.l10n.homeScreenshots,
-        _photoCountLabel(s.scanResult.screenshots.length, hasScanned),
+        !indexComplete && s.scanResult.screenshots.isEmpty
+            ? (hasScanned
+                  ? context.l10n.scanEmptyIndexing
+                  : context.l10n.homeNotScanned)
+            : _photoCountLabel(s.scanResult.screenshots.length, hasScanned),
         s.scanResult.screenshots.isNotEmpty
             ? _Status.minor
-            : hasScanned
+            : indexComplete
             ? _Status.done
             : _Status.scan,
         const Color(0xFF1D9E75),
@@ -508,7 +499,7 @@ class _HomeViewState extends State<HomeView>
         ),
         s.scanResult.largeFiles.isNotEmpty
             ? _Status.minor
-            : hasScanned && s.pendingResourceCount == 0
+            : indexComplete && s.pendingResourceCount == 0
             ? _Status.done
             : _Status.scan,
         const Color(0xFFE5A31A),

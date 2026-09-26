@@ -17,6 +17,7 @@ class _OnboardingViewState extends State<OnboardingView>
   final _controller = PageController();
   int _currentPage = 0;
   bool _isCompleting = false;
+  bool _reduceMotion = false;
   late AnimationController _pulseController;
 
   List<_PageData> get _pages => [
@@ -57,7 +58,19 @@ class _OnboardingViewState extends State<OnboardingView>
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reduceMotion = MediaQuery.disableAnimationsOf(context);
+    if (_reduceMotion) {
+      _pulseController.stop();
+      _pulseController.value = 0;
+    } else if (!_pulseController.isAnimating) {
+      _pulseController.repeat(reverse: true);
+    }
   }
 
   @override
@@ -119,87 +132,112 @@ class _OnboardingViewState extends State<OnboardingView>
           ),
 
           SafeArea(
-            child: Column(
-              children: [
-                const SizedBox(height: 12),
-                // Top bar
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Row(
-                    children: [
-                      // Step indicator
-                      Flexible(
-                        child: Text(
-                          context.l10n.onboardingStep(
-                            _currentPage + 1,
-                            _pages.length,
-                          ),
-                          style: const TextStyle(
-                            color: AppTheme.textMuted,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      if (_currentPage < _pages.length - 1)
-                        Flexible(
-                          child: GestureDetector(
-                            onTap: () => _controller.animateToPage(
-                              _pages.length - 1,
-                              duration: const Duration(milliseconds: 400),
-                              curve: Curves.easeOut,
-                            ),
-                            child: Text(
-                              context.l10n.onboardingSkip,
-                              textAlign: TextAlign.end,
-                              style: const TextStyle(
-                                color: AppTheme.textMuted,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 640),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 12),
+                    // Top bar
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Step indicator
+                          Expanded(
+                            child: Semantics(
+                              liveRegion: true,
+                              child: Text(
+                                context.l10n.onboardingStep(
+                                  _currentPage + 1,
+                                  _pages.length,
+                                ),
+                                style: const TextStyle(
+                                  color: AppTheme.textMuted,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                    ],
-                  ),
-                ),
-
-                // Pages
-                Expanded(
-                  child: PageView.builder(
-                    controller: _controller,
-                    onPageChanged: (i) => setState(() => _currentPage = i),
-                    itemCount: _pages.length,
-                    itemBuilder: (ctx, i) => _buildPage(_pages[i]),
-                  ),
-                ),
-
-                // Bottom section
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(28, 0, 28, 16),
-                  child: Column(
-                    children: [
-                      SmoothPageIndicator(
-                        controller: _controller,
-                        count: _pages.length,
-                        effect: ExpandingDotsEffect(
-                          dotHeight: 6,
-                          dotWidth: 6,
-                          expansionFactor: 4,
-                          activeDotColor: page.c1,
-                          dotColor: const Color(0xFFE2E8F0),
-                          spacing: 5,
-                        ),
+                          if (_currentPage < _pages.length - 1)
+                            Flexible(
+                              child: TextButton(
+                                style: TextButton.styleFrom(
+                                  minimumSize: const Size(44, 44),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                  ),
+                                  foregroundColor: AppTheme.textSecondary,
+                                ),
+                                onPressed: () {
+                                  if (_reduceMotion) {
+                                    _controller.jumpToPage(_pages.length - 1);
+                                  } else {
+                                    _controller.animateToPage(
+                                      _pages.length - 1,
+                                      duration: const Duration(
+                                        milliseconds: 400,
+                                      ),
+                                      curve: Curves.easeOut,
+                                    );
+                                  }
+                                },
+                                child: Text(
+                                  context.l10n.onboardingSkip,
+                                  textAlign: TextAlign.end,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
-                      const SizedBox(height: 32),
-                      // CTA
-                      _buildButton(page),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
+                    ),
+
+                    // Pages
+                    Expanded(
+                      child: PageView.builder(
+                        controller: _controller,
+                        onPageChanged: (i) => setState(() => _currentPage = i),
+                        itemCount: _pages.length,
+                        itemBuilder: (ctx, i) => _buildPage(_pages[i]),
+                      ),
+                    ),
+
+                    // Bottom section
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(28, 0, 28, 16),
+                      child: Column(
+                        children: [
+                          ExcludeSemantics(
+                            child: SmoothPageIndicator(
+                              controller: _controller,
+                              count: _pages.length,
+                              effect: ExpandingDotsEffect(
+                                dotHeight: 6,
+                                dotWidth: 6,
+                                expansionFactor: 4,
+                                activeDotColor: page.c1,
+                                dotColor: const Color(0xFFE2E8F0),
+                                spacing: 5,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                          // CTA
+                          _buildButton(),
+                          const SizedBox(height: 20),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ],
@@ -308,20 +346,16 @@ class _OnboardingViewState extends State<OnboardingView>
     );
   }
 
-  Widget _buildButton(_PageData page) {
+  Widget _buildButton() {
     return Container(
       width: double.infinity,
       constraints: const BoxConstraints(minHeight: 56),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [page.c1, page.c2],
-          begin: AlignmentDirectional.centerStart,
-          end: AlignmentDirectional.centerEnd,
-        ),
+        color: AppTheme.primary,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: page.c1.withValues(alpha: 0.4),
+            color: AppTheme.primary.withValues(alpha: 0.25),
             blurRadius: 24,
             offset: const Offset(0, 10),
           ),
@@ -381,10 +415,14 @@ class _OnboardingViewState extends State<OnboardingView>
   Future<void> _onNext() async {
     if (_isCompleting || !mounted) return;
     if (_currentPage < _pages.length - 1) {
-      _controller.nextPage(
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeOutCubic,
-      );
+      if (_reduceMotion) {
+        _controller.jumpToPage(_currentPage + 1);
+      } else {
+        _controller.nextPage(
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutCubic,
+        );
+      }
     } else {
       setState(() => _isCompleting = true);
       try {

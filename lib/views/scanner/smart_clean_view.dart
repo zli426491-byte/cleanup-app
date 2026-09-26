@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cleanup_app/l10n/l10n.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +11,7 @@ import '../paywall/paywall_view.dart';
 import '../components/video_compression_view.dart';
 import 'swipe_clean_view.dart';
 import 'asset_thumbnail.dart';
+import 'asset_preview.dart';
 import 'photo_asset_labels.dart';
 import 'scan_progress_panel.dart';
 
@@ -27,6 +29,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   final Set<String> _selectedIds = {};
   final Set<String> _dismissedSuggestions = {};
   bool _isDeleting = false;
+  String? _focusedAssetId;
   ScanResult? _cachedResult;
   ScanResult? _selectionSource;
   final Map<int, List<PhotoAsset>> _cachedAssets = {};
@@ -82,55 +85,59 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     _updateSnapshot(scanner);
     final sub = context.watch<SubscriptionManager>();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(context.l10n.scanSmartTitle),
-        actions: [
-          if (scanner.isScanning)
-            IconButton(
-              tooltip: context.l10n.scanCancelKeepProgress,
-              icon: const Icon(Icons.stop_circle_outlined),
-              onPressed: scanner.cancelScan,
-            ),
-          if (scanner.scanResult.allAssets.isNotEmpty)
-            IconButton(
-              tooltip: context.l10n.scanSwipeCleanup,
-              icon: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  gradient: AppTheme.primaryGradient,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.swipe_rounded,
-                  color: Colors.white,
-                  size: 16,
-                ),
+    return PopScope(
+      canPop: !_isDeleting,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(context.l10n.scanSmartTitle),
+          actions: [
+            if (scanner.isScanning)
+              IconButton(
+                tooltip: context.l10n.scanCancelKeepProgress,
+                icon: const Icon(Icons.stop_circle_outlined),
+                onPressed: scanner.cancelScan,
               ),
-              onPressed: scanner.isScanning || scanner.isDeleting || _isDeleting
-                  ? null
-                  : () => _openSwipeMode(scanner),
+            if (scanner.scanResult.allAssets.isNotEmpty)
+              IconButton(
+                tooltip: context.l10n.scanSwipeCleanup,
+                icon: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.primaryGradient,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.swipe_rounded,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                ),
+                onPressed:
+                    scanner.isScanning || scanner.isDeleting || _isDeleting
+                    ? null
+                    : () => _openSwipeMode(scanner),
+              ),
+          ],
+        ),
+        body: Column(
+          children: [
+            _categoryBar(scanner),
+            if (_selectedCategory == 4 && scanner.scanResult.videos.isNotEmpty)
+              _videoSortBar(),
+            const Divider(height: 16),
+            Expanded(
+              child: scanner.scanResult.allAssets.isEmpty
+                  ? scanner.isScanning
+                        ? _scanningState(scanner)
+                        : _emptyState(scanner)
+                  : _content(scanner),
             ),
-        ],
-      ),
-      body: Column(
-        children: [
-          _categoryBar(scanner),
-          if (_selectedCategory == 4 && scanner.scanResult.videos.isNotEmpty)
-            _videoSortBar(),
-          const Divider(height: 16),
-          Expanded(
-            child: scanner.scanResult.allAssets.isEmpty
-                ? scanner.isScanning
-                      ? _scanningState(scanner)
-                      : _emptyState(scanner)
-                : _content(scanner),
-          ),
-          if (scanner.scanResult.allAssets.isNotEmpty &&
-              _selectedIds.isNotEmpty &&
-              !scanner.isScanning)
-            _bottomBar(scanner, sub),
-        ],
+            if (scanner.scanResult.allAssets.isNotEmpty &&
+                _selectedIds.isNotEmpty &&
+                !scanner.isScanning)
+              _bottomBar(scanner, sub),
+          ],
+        ),
       ),
     );
   }
@@ -148,10 +155,13 @@ class _SmartCleanViewState extends State<SmartCleanView> {
           final count = _countFor(index, scanner);
 
           return GestureDetector(
-            onTap: () => setState(() {
-              _selectedCategory = index;
-              _selectedIds.clear();
-            }),
+            onTap: () {
+              if (_selectedCategory == index) return;
+              setState(() {
+                _selectedCategory = index;
+                _selectedIds.clear();
+              });
+            },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
@@ -246,6 +256,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
 
   Widget _emptyState(PhotoScannerService scanner) {
     final error = scanner.lastError;
+    final completedEmpty = scanner.hasCompletedScan && error == null;
 
     return SingleChildScrollView(
       child: Padding(
@@ -268,7 +279,9 @@ class _SmartCleanViewState extends State<SmartCleanView> {
             ),
             const SizedBox(height: 20),
             Text(
-              error == null
+              completedEmpty
+                  ? context.l10n.homeDoneStatus
+                  : error == null
                   ? context.l10n.scanStartAlbumTitle
                   : context.l10n.scanIncompleteTitle,
               style: const TextStyle(
@@ -279,7 +292,12 @@ class _SmartCleanViewState extends State<SmartCleanView> {
             ),
             const SizedBox(height: 6),
             Text(
-              error == null
+              completedEmpty
+                  ? context.l10n.homeIndexedCountWithTotal(
+                      0,
+                      scanner.availableAssetCount ?? 0,
+                    )
+                  : error == null
                   ? context.l10n.scanStartAlbumDescription
                   : context.localizeServiceMessage(error),
               textAlign: TextAlign.center,
@@ -412,7 +430,8 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                     mainAxisExtent: tileWidth + 45 * textScale,
                   ),
                   delegate: SliverChildBuilderDelegate(
-                    (context, index) => _thumbnail(assets[index]),
+                    (context, index) =>
+                        _thumbnail(assets[index], semanticIndex: index + 1),
                     childCount: assets.length,
                   ),
                 ),
@@ -492,6 +511,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                 child: _thumbnail(
                   group.assets[index],
                   recommended: suggested == group.assets[index].id,
+                  semanticIndex: index + 1,
                 ),
               ),
             ),
@@ -516,110 +536,163 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     return context.l10n.scanEmptyCategory;
   }
 
-  Widget _thumbnail(PhotoAsset asset, {bool recommended = false}) {
+  Widget _thumbnail(
+    PhotoAsset asset, {
+    bool recommended = false,
+    int semanticIndex = 1,
+  }) {
     final scanner = context.read<PhotoScannerService>();
     final selected = _selectedIds.contains(asset.id);
-    return GestureDetector(
-      key: ValueKey('select-${asset.id}'),
-      behavior: HitTestBehavior.opaque,
-      onTap: scanner.isScanning || scanner.isDeleting
-          ? null
-          : () => setState(() {
-              selected
-                  ? _selectedIds.remove(asset.id)
-                  : _selectedIds.add(asset.id);
-            }),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                border: selected
-                    ? Border.all(color: AppTheme.danger, width: 2.5)
-                    : null,
-                color: Colors.grey[100],
-              ),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(13),
-                    child: AssetThumbnail(asset: asset),
-                  ),
-                  if (recommended)
-                    PositionedDirectional(
-                      top: 4,
-                      start: 4,
-                      end: 4,
-                      child: _badge(
-                        context.l10n.scanKeepBadge,
-                        AppTheme.success,
-                      ),
-                    ),
-                  if (!scanner.isScanning)
-                    PositionedDirectional(
-                      bottom: 4,
-                      end: 4,
-                      child: Icon(
-                        selected
-                            ? Icons.check_circle_rounded
-                            : Icons.circle_outlined,
-                        color: selected ? AppTheme.danger : Colors.white,
-                        size: 24,
-                      ),
-                    ),
-                  PositionedDirectional(
-                    bottom: 0,
-                    start: 0,
-                    child: IconButton(
-                      tooltip: context.l10n.scanZoomPreview,
-                      icon: const Icon(
-                        Icons.zoom_in_rounded,
-                        color: Colors.white,
-                      ),
-                      onPressed: () => _previewAsset(asset),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+    final enabled = !scanner.isScanning && !scanner.isDeleting;
+    void toggleSelection() {
+      if (scanner.isScanning || scanner.isDeleting) return;
+      setState(() {
+        selected ? _selectedIds.remove(asset.id) : _selectedIds.add(asset.id);
+      });
+    }
+
+    final label = [
+      asset.type == AssetType.video
+          ? context.l10n.scanCategoryVideos
+          : context.l10n.scanCategoryPhotos,
+      semanticIndex.toString(),
+      if (asset.title?.trim().isNotEmpty == true) asset.title!.trim(),
+      MaterialLocalizations.of(context).formatFullDate(asset.createDate),
+      context.l10n.assetPreviewDetails(
+        asset.width,
+        asset.height,
+        assetSizeLabel(asset, context: context),
+      ),
+      if (recommended) context.l10n.scanKeepBadge,
+    ].join(' · ');
+    return Semantics(
+      container: true,
+      label: label,
+      checked: selected,
+      selected: selected,
+      enabled: enabled,
+      onTap: enabled ? toggleSelection : null,
+      child: FocusableActionDetector(
+        enabled: enabled,
+        shortcuts: const <ShortcutActivator, Intent>{
+          SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+          SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
+        },
+        actions: <Type, Action<Intent>>{
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) {
+              toggleSelection();
+              return null;
+            },
           ),
-          const SizedBox(height: 4),
-          Row(
+        },
+        onShowFocusHighlight: (focused) => setState(() {
+          if (focused) {
+            _focusedAssetId = asset.id;
+          } else if (_focusedAssetId == asset.id) {
+            _focusedAssetId = null;
+          }
+        }),
+        child: GestureDetector(
+          key: ValueKey('select-${asset.id}'),
+          behavior: HitTestBehavior.opaque,
+          excludeFromSemantics: true,
+          onTap: enabled ? toggleSelection : null,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                child: Text(
-                  assetSizeLabel(asset, context: context),
-                  style: const TextStyle(fontSize: 11),
-                  maxLines: 2,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    border: selected
+                        ? Border.all(color: AppTheme.danger, width: 2.5)
+                        : _focusedAssetId == asset.id
+                        ? Border.all(color: AppTheme.primary, width: 2.5)
+                        : null,
+                    color: Colors.grey[100],
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(13),
+                        child: AssetThumbnail(asset: asset),
+                      ),
+                      if (recommended)
+                        PositionedDirectional(
+                          top: 4,
+                          start: 4,
+                          end: 4,
+                          child: _badge(
+                            context.l10n.scanKeepBadge,
+                            AppTheme.success,
+                          ),
+                        ),
+                      if (!scanner.isScanning)
+                        PositionedDirectional(
+                          bottom: 4,
+                          end: 4,
+                          child: Icon(
+                            selected
+                                ? Icons.check_circle_rounded
+                                : Icons.circle_outlined,
+                            color: selected ? AppTheme.danger : Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                      PositionedDirectional(
+                        bottom: 0,
+                        start: 0,
+                        child: IconButton(
+                          tooltip: context.l10n.scanZoomPreview,
+                          icon: const Icon(
+                            Icons.zoom_in_rounded,
+                            color: Colors.white,
+                          ),
+                          onPressed: () => _previewAsset(asset),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              if (asset.type == AssetType.video)
-                IconButton(
-                  tooltip: context.l10n.scanCompressVideo,
-                  icon: const Icon(Icons.compress_rounded, size: 20),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 32,
-                    minHeight: 32,
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      assetSizeLabel(asset, context: context),
+                      style: const TextStyle(fontSize: 11),
+                      maxLines: 2,
+                    ),
                   ),
-                  onPressed: scanner.isScanning || scanner.isDeleting
-                      ? null
-                      : () => _openCompression(asset),
+                  if (asset.type == AssetType.video)
+                    IconButton(
+                      tooltip: context.l10n.scanCompressVideo,
+                      icon: const Icon(Icons.compress_rounded, size: 20),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 32,
+                      ),
+                      onPressed: scanner.isScanning || scanner.isDeleting
+                          ? null
+                          : () => _openCompression(asset),
+                    ),
+                ],
+              ),
+              if (asset.analysisPending)
+                Text(
+                  context.l10n.scanContentPending,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
             ],
           ),
-          if (asset.analysisPending)
-            Text(
-              context.l10n.scanContentPending,
-              style: const TextStyle(
-                fontSize: 10,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-        ],
+        ),
       ),
     );
   }
@@ -642,43 +715,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     );
   }
 
-  void _previewAsset(PhotoAsset asset) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => Dialog(
-        child: SizedBox(
-          width: 720,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: InteractiveViewer(
-                    child: AssetThumbnail(asset: asset, previewSize: 1200),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Text(
-                  context.l10n.assetPreviewDetails(
-                    asset.width,
-                    asset.height,
-                    assetSizeLabel(asset, context: context),
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(context.l10n.scanBackToCompare),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  void _previewAsset(PhotoAsset asset) => showAssetPreview(context, asset);
 
   Widget _bottomBar(PhotoScannerService scanner, SubscriptionManager sub) {
     return Container(
@@ -728,17 +765,29 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(
-                          Icons.visibility_rounded,
-                          color: Colors.white,
-                          size: 18,
-                        ),
+                        if (_isDeleting)
+                          const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        else
+                          const Icon(
+                            Icons.visibility_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
-                            context.l10n.scanPreviewDeleteCount(
-                              _selectedIds.length,
-                            ),
+                            _isDeleting
+                                ? context.l10n.homeDeleting
+                                : context.l10n.scanPreviewDeleteCount(
+                                    _selectedIds.length,
+                                  ),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 14,

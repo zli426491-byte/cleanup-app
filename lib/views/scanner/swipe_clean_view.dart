@@ -6,6 +6,7 @@ import '../../services/subscription_manager.dart';
 import '../../utils/app_theme.dart';
 import '../paywall/paywall_view.dart';
 import 'asset_thumbnail.dart';
+import 'asset_preview.dart';
 import 'photo_asset_labels.dart';
 
 /// Tinder-style swipe to delete/keep photos
@@ -30,6 +31,9 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
   int _currentIndex = 0;
   final List<PhotoAsset> _toDelete = [];
   final List<PhotoAsset> _toKeep = [];
+  final List<int> _reviewHistory = [];
+  final Set<String> _previewReadyIds = {};
+  bool _allowPop = false;
 
   // Drag state
   double _dragX = 0;
@@ -88,34 +92,45 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF6F8FC),
-      appBar: AppBar(
-        title: Text(switch (widget.categoryId) {
-          'photos' => context.l10n.scanCategoryPhotos,
-          'duplicates' => context.l10n.scanCategoryExact,
-          'similar' => context.l10n.scanCategorySimilar,
-          'screenshots' => context.l10n.scanCategoryScreenshots,
-          'videos' => context.l10n.scanCategoryVideos,
-          'largeFiles' => context.l10n.scanCategoryLarge,
-          _ => widget.title,
-        }),
-        leading: IconButton(
-          icon: const Icon(Icons.close_rounded),
-          tooltip: context.l10n.swipeLeave,
-          onPressed: () => _showExitDialog(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: _isDone ? null : () => _showResultDialog(),
-            child: Text(
-              context.l10n.swipeDoneCount(_toDelete.length),
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
+    return PopScope(
+      canPop: _allowPop,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && !_isDeleting) _requestExit();
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF6F8FC),
+        appBar: AppBar(
+          title: Text(switch (widget.categoryId) {
+            'photos' => context.l10n.scanCategoryPhotos,
+            'duplicates' => context.l10n.scanCategoryExact,
+            'similar' => context.l10n.scanCategorySimilar,
+            'screenshots' => context.l10n.scanCategoryScreenshots,
+            'videos' => context.l10n.scanCategoryVideos,
+            'largeFiles' => context.l10n.scanCategoryLarge,
+            _ => widget.title,
+          }),
+          leading: IconButton(
+            icon: const Icon(Icons.close_rounded),
+            tooltip: context.l10n.swipeLeave,
+            onPressed: _isDeleting ? null : _requestExit,
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: _isDone || _isAnimating
+                  ? null
+                  : () => _showResultDialog(),
+              child: Text(
+                context.l10n.swipeDoneCount(_toDelete.length),
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          top: false,
+          child: _isDone ? _buildDoneView() : _buildSwipeView(),
+        ),
       ),
-      body: _isDone ? _buildDoneView() : _buildSwipeView(),
     );
   }
 
@@ -197,19 +212,23 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
                   children: [
                     // Next card (background)
                     if (_currentIndex + 1 < widget.assets.length)
-                      _buildCard(
-                        widget.assets[_currentIndex + 1],
-                        isBackground: true,
+                      ExcludeSemantics(
+                        child: IgnorePointer(
+                          child: _buildCard(
+                            widget.assets[_currentIndex + 1],
+                            isBackground: true,
+                          ),
+                        ),
                       ),
 
                     // Current card (draggable)
                     GestureDetector(
-                      onPanUpdate: (d) => setState(() {
+                      onHorizontalDragUpdate: (d) => setState(() {
                         if (_isAnimating) return;
                         _dragX += d.delta.dx;
                         _dragY += d.delta.dy * 0.3;
                       }),
-                      onPanEnd: (_) => _onDragEnd(),
+                      onHorizontalDragEnd: (_) => _onDragEnd(),
                       child: AnimatedBuilder(
                         animation: _animController,
                         builder: (_, child) => Transform.translate(
@@ -285,7 +304,10 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
                       label: context.l10n.swipeDelete,
                       color: AppTheme.danger,
                       size: 64,
-                      onTap: () => _swipeAway(-1),
+                      onTap:
+                          _isAnimating || !_previewReadyIds.contains(asset.id)
+                          ? null
+                          : () => _swipeAway(-1),
                     ),
                     // Undo button
                     _actionButton(
@@ -293,7 +315,9 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
                       label: context.l10n.swipeUndoChoice,
                       color: AppTheme.warning,
                       size: 48,
-                      onTap: _undo,
+                      onTap: _isAnimating || _reviewHistory.isEmpty
+                          ? null
+                          : _undo,
                     ),
                     // Keep button
                     _actionButton(
@@ -301,7 +325,7 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
                       label: context.l10n.swipeKeep,
                       color: AppTheme.success,
                       size: 64,
-                      onTap: () => _swipeAway(1),
+                      onTap: _isAnimating ? null : () => _swipeAway(1),
                     ),
                   ],
                 ),
@@ -341,61 +365,78 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
                   key: ValueKey(asset.id),
                   asset: asset,
                   previewSize: 800,
+                  onPreviewReady: (ready) {
+                    if (!mounted) return;
+                    final changed = ready
+                        ? _previewReadyIds.add(asset.id)
+                        : _previewReadyIds.remove(asset.id);
+                    if (changed) setState(() {});
+                  },
                 ),
               ),
             ),
             // Info bar
             Container(
               padding: const EdgeInsets.all(16),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          context.l10n.assetDimensions(
-                            asset.width,
-                            asset.height,
-                          ),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 15,
-                            color: AppTheme.textPrimary,
-                          ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              context.l10n.assetDimensions(
+                                asset.width,
+                                asset.height,
+                              ),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              assetSizeLabel(asset, context: context),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppTheme.textMuted,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          assetSizeLabel(asset, context: context),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppTheme.textMuted,
-                          ),
+                      ),
+                      if (!isBackground) ...[
+                        const SizedBox(width: 8),
+                        IconButton(
+                          tooltip: context.l10n.scanZoomPreview,
+                          icon: const Icon(Icons.zoom_in_rounded),
+                          onPressed: () => showAssetPreview(context, asset),
                         ),
                       ],
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(50),
-                      ),
-                      child: Text(
-                        MaterialLocalizations.of(
-                          context,
-                        ).formatShortDate(asset.createDate),
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                    child: Text(
+                      MaterialLocalizations.of(
+                        context,
+                      ).formatShortDate(asset.createDate),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.primary,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -413,31 +454,39 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
     required String label,
     required Color color,
     required double size,
-    required VoidCallback onTap,
+    required VoidCallback? onTap,
   }) {
     return Tooltip(
       message: label,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: color.withValues(alpha: 0.2),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-              ),
-            ],
+      child: Semantics(
+        button: true,
+        enabled: onTap != null,
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.2),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                ),
+              ],
+            ),
+            child: Icon(
+              icon,
+              color: onTap == null ? Colors.grey : color,
+              size: size * 0.4,
+            ),
           ),
-          child: Icon(icon, color: color, size: size * 0.4),
         ),
       ),
     );
@@ -488,10 +537,27 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
     if (_isDone || _isAnimating) return;
 
     final asset = _currentAsset!;
+    if (direction < 0 && !_previewReadyIds.contains(asset.id)) {
+      setState(() {
+        _dragX = 0;
+        _dragY = 0;
+      });
+      return;
+    }
+    _reviewHistory.add(_currentIndex);
     if (direction > 0) {
       _toKeep.add(asset);
     } else {
       _toDelete.add(asset);
+    }
+
+    if (MediaQuery.disableAnimationsOf(context)) {
+      setState(() {
+        _dragX = 0;
+        _dragY = 0;
+        _currentIndex++;
+      });
+      return;
     }
 
     _animX = Tween<double>(
@@ -508,14 +574,14 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
   }
 
   void _undo() {
-    if (_currentIndex == 0 ||
+    if (_reviewHistory.isEmpty ||
         _isAnimating ||
         _isDeleting ||
         _deletedCount > 0) {
       return;
     }
     setState(() {
-      _currentIndex--;
+      _currentIndex = _reviewHistory.removeLast();
       final asset = widget.assets[_currentIndex];
       _toDelete.remove(asset);
       _toKeep.remove(asset);
@@ -566,7 +632,10 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
             ),
             const SizedBox(height: 32),
             TextButton.icon(
-              onPressed: _isDeleting || _deletedCount > 0 ? null : _undo,
+              onPressed:
+                  _isDeleting || _deletedCount > 0 || _reviewHistory.isEmpty
+                  ? null
+                  : _undo,
               icon: const Icon(Icons.undo_rounded),
               label: Text(context.l10n.swipeUndoChoice),
             ),
@@ -602,9 +671,7 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
             ),
             const SizedBox(height: 12),
             TextButton(
-              onPressed: _isDeleting
-                  ? null
-                  : () => Navigator.pop(context, _deletedCount),
+              onPressed: _isDeleting ? null : _requestExit,
               child: Text(
                 context.l10n.swipeBack,
                 style: const TextStyle(color: AppTheme.textMuted),
@@ -665,7 +732,7 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
       _toDelete.removeWhere((asset) => deletedIds.contains(asset.id));
     });
     if (deletedIds.length == requested) {
-      Navigator.pop(context, _deletedCount);
+      _leave();
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
@@ -679,7 +746,16 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
     );
   }
 
+  void _leave() {
+    if (_isDeleting) return;
+    setState(() => _allowPop = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Navigator.pop(context, _deletedCount);
+    });
+  }
+
   void _showExitDialog() {
+    if (_isDeleting) return;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -693,7 +769,7 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
-              Navigator.pop(context);
+              _leave();
             },
             child: Text(
               context.l10n.swipeLeave,
@@ -703,6 +779,15 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
         ],
       ),
     );
+  }
+
+  void _requestExit() {
+    if (_isDeleting) return;
+    if (_toDelete.isEmpty) {
+      _leave();
+    } else {
+      _showExitDialog();
+    }
   }
 
   void _showResultDialog() {

@@ -1,15 +1,15 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:provider/provider.dart';
+import 'package:image/image.dart' as img;
 
 import 'package:cleanup_app/services/photo_scanner_service.dart';
 import 'package:cleanup_app/services/subscription_manager.dart';
 import 'package:cleanup_app/views/scanner/asset_thumbnail.dart';
 import 'package:cleanup_app/views/scanner/smart_clean_view.dart';
+import 'package:cleanup_app/views/scanner/swipe_clean_view.dart';
 
 class ProSubscription extends SubscriptionManager {
   @override
@@ -48,9 +48,7 @@ void main() {
     const channel = MethodChannel('com.fluttercandies/photo_manager');
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-    final pixel = base64Decode(
-      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aG2kAAAAASUVORK5CYII=',
-    );
+    final pixel = img.encodePng(img.Image(width: 8, height: 8));
     messenger.setMockMethodCallHandler(channel, (call) async {
       final id = (call.arguments as Map)['id'] as String;
       switch (call.method) {
@@ -97,6 +95,21 @@ void main() {
     await tester.pump();
     expect(find.text('已選擇 1 個項目'), findsOneWidget);
     await tester.tap(find.byTooltip('滑動清理'));
+    await tester.pumpAndSettle();
+    final previews = tester
+        .widgetList<Image>(
+          find.descendant(
+            of: find.byType(SwipeCleanView),
+            matching: find.byType(Image),
+          ),
+        )
+        .toList();
+    final previewContext = tester.element(find.byType(SwipeCleanView));
+    await tester.runAsync(() async {
+      for (final preview in previews) {
+        await precacheImage(preview.image, previewContext);
+      }
+    });
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.close_rounded).first);
     await tester.pump();

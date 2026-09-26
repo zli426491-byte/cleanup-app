@@ -13,24 +13,43 @@ import '../../utils/app_theme.dart';
 
 class VideoCompressionView extends StatefulWidget {
   final PhotoAsset asset;
-  const VideoCompressionView({super.key, required this.asset});
+  final VideoCompressionService? service;
+  final VideoPlayerController Function(File file)? controllerFactory;
+  const VideoCompressionView({
+    super.key,
+    required this.asset,
+    this.service,
+    this.controllerFactory,
+  });
 
   @override
   State<VideoCompressionView> createState() => _VideoCompressionViewState();
 }
 
 class _VideoCompressionViewState extends State<VideoCompressionView> {
-  final _service = VideoCompressionService();
+  late final VideoCompressionService _service;
   VideoPlayerController? _player;
   bool _initializingPreview = false;
   bool _savingRequested = false;
   bool _showOriginal = false;
   String? _error;
+  bool _cancelRequested = false;
+  int _previewGeneration = 0;
 
   bool get _busy => _service.isBusy || _initializingPreview || _savingRequested;
+  bool get _canLeave =>
+      !_busy || (_cancelRequested && !_service.isSaving && !_savingRequested);
+
+  @override
+  void initState() {
+    super.initState();
+    _service = widget.service ?? VideoCompressionService();
+  }
 
   @override
   void dispose() {
+    _previewGeneration++;
+    _player?.removeListener(_onPlayerChanged);
     _player?.dispose();
     _service.dispose();
     super.dispose();
@@ -38,35 +57,47 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
 
   Future<void> _prepare() async {
     if (_busy || !context.read<SubscriptionManager>().isPro) return;
-    setState(() => _error = null);
+    setState(() {
+      _error = null;
+      _cancelRequested = false;
+    });
     try {
       final prepared = await _service.prepare(widget.asset.id);
-      if (!mounted) return;
+      if (!mounted || _cancelRequested) return;
       await _loadPreview(prepared.output, original: false);
     } catch (error) {
-      if (mounted) setState(() => _error = _message(error));
+      if (mounted && !_cancelRequested) {
+        setState(() => _error = _message(error));
+      }
     }
   }
 
   Future<void> _loadPreview(File file, {required bool original}) async {
     if (_busy) return;
+    final generation = ++_previewGeneration;
     setState(() {
       _initializingPreview = true;
       _error = null;
+      _cancelRequested = false;
     });
     final oldPlayer = _player;
+    oldPlayer?.removeListener(_onPlayerChanged);
     _player = null;
     await oldPlayer?.dispose();
-    if (!mounted) return;
-    final player = VideoPlayerController.file(file);
+    if (!mounted || _cancelRequested || generation != _previewGeneration) {
+      return;
+    }
+    final player =
+        widget.controllerFactory?.call(file) ??
+        VideoPlayerController.file(file);
     try {
       await player.initialize().timeout(const Duration(seconds: 30));
-      if (!mounted) {
+      if (!mounted || _cancelRequested || generation != _previewGeneration) {
         await player.dispose();
         return;
       }
       await player.setLooping(true);
-      if (!mounted) {
+      if (!mounted || _cancelRequested || generation != _previewGeneration) {
         await player.dispose();
         return;
       }
@@ -74,11 +105,38 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
         _player = player;
         _showOriginal = original;
       });
+      player.addListener(_onPlayerChanged);
+      _onPlayerChanged();
     } catch (error) {
       await player.dispose();
-      if (mounted) setState(() => _error = 'videoPreviewUnavailable');
+      if (mounted && !_cancelRequested && generation == _previewGeneration) {
+        setState(() => _error = 'videoPreviewUnavailable');
+      }
     } finally {
-      if (mounted) setState(() => _initializingPreview = false);
+      if (mounted && generation == _previewGeneration) {
+        setState(() => _initializingPreview = false);
+      }
+    }
+  }
+
+  void _onPlayerChanged() {
+    if (!mounted || _player?.value.hasError != true) return;
+    if (_error != 'videoPlaybackUnavailable') {
+      setState(() => _error = 'videoPlaybackUnavailable');
+    }
+  }
+
+  Future<void> _cancel() async {
+    if (_service.isSaving || _savingRequested || _cancelRequested) return;
+    setState(() {
+      _cancelRequested = true;
+      _previewGeneration++;
+      _initializingPreview = false;
+    });
+    try {
+      await _service.cancel();
+    } catch (_) {
+      // The cancellation flag still prevents this page from using late output.
     }
   }
 
@@ -86,6 +144,7 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
     if (_busy ||
         !context.read<SubscriptionManager>().isPro ||
         _showOriginal ||
+        _player?.value.hasError == true ||
         _player?.value.isInitialized != true) {
       return;
     }
@@ -95,7 +154,12 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
     });
     try {
       await _player?.pause();
-      if (!mounted || !context.read<SubscriptionManager>().isPro) return;
+      if (!mounted ||
+          !context.read<SubscriptionManager>().isPro ||
+          _player?.value.hasError == true ||
+          _player?.value.isInitialized != true) {
+        return;
+      }
       await _service.savePrepared();
       if (mounted) setState(() => _error = null);
     } catch (error) {
@@ -135,7 +199,7 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
       final saved = _service.savedAssetId != null;
       final isPro = context.watch<SubscriptionManager>().isPro;
       return PopScope(
-        canPop: !_busy,
+        canPop: _canLeave,
         child: Scaffold(
           appBar: AppBar(title: Text(context.l10n.videoTitle)),
           body: Center(
@@ -150,7 +214,9 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
                   ),
                   const SizedBox(height: 20),
                   if (!isPro) Text(context.l10n.videoProRequired),
-                  if (_service.isBusy) ...[
+                  if (_cancelRequested)
+                    Text(context.l10n.serviceVideoCancelled),
+                  if (_service.isBusy && !_cancelRequested) ...[
                     LinearProgressIndicator(
                       value: _service.isSaving ? null : _service.progress,
                     ),
@@ -164,11 +230,7 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
                     ),
                     if (!_service.isSaving)
                       TextButton(
-                        onPressed: () async {
-                          try {
-                            await _service.cancel();
-                          } catch (_) {}
-                        },
+                        onPressed: _cancel,
                         child: Text(context.l10n.videoCancelCompression),
                       ),
                   ],
@@ -176,6 +238,10 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
                     const LinearProgressIndicator(),
                     const SizedBox(height: 12),
                     Text(context.l10n.videoLoadingPreview),
+                    TextButton(
+                      onPressed: _cancel,
+                      child: Text(context.l10n.scanCancel),
+                    ),
                   ],
                   if (_error != null) ...[
                     Text(
@@ -221,7 +287,8 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    if (_player?.value.isInitialized == true) ...[
+                    if (_player?.value.isInitialized == true &&
+                        _player?.value.hasError != true) ...[
                       SizedBox(
                         height: 280,
                         child: Center(
@@ -300,6 +367,7 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
                             _busy ||
                                 !isPro ||
                                 _showOriginal ||
+                                _player?.value.hasError == true ||
                                 _player?.value.isInitialized != true
                             ? null
                             : _save,
