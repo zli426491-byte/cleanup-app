@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:cleanup_app/l10n/l10n.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
@@ -74,7 +76,7 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
       });
     } catch (error) {
       await player.dispose();
-      if (mounted) setState(() => _error = '預覽無法播放，請重試。原片已保留。');
+      if (mounted) setState(() => _error = 'videoPreviewUnavailable');
     } finally {
       if (mounted) setState(() => _initializingPreview = false);
     }
@@ -105,11 +107,25 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
 
   String _message(Object error) => error is StateError
       ? error.message.toString()
-      : '操作未完成，原片已保留。請檢查照片權限、可用空間後重試。';
+      : 'videoOperationIncomplete';
 
-  String _bytes(int bytes) => bytes >= 1073741824
-      ? '${(bytes / 1073741824).toStringAsFixed(2)} GB'
-      : '${(bytes / 1048576).toStringAsFixed(1)} MB';
+  String _localizedError(String source) => switch (source) {
+    'videoPreviewUnavailable' => context.l10n.videoPreviewUnavailable,
+    'videoPlaybackUnavailable' => context.l10n.videoPlaybackUnavailable,
+    'videoOperationIncomplete' => context.l10n.videoOperationIncomplete,
+    _ => context.localizeServiceMessage(source),
+  };
+
+  String _bytes(int bytes) {
+    final locale = context.l10n.localeName;
+    return bytes >= 1073741824
+        ? context.l10n.videoSizeGb(
+            NumberFormat('0.00', locale).format(bytes / 1073741824),
+          )
+        : context.l10n.videoSizeMb(
+            NumberFormat('0.0', locale).format(bytes / 1048576),
+          );
+  }
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
@@ -121,19 +137,19 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
       return PopScope(
         canPop: !_busy,
         child: Scaffold(
-          appBar: AppBar(title: const Text('影片壓縮')),
+          appBar: AppBar(title: Text(context.l10n.videoTitle)),
           body: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 720),
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
-                  const Text(
-                    '壓縮會降低畫質並產生新副本。先檢查畫面、聲音與方向，再另存至照片。原片會保留。',
-                    style: TextStyle(color: AppTheme.textSecondary),
+                  Text(
+                    context.l10n.videoDescription,
+                    style: const TextStyle(color: AppTheme.textSecondary),
                   ),
                   const SizedBox(height: 20),
-                  if (!isPro) const Text('這項功能需要 Pro，請返回清理頁查看方案。'),
+                  if (!isPro) Text(context.l10n.videoProRequired),
                   if (_service.isBusy) ...[
                     LinearProgressIndicator(
                       value: _service.isSaving ? null : _service.progress,
@@ -141,8 +157,10 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
                     const SizedBox(height: 12),
                     Text(
                       _service.isSaving
-                          ? '正在另存至照片，請等待完成。'
-                          : '正在準備／壓縮影片 ${(100 * _service.progress).round()}%',
+                          ? context.l10n.videoSaving
+                          : context.l10n.videoCompressionProgress(
+                              (100 * _service.progress).round(),
+                            ),
                     ),
                     if (!_service.isSaving)
                       TextButton(
@@ -151,17 +169,17 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
                             await _service.cancel();
                           } catch (_) {}
                         },
-                        child: const Text('取消壓縮'),
+                        child: Text(context.l10n.videoCancelCompression),
                       ),
                   ],
                   if (_initializingPreview) ...[
                     const LinearProgressIndicator(),
                     const SizedBox(height: 12),
-                    const Text('正在載入影片預覽…'),
+                    Text(context.l10n.videoLoadingPreview),
                   ],
                   if (_error != null) ...[
                     Text(
-                      _error!,
+                      _localizedError(_error!),
                       style: const TextStyle(color: AppTheme.danger),
                     ),
                     const SizedBox(height: 16),
@@ -170,22 +188,37 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
                     FilledButton.icon(
                       onPressed: isPro ? _prepare : null,
                       icon: const Icon(Icons.compress_rounded),
-                      label: const Text('建立壓縮預覽'),
+                      label: Text(context.l10n.videoCreatePreview),
                     ),
                   if (prepared != null) ...[
                     Wrap(
                       spacing: 24,
                       runSpacing: 12,
                       children: [
-                        Text('原片：${_bytes(prepared.originalBytes)}'),
-                        Text('副本：${_bytes(prepared.outputBytes)}'),
-                        Text('檔案差額：${_bytes(prepared.savedBytes)}'),
+                        Text(
+                          context.l10n.videoOriginalSize(
+                            _bytes(prepared.originalBytes),
+                          ),
+                        ),
+                        Text(
+                          context.l10n.videoCopySize(
+                            _bytes(prepared.outputBytes),
+                          ),
+                        ),
+                        Text(
+                          context.l10n.videoSizeDifference(
+                            _bytes(prepared.savedBytes),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      '另存副本會暫時增加用量。刪除原片及清空「最近刪除」後，裝置實際可用空間以系統為準。',
-                      style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                    Text(
+                      context.l10n.videoStorageNotice,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textMuted,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     if (_player?.value.isInitialized == true) ...[
@@ -214,7 +247,8 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
                                   } catch (_) {
                                     if (mounted) {
                                       setState(
-                                        () => _error = '影片暫時無法播放，請重新載入預覽。',
+                                        () =>
+                                            _error = 'videoPlaybackUnavailable',
                                       );
                                     }
                                   }
@@ -223,7 +257,13 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
                             value.isPlaying ? Icons.pause : Icons.play_arrow,
                           ),
                           label: Text(
-                            '${_showOriginal ? "原片" : "壓縮副本"}：${value.isPlaying ? "暫停" : "播放"}',
+                            (_showOriginal
+                                ? (value.isPlaying
+                                      ? context.l10n.videoPauseOriginal
+                                      : context.l10n.videoPlayOriginal)
+                                : (value.isPlaying
+                                      ? context.l10n.videoPauseCopy
+                                      : context.l10n.videoPlayCopy)),
                           ),
                         ),
                       ),
@@ -238,7 +278,7 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
                                   prepared.original,
                                   original: true,
                                 ),
-                          child: const Text('查看原片'),
+                          child: Text(context.l10n.videoViewOriginal),
                         ),
                         TextButton(
                           onPressed: _busy
@@ -247,13 +287,13 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
                                   prepared.output,
                                   original: false,
                                 ),
-                          child: const Text('查看壓縮副本'),
+                          child: Text(context.l10n.videoViewCopy),
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
                     if (saved)
-                      const Text('副本已另存至照片，原片保留。返回首頁重新掃描後，可自行選擇是否刪除原片。')
+                      Text(context.l10n.videoSaved)
                     else
                       FilledButton.icon(
                         onPressed:
@@ -264,7 +304,7 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
                             ? null
                             : _save,
                         icon: const Icon(Icons.save_alt),
-                        label: const Text('確認副本並另存至照片'),
+                        label: Text(context.l10n.videoConfirmSave),
                       ),
                   ],
                 ],

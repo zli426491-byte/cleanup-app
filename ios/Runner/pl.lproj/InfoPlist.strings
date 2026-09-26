@@ -1,0 +1,6 @@
+/* Generated from lib/l10n/app_*.arb by scripts/check_localizations.py. */
+"CFBundleDisplayName" = "Mistrz porządków";
+"NSPhotoLibraryUsageDescription" = "Dostęp do zdjęć i filmów, na które zezwolisz, aby je obejrzeć, uporządkować i potwierdzić, co usunąć.";
+"NSPhotoLibraryAddUsageDescription" = "Zapisanie skompresowanej kopii filmu w Zdjęciach po potwierdzeniu. Oryginał zostaje zachowany.";
+"NSContactsUsageDescription" = "Dostęp do kontaktów, aby pomóc uporządkować powtarzające się dane kontaktowe.";
+"NSUserTrackingUsageDescription" = "Zezwól na śledzenie, aby dostosować obsługę i ulepszyć usługę.";

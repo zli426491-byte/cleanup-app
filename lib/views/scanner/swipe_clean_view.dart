@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cleanup_app/l10n/l10n.dart';
 import 'package:provider/provider.dart';
 import '../../services/photo_scanner_service.dart';
 import '../../services/subscription_manager.dart';
@@ -11,8 +12,14 @@ import 'photo_asset_labels.dart';
 class SwipeCleanView extends StatefulWidget {
   final List<PhotoAsset> assets;
   final String title;
+  final String? categoryId;
 
-  const SwipeCleanView({super.key, required this.assets, required this.title});
+  const SwipeCleanView({
+    super.key,
+    required this.assets,
+    required this.title,
+    this.categoryId,
+  });
 
   @override
   State<SwipeCleanView> createState() => _SwipeCleanViewState();
@@ -68,8 +75,8 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
 
   // Swipe direction indicator
   String get _swipeLabel {
-    if (_dragX > 40) return '保留';
-    if (_dragX < -40) return '刪除';
+    if (_dragX > 40) return context.l10n.swipeKeep;
+    if (_dragX < -40) return context.l10n.swipeDelete;
     return '';
   }
 
@@ -84,16 +91,25 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FC),
       appBar: AppBar(
-        title: Text(widget.title),
+        title: Text(switch (widget.categoryId) {
+          'photos' => context.l10n.scanCategoryPhotos,
+          'duplicates' => context.l10n.scanCategoryExact,
+          'similar' => context.l10n.scanCategorySimilar,
+          'screenshots' => context.l10n.scanCategoryScreenshots,
+          'videos' => context.l10n.scanCategoryVideos,
+          'largeFiles' => context.l10n.scanCategoryLarge,
+          _ => widget.title,
+        }),
         leading: IconButton(
           icon: const Icon(Icons.close_rounded),
+          tooltip: context.l10n.swipeLeave,
           onPressed: () => _showExitDialog(),
         ),
         actions: [
           TextButton(
             onPressed: _isDone ? null : () => _showResultDialog(),
             child: Text(
-              '完成 (${_toDelete.length})',
+              context.l10n.swipeDoneCount(_toDelete.length),
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
@@ -122,7 +138,10 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
                 child: Row(
                   children: [
                     Text(
-                      '${_currentIndex + 1}/${widget.assets.length}',
+                      context.l10n.swipeProgressCount(
+                        _currentIndex + 1,
+                        widget.assets.length,
+                      ),
                       style: const TextStyle(
                         fontSize: 12,
                         color: AppTheme.textMuted,
@@ -158,12 +177,12 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
                   children: [
                     _statChip(
                       Icons.delete_rounded,
-                      '${_toDelete.length} 刪除',
+                      context.l10n.swipeDeleteCount(_toDelete.length),
                       AppTheme.danger,
                     ),
                     _statChip(
                       Icons.favorite_rounded,
-                      '${_toKeep.length} 保留',
+                      context.l10n.swipeKeepCount(_toKeep.length),
                       AppTheme.success,
                     ),
                   ],
@@ -255,13 +274,15 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
 
               // Bottom buttons
               Padding(
-                padding: const EdgeInsets.fromLTRB(40, 12, 40, 24),
+                padding: const EdgeInsetsDirectional.fromSTEB(40, 12, 40, 24),
                 child: Row(
+                  textDirection: TextDirection.ltr,
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     // Delete button
                     _actionButton(
                       icon: Icons.close_rounded,
+                      label: context.l10n.swipeDelete,
                       color: AppTheme.danger,
                       size: 64,
                       onTap: () => _swipeAway(-1),
@@ -269,6 +290,7 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
                     // Undo button
                     _actionButton(
                       icon: Icons.undo_rounded,
+                      label: context.l10n.swipeUndoChoice,
                       color: AppTheme.warning,
                       size: 48,
                       onTap: _undo,
@@ -276,6 +298,7 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
                     // Keep button
                     _actionButton(
                       icon: Icons.favorite_rounded,
+                      label: context.l10n.swipeKeep,
                       color: AppTheme.success,
                       size: 64,
                       onTap: () => _swipeAway(1),
@@ -327,11 +350,15 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
               child: Row(
                 children: [
                   Expanded(
+                    flex: 2,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '${asset.width} × ${asset.height}',
+                          context.l10n.assetDimensions(
+                            asset.width,
+                            asset.height,
+                          ),
                           style: const TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 15,
@@ -340,7 +367,7 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          assetSizeLabel(asset),
+                          assetSizeLabel(asset, context: context),
                           style: const TextStyle(
                             fontSize: 11,
                             color: AppTheme.textMuted,
@@ -350,21 +377,25 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(50),
-                    ),
-                    child: Text(
-                      '${asset.createDate.month}/${asset.createDate.day}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppTheme.primary,
-                        fontWeight: FontWeight.w600,
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(50),
+                      ),
+                      child: Text(
+                        MaterialLocalizations.of(
+                          context,
+                        ).formatShortDate(asset.createDate),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
@@ -379,31 +410,35 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
 
   Widget _actionButton({
     required IconData icon,
+    required String label,
     required Color color,
     required double size,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.2),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-            ),
-          ],
+    return Tooltip(
+      message: label,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.2),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+              ),
+            ],
+          ),
+          child: Icon(icon, color: color, size: size * 0.4),
         ),
-        child: Icon(icon, color: color, size: size * 0.4),
       ),
     );
   }
@@ -420,12 +455,14 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
         children: [
           Icon(icon, size: 14, color: color),
           const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: color,
+          Flexible(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
           ),
         ],
@@ -509,9 +546,9 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              '審核完成！',
-              style: TextStyle(
+            Text(
+              context.l10n.swipeReviewComplete,
+              style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.textPrimary,
@@ -519,19 +556,19 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
             ),
             const SizedBox(height: 12),
             Text(
-              '${_toDelete.length} 張要刪除 · ${_toKeep.length} 張保留',
+              context.l10n.swipeReviewSummary(_toDelete.length, _toKeep.length),
               style: const TextStyle(color: AppTheme.textMuted, fontSize: 14),
             ),
             const SizedBox(height: 4),
-            const Text(
-              '刪除後的空間以系統為準',
-              style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
+            Text(
+              context.l10n.swipeRecoveredSpaceHint,
+              style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
             ),
             const SizedBox(height: 32),
             TextButton.icon(
               onPressed: _isDeleting || _deletedCount > 0 ? null : _undo,
               icon: const Icon(Icons.undo_rounded),
-              label: const Text('撤回上一個選擇'),
+              label: Text(context.l10n.swipeUndoChoice),
             ),
             // Delete button
             Container(
@@ -552,7 +589,7 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: Text(
-                      '刪除 ${_toDelete.length} 張照片',
+                      context.l10n.swipeDeletePhotos(_toDelete.length),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -568,9 +605,9 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
               onPressed: _isDeleting
                   ? null
                   : () => Navigator.pop(context, _deletedCount),
-              child: const Text(
-                '返回',
-                style: TextStyle(color: AppTheme.textMuted),
+              child: Text(
+                context.l10n.swipeBack,
+                style: const TextStyle(color: AppTheme.textMuted),
               ),
             ),
           ],
@@ -598,16 +635,18 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('確認刪除已標記的照片？'),
-        content: Text('將刪除 ${_toDelete.length} 張你已審核的照片，請確認保留項目已正確選擇。'),
+        title: Text(context.l10n.swipeConfirmDeleteTitle),
+        content: Text(
+          context.l10n.swipeConfirmDeleteDescription(_toDelete.length),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
+            child: Text(context.l10n.swipeCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('確認刪除'),
+            child: Text(context.l10n.swipeConfirmDelete),
           ),
         ],
       ),
@@ -633,8 +672,8 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
       SnackBar(
         content: Text(
           deletedIds.isEmpty
-              ? '未刪除任何照片，可能已取消或刪除未成功。'
-              : '已刪除 ${deletedIds.length} 張，剩餘照片尚未刪除。',
+              ? context.l10n.swipeNoPhotosDeleted
+              : context.l10n.swipePartialDeleted(deletedIds.length),
         ),
       ),
     );
@@ -644,19 +683,22 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('確定離開？'),
-        content: Text('你已標記 ${_toDelete.length} 張照片要刪除，離開將不會執行。'),
+        title: Text(context.l10n.swipeExitTitle),
+        content: Text(context.l10n.swipeExitDescription(_toDelete.length)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('繼續審核'),
+            child: Text(context.l10n.swipeContinueReview),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               Navigator.pop(context);
             },
-            child: const Text('離開', style: TextStyle(color: AppTheme.danger)),
+            child: Text(
+              context.l10n.swipeLeave,
+              style: const TextStyle(color: AppTheme.danger),
+            ),
           ),
         ],
       ),
@@ -668,21 +710,26 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('跳過剩餘照片？'),
-        content: Text('還有 $remaining 張未審核，要直接刪除已標記的 ${_toDelete.length} 張嗎？'),
+        title: Text(context.l10n.swipeSkipRemainingTitle),
+        content: Text(
+          context.l10n.swipeSkipRemainingDescription(
+            remaining,
+            _toDelete.length,
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('繼續審核'),
+            child: Text(context.l10n.swipeContinueReview),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               setState(() => _currentIndex = widget.assets.length);
             },
-            child: const Text(
-              '完成',
-              style: TextStyle(
+            child: Text(
+              context.l10n.swipeDone,
+              style: const TextStyle(
                 color: AppTheme.primary,
                 fontWeight: FontWeight.w700,
               ),

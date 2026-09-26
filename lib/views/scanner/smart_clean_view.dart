@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cleanup_app/l10n/l10n.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:provider/provider.dart';
 
@@ -30,7 +31,14 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   ScanResult? _selectionSource;
   final Map<int, List<PhotoAsset>> _cachedAssets = {};
 
-  static const _categories = ['照片', '真重複', '視覺相似', '截圖', '影片', '大檔'];
+  List<String> get _categories => [
+    context.l10n.scanCategoryPhotos,
+    context.l10n.scanCategoryExact,
+    context.l10n.scanCategorySimilar,
+    context.l10n.scanCategoryScreenshots,
+    context.l10n.scanCategoryVideos,
+    context.l10n.scanCategoryLarge,
+  ];
   static const _categoryIds = [
     'photos',
     'duplicates',
@@ -76,17 +84,17 @@ class _SmartCleanViewState extends State<SmartCleanView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('智慧清理'),
+        title: Text(context.l10n.scanSmartTitle),
         actions: [
           if (scanner.isScanning)
             IconButton(
-              tooltip: '取消掃描並保留進度',
+              tooltip: context.l10n.scanCancelKeepProgress,
               icon: const Icon(Icons.stop_circle_outlined),
               onPressed: scanner.cancelScan,
             ),
           if (scanner.scanResult.allAssets.isNotEmpty)
             IconButton(
-              tooltip: '滑動清理',
+              tooltip: context.l10n.scanSwipeCleanup,
               icon: Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
@@ -201,9 +209,9 @@ class _SmartCleanViewState extends State<SmartCleanView> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          _sortChip('檔案容量', 0),
+          _sortChip(context.l10n.scanSortFileSize, 0),
           const SizedBox(width: 6),
-          _sortChip('最新', 1),
+          _sortChip(context.l10n.scanSortNewest, 1),
         ],
       ),
     );
@@ -260,7 +268,9 @@ class _SmartCleanViewState extends State<SmartCleanView> {
             ),
             const SizedBox(height: 20),
             Text(
-              error == null ? '開始掃描相簿' : '掃描未完成',
+              error == null
+                  ? context.l10n.scanStartAlbumTitle
+                  : context.l10n.scanIncompleteTitle,
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
@@ -269,7 +279,9 @@ class _SmartCleanViewState extends State<SmartCleanView> {
             ),
             const SizedBox(height: 6),
             Text(
-              error ?? '掃描全部可存取的照片與影片，以檔案內容確認真重複，再找出視覺相似照片。請逐張確認後決定。',
+              error == null
+                  ? context.l10n.scanStartAlbumDescription
+                  : context.localizeServiceMessage(error),
               textAlign: TextAlign.center,
               style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
             ),
@@ -289,9 +301,14 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                       ? scanner.resumeScan
                       : scanner.startFullScan,
                   child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 28,
+                      vertical: 12,
+                    ),
                     child: Text(
-                      scanner.wasCancelled ? '繼續掃描' : '開始掃描',
+                      scanner.wasCancelled
+                          ? context.l10n.scanContinue
+                          : context.l10n.scanStart,
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
@@ -328,28 +345,31 @@ class _SmartCleanViewState extends State<SmartCleanView> {
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (scanner.isScanning) ...[
                       ScanProgressPanel(scanner: scanner, compact: true),
                       const SizedBox(height: 12),
-                      const Text(
-                        '照片與截圖可先預覽；掃描期間暫停選取、刪除及影片壓縮。',
+                      Text(
+                        context.l10n.scanPreviewWhileRunning,
                         style: AppTheme.caption,
                       ),
                     ],
                     if (scanner.scanNotice != null)
-                      Text(scanner.scanNotice!, style: AppTheme.caption),
+                      Text(
+                        context.localizeServiceMessage(scanner.scanNotice!),
+                        style: AppTheme.caption,
+                      ),
                     Text(
                       _selectedCategory == 1
-                          ? '真重複僅包括已完成原始素材驗證的項目，其餘不會推定重複。保留建議可撤回。'
+                          ? context.l10n.scanExactDescription
                           : _selectedCategory == 2
-                          ? '視覺相似依已完成的本機畫面分析逐步整理，內容可能不同。保留建議僅供參考。'
+                          ? context.l10n.scanSimilarDescription
                           : _selectedCategory == 5
-                          ? '依已取得的原始檔案容量排序。這是檔案大小，實際回收空間以系統為準。'
-                          : '只會刪除你手動勾選並再次確認的項目。',
+                          ? context.l10n.scanLargeDescription
+                          : context.l10n.scanManualDeleteDescription,
                       style: AppTheme.caption,
                     ),
                     if (!scanner.isScanning && scanner.pendingResourceCount > 0)
@@ -358,7 +378,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                             ? null
                             : scanner.verifyOriginals,
                         icon: const Icon(Icons.verified_outlined),
-                        label: const Text('驗證本機原始素材：確認真重複與容量'),
+                        label: Text(context.l10n.scanVerifyOriginals),
                       ),
                     if (!scanner.isScanning &&
                         (scanner.wasCancelled ||
@@ -368,7 +388,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                             ? null
                             : scanner.resumeScan,
                         icon: const Icon(Icons.play_arrow_rounded),
-                        label: const Text('繼續掃描／重試待處理項目'),
+                        label: Text(context.l10n.scanResumePending),
                       ),
                   ],
                 ),
@@ -431,13 +451,19 @@ class _SmartCleanViewState extends State<SmartCleanView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${group.assets.length} 張${_selectedCategory == 1 ? '真重複' : '視覺相似'}照片',
+            _selectedCategory == 1
+                ? context.l10n.scanExactGroupCount(group.assets.length)
+                : context.l10n.scanSimilarGroupCount(group.assets.length),
             style: const TextStyle(fontWeight: FontWeight.w700),
           ),
           if (group.bestAssetId != null) ...[
             if (suggested != null)
               Text(
-                '建議保留：${group.bestReason ?? '此張照片在這組中較適合保留。'}',
+                context.l10n.scanRecommendedKeep(
+                  group.bestReason == null
+                      ? context.l10n.scanKeepReasonDefault
+                      : context.localizeServiceMessage(group.bestReason!),
+                ),
                 style: AppTheme.caption,
               ),
             TextButton(
@@ -446,10 +472,14 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                     ? _dismissedSuggestions.remove(group.key)
                     : _dismissedSuggestions.add(group.key);
               }),
-              child: Text(suggested == null ? '重新顯示保留建議' : '撤回保留建議'),
+              child: Text(
+                suggested == null
+                    ? context.l10n.scanRestoreKeepSuggestion
+                    : context.l10n.scanDismissKeepSuggestion,
+              ),
             ),
           ],
-          const Text('保留建議不會自動勾選；點選縮圖標記刪除。', style: AppTheme.caption),
+          Text(context.l10n.scanKeepManualHint, style: AppTheme.caption),
           const SizedBox(height: 10),
           SizedBox(
             height: tileWidth + 52 * textScale,
@@ -474,16 +504,16 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   String _emptyCategoryMessage(PhotoScannerService scanner) {
     if ((_selectedCategory == 1 || _selectedCategory == 5) &&
         scanner.pendingResourceCount > 0) {
-      return '尚有原始素材待驗證，目前不能判定是否有真重複或大型檔案。照片與截圖可先預覽。';
+      return context.l10n.scanEmptyUnverified;
     }
     if (_selectedCategory == 2 && scanner.pendingAnalysisCount > 0) {
-      return '照片畫面仍有待處理項目，視覺相似結果會逐步整理。照片與截圖可先預覽。';
+      return context.l10n.scanEmptyVisualPending;
     }
     if (scanner.isScanning &&
         scanner.currentPhase == ScanPhase.fetchingAssets) {
-      return '相簿目錄仍在讀取，此分類將隨讀取進度更新。';
+      return context.l10n.scanEmptyIndexing;
     }
-    return '目前已完成分析或驗證的項目中沒有這個分類。';
+    return context.l10n.scanEmptyCategory;
   }
 
   Widget _thumbnail(PhotoAsset asset, {bool recommended = false}) {
@@ -519,16 +549,19 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                     child: AssetThumbnail(asset: asset),
                   ),
                   if (recommended)
-                    Positioned(
+                    PositionedDirectional(
                       top: 4,
-                      left: 4,
-                      right: 4,
-                      child: _badge('建議保留', AppTheme.success),
+                      start: 4,
+                      end: 4,
+                      child: _badge(
+                        context.l10n.scanKeepBadge,
+                        AppTheme.success,
+                      ),
                     ),
                   if (!scanner.isScanning)
-                    Positioned(
+                    PositionedDirectional(
                       bottom: 4,
-                      right: 4,
+                      end: 4,
                       child: Icon(
                         selected
                             ? Icons.check_circle_rounded
@@ -537,11 +570,11 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                         size: 24,
                       ),
                     ),
-                  Positioned(
+                  PositionedDirectional(
                     bottom: 0,
-                    left: 0,
+                    start: 0,
                     child: IconButton(
-                      tooltip: '放大預覽',
+                      tooltip: context.l10n.scanZoomPreview,
                       icon: const Icon(
                         Icons.zoom_in_rounded,
                         color: Colors.white,
@@ -558,14 +591,14 @@ class _SmartCleanViewState extends State<SmartCleanView> {
             children: [
               Expanded(
                 child: Text(
-                  assetSizeLabel(asset),
+                  assetSizeLabel(asset, context: context),
                   style: const TextStyle(fontSize: 11),
                   maxLines: 2,
                 ),
               ),
               if (asset.type == AssetType.video)
                 IconButton(
-                  tooltip: '壓縮此影片',
+                  tooltip: context.l10n.scanCompressVideo,
                   icon: const Icon(Icons.compress_rounded, size: 20),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(
@@ -579,9 +612,12 @@ class _SmartCleanViewState extends State<SmartCleanView> {
             ],
           ),
           if (asset.analysisPending)
-            const Text(
-              '內容待分析',
-              style: TextStyle(fontSize: 10, color: AppTheme.textSecondary),
+            Text(
+              context.l10n.scanContentPending,
+              style: const TextStyle(
+                fontSize: 10,
+                color: AppTheme.textSecondary,
+              ),
             ),
         ],
       ),
@@ -626,12 +662,16 @@ class _SmartCleanViewState extends State<SmartCleanView> {
               Padding(
                 padding: const EdgeInsets.all(12),
                 child: Text(
-                  '${asset.width} × ${asset.height} · ${assetSizeLabel(asset)}',
+                  context.l10n.assetPreviewDetails(
+                    asset.width,
+                    asset.height,
+                    assetSizeLabel(asset, context: context),
+                  ),
                 ),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('返回繼續比較'),
+                child: Text(context.l10n.scanBackToCompare),
               ),
             ],
           ),
@@ -642,7 +682,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
 
   Widget _bottomBar(PhotoScannerService scanner, SubscriptionManager sub) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+      padding: const EdgeInsetsDirectional.fromSTEB(20, 10, 20, 14),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -658,7 +698,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '已選擇 ${_selectedIds.length} 個項目',
+              context.l10n.scanSelectedCount(_selectedIds.length),
               style: const TextStyle(
                 color: AppTheme.textMuted,
                 fontSize: 11,
@@ -696,7 +736,9 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
-                            '預覽並刪除 ${_selectedIds.length} 個項目',
+                            context.l10n.scanPreviewDeleteCount(
+                              _selectedIds.length,
+                            ),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 14,
@@ -805,6 +847,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
         builder: (_) => SwipeCleanView(
           assets: assets,
           title: _categories[_selectedCategory],
+          categoryId: _categoryIds[_selectedCategory],
         ),
       ),
     );
@@ -843,7 +886,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('確認要刪除這些項目嗎？'),
+        title: Text(context.l10n.scanConfirmDeleteTitle),
         content: SingleChildScrollView(
           child: SizedBox(
             width: double.maxFinite,
@@ -852,7 +895,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '共 ${toDelete.length} 個項目。請確認選取內容與保留建議後再刪除；實際回收空間以系統為準。',
+                  context.l10n.scanConfirmDeleteDescription(toDelete.length),
                   style: const TextStyle(
                     color: AppTheme.textSecondary,
                     fontSize: 13,
@@ -882,7 +925,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: Text(context.l10n.scanCancel),
           ),
           TextButton(
             onPressed: () async {
@@ -901,15 +944,15 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                 SnackBar(
                   content: Text(
                     deletedIds.isEmpty
-                        ? '未刪除任何項目，可能已取消或刪除未成功。'
-                        : '已刪除 ${deletedIds.length} 個項目。',
+                        ? this.context.l10n.scanNoItemsDeleted
+                        : this.context.l10n.scanItemsDeleted(deletedIds.length),
                   ),
                 ),
               );
             },
-            child: const Text(
-              '確認刪除',
-              style: TextStyle(
+            child: Text(
+              context.l10n.scanConfirmDelete,
+              style: const TextStyle(
                 color: AppTheme.danger,
                 fontWeight: FontWeight.w700,
               ),

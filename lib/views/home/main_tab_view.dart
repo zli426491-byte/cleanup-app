@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cleanup_app/l10n/l10n.dart';
 import '../home/home_view.dart';
 import '../scanner/smart_clean_view.dart';
 import '../settings/settings_view.dart';
@@ -31,14 +32,24 @@ class _MainTabViewState extends State<MainTabView> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _tab(0, Icons.home_outlined, Icons.home_rounded, '首頁'),
+                _tab(
+                  0,
+                  Icons.home_outlined,
+                  Icons.home_rounded,
+                  context.l10n.navHome,
+                ),
                 _tab(
                   1,
                   Icons.auto_awesome_outlined,
                   Icons.auto_awesome_rounded,
-                  '清理',
+                  context.l10n.navClean,
                 ),
-                _tab(2, Icons.settings_outlined, Icons.settings_rounded, '設定'),
+                _tab(
+                  2,
+                  Icons.settings_outlined,
+                  Icons.settings_rounded,
+                  context.l10n.navSettings,
+                ),
               ],
             ),
           ),
@@ -49,29 +60,32 @@ class _MainTabViewState extends State<MainTabView> {
 
   Widget _tab(int idx, IconData outline, IconData filled, String label) {
     final selected = _i == idx;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => setState(() => _i = idx),
-      child: SizedBox(
-        width: 56,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              selected ? filled : outline,
-              size: 22,
-              color: selected ? AppTheme.primary : AppTheme.textMuted,
-            ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => setState(() => _i = idx),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                selected ? filled : outline,
+                size: 22,
                 color: selected ? AppTheme.primary : AppTheme.textMuted,
               ),
-            ),
-          ],
+              const SizedBox(height: 3),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  color: selected ? AppTheme.primary : AppTheme.textMuted,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

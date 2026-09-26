@@ -1,0 +1,1119 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for Romanian Moldavian Moldovan (`ro`).
+class AppLocalizationsRo extends AppLocalizations {
+  AppLocalizationsRo([String locale = 'ro']) : super(locale);
+
+  @override
+  String get onboardingSmartTitle => 'Curățare inteligentă';
+
+  @override
+  String get onboardingSmartSubtitle =>
+      'Scanează fotografiile și videoclipurile la care permiți accesul\nVezi întâi previzualizarea, apoi alege ce păstrezi sau ștergi';
+
+  @override
+  String get onboardingPhotosTitle => 'Organizează fotografiile';
+
+  @override
+  String get onboardingPhotosSubtitle =>
+      'Compară fotografiile identice și similare după conținut\nVerifică fiecare fotografie recomandată pentru păstrare';
+
+  @override
+  String get onboardingSwipeTitle => 'Glisează pentru a organiza';
+
+  @override
+  String get onboardingSwipeSubtitle =>
+      'Glisează pentru a alege ce păstrezi sau ștergi\nConfirmă toate alegerile la final';
+
+  @override
+  String get onboardingChoiceTitle => 'Tu decizi';
+
+  @override
+  String get onboardingChoiceSubtitle =>
+      'Scanarea și previzualizarea fotografiilor sunt gratuite\nȘtergerea și comprimarea video necesită Pro. Originalele nu sunt șterse niciodată automat.';
+
+  @override
+  String get onboardingSkip => 'Omite';
+
+  @override
+  String get onboardingPreparing => 'Se pregătește…';
+
+  @override
+  String get onboardingContinue => 'Continuă';
+
+  @override
+  String get onboardingGetStarted => 'Începe';
+
+  @override
+  String get paywallTitle => 'Curățare Pro';
+
+  @override
+  String get paywallClose => 'Închide';
+
+  @override
+  String get paywallDescription =>
+      'Deblochează curățarea fotografiilor și videoclipurilor. Previzualizează elementele înainte să alegi ce ștergi.';
+
+  @override
+  String get paywallReloadPlans => 'Reîncarcă planurile';
+
+  @override
+  String get paywallNotConfigured => 'Abonamente indisponibile';
+
+  @override
+  String get paywallContinue => 'Continuă';
+
+  @override
+  String get paywallStoreNotice =>
+      'Achizițiile se fac prin App Store. Gestionează sau anulează abonamentele din configurările Apple ID.';
+
+  @override
+  String get paywallRestorePurchases => 'Restabilește achizițiile';
+
+  @override
+  String get paywallPrivacyPolicy => 'Politica de confidențialitate';
+
+  @override
+  String get paywallTerms => 'Condiții de utilizare';
+
+  @override
+  String get paywallPurchaseIncomplete =>
+      'Achiziția nu s-a finalizat. Încearcă din nou mai târziu.';
+
+  @override
+  String get paywallRestored => 'Accesul Pro a fost restabilit.';
+
+  @override
+  String get paywallRestoreNotFound => 'Nu s-au găsit achiziții de restabilit.';
+
+  @override
+  String get paywallWeeklyPlan => 'Abonament săptămânal';
+
+  @override
+  String get paywallYearlyPlan => 'Abonament anual';
+
+  @override
+  String get paywallYearlySubtitle =>
+      'Organizează fotografii și videoclipuri tot anul';
+
+  @override
+  String get paywallWeeklySubtitle =>
+      'Pentru o sesiune scurtă de organizare a fotografiilor';
+
+  @override
+  String get paywallPhotoFeature =>
+      'Grupează fotografiile identice și similare, apoi verifică fiecare element';
+
+  @override
+  String get paywallVideoFeature =>
+      'Comprimă videoclipuri, previzualizează-le și salvează copii';
+
+  @override
+  String get paywallSwipeFeature => 'Organizează rapid prin gesturi de glisare';
+
+  @override
+  String get paywallPlansUnavailable =>
+      'Planurile de abonament nu s-au încărcat. Verifică conexiunea și reîncarcă.';
+
+  @override
+  String get paywallBestValue => 'Cea mai avantajoasă opțiune';
+
+  @override
+  String get videoTitle => 'Comprimare video';
+
+  @override
+  String get videoDescription =>
+      'Comprimarea reduce calitatea și creează o copie nouă. Verifică imaginea, sunetul și orientarea înainte de salvarea în Poze. Originalul este păstrat.';
+
+  @override
+  String get videoProRequired =>
+      'Această funcție necesită Pro. Revino la pagina de curățare pentru a vedea planurile.';
+
+  @override
+  String get videoSaving => 'Se salvează în Poze. Așteaptă finalizarea.';
+
+  @override
+  String get videoCancelCompression => 'Anulează comprimarea';
+
+  @override
+  String get videoLoadingPreview => 'Se încarcă previzualizarea video…';
+
+  @override
+  String get videoCreatePreview => 'Creează o previzualizare comprimată';
+
+  @override
+  String get videoStorageNotice =>
+      'Salvarea unei copii ocupă temporar mai mult spațiu. După ștergerea originalului și golirea albumului Șterse recent, verifică în sistem spațiul disponibil real.';
+
+  @override
+  String get videoViewOriginal => 'Vezi originalul';
+
+  @override
+  String get videoViewCopy => 'Vezi copia comprimată';
+
+  @override
+  String get videoSaved =>
+      'Copia a fost salvată în Poze, iar originalul a fost păstrat. Scanează din nou din Acasă, apoi alege dacă ștergi originalul.';
+
+  @override
+  String get videoConfirmSave => 'Confirmă copia și salvează în Poze';
+
+  @override
+  String get videoPreviewUnavailable =>
+      'Previzualizarea nu a putut fi redată. Încearcă din nou. Originalul este păstrat.';
+
+  @override
+  String get videoPlaybackUnavailable =>
+      'Videoclipul nu poate fi redat acum. Reîncarcă previzualizarea.';
+
+  @override
+  String get videoOperationIncomplete =>
+      'Operația nu s-a încheiat. Originalul este păstrat. Verifică permisiunea pentru Poze și spațiul disponibil, apoi încearcă din nou.';
+
+  @override
+  String get videoPauseOriginal => 'Original: pauză';
+
+  @override
+  String get videoPlayOriginal => 'Original: redare';
+
+  @override
+  String get videoPauseCopy => 'Copie comprimată: pauză';
+
+  @override
+  String get videoPlayCopy => 'Copie comprimată: redare';
+
+  @override
+  String onboardingStep(int current, int total) {
+    return '$current/$total';
+  }
+
+  @override
+  String paywallBuild(String build) {
+    return 'Compilare $build';
+  }
+
+  @override
+  String videoCompressionProgress(int percent) {
+    return 'Pregătire / comprimare video $percent%';
+  }
+
+  @override
+  String videoOriginalSize(String size) {
+    return 'Original: $size';
+  }
+
+  @override
+  String videoCopySize(String size) {
+    return 'Copie: $size';
+  }
+
+  @override
+  String videoSizeDifference(String size) {
+    return 'Diferența de dimensiune a fișierului: $size';
+  }
+
+  @override
+  String videoSizeGb(String size) {
+    return '$size GB';
+  }
+
+  @override
+  String videoSizeMb(String size) {
+    return '$size MB';
+  }
+
+  @override
+  String get homeStorageUnavailable =>
+      'Verifică stocarea dispozitivului în configurările iPhone. Aici poți organiza fotografiile și videoclipurile accesibile.';
+
+  @override
+  String get homeViewIndexedPhotos => 'Vezi fotografiile citite până acum';
+
+  @override
+  String get homeViewIndexedScreenshots =>
+      'Vezi capturile de ecran citite până acum';
+
+  @override
+  String get homeCleanupTools => 'Instrumente de curățare';
+
+  @override
+  String get homeQuickActions => 'Acțiuni rapide';
+
+  @override
+  String get homeAppName => 'Curățare';
+
+  @override
+  String get homeSubtitle =>
+      'Previzualizează întâi, apoi organizează fotografii și videoclipuri';
+
+  @override
+  String get homeProBadge => 'PRO';
+
+  @override
+  String get homeStorageUsed => 'Utilizat';
+
+  @override
+  String get homeUsedLegend => 'Utilizat';
+
+  @override
+  String get homeAvailableLegend => 'Disponibil';
+
+  @override
+  String get homeStartScanHint =>
+      'Nu s-a scanat încă. Atinge mai jos pentru a începe.';
+
+  @override
+  String get homeScanning => 'Se scanează…';
+
+  @override
+  String get homeDeleting => 'Se șterge…';
+
+  @override
+  String get homeResumeScan => 'Continuă scanarea și păstrează progresul';
+
+  @override
+  String get homeScanAll =>
+      'Scanează toate fotografiile și videoclipurile accesibile';
+
+  @override
+  String get homePreviewOrganize => 'Previzualizează și organizează';
+
+  @override
+  String get homeVerifyOriginals =>
+      'Verifică originalele locale pentru duplicate exacte și dimensiunile fișierelor';
+
+  @override
+  String get homeRetryPending =>
+      'Continuă scanarea / reîncearcă elementele în așteptare';
+
+  @override
+  String get homeExactDuplicates => 'Fotografii identice';
+
+  @override
+  String get homeSimilarPhotos => 'Fotografii similare vizual';
+
+  @override
+  String get homeNotScanned => 'Nu s-a scanat încă';
+
+  @override
+  String get homePendingAnalysis => 'Analiză vizuală în așteptare';
+
+  @override
+  String get homeNoneAnalyzed => 'Niciunul găsit printre elementele analizate';
+
+  @override
+  String get homeScreenshots => 'Capturi de ecran';
+
+  @override
+  String get homeLargeFiles => 'Fișiere mari';
+
+  @override
+  String get homeNoneFound => 'Niciunul găsit';
+
+  @override
+  String get homePendingVerification => 'Verificarea originalelor în așteptare';
+
+  @override
+  String get homeNoneVerified => 'Niciunul găsit printre elementele verificate';
+
+  @override
+  String get homeNeedsReview => 'Necesită verificare';
+
+  @override
+  String get homeCanReview => 'Verifică';
+
+  @override
+  String get homeScanStatus => 'Scanează';
+
+  @override
+  String get homeDoneStatus => 'Gata ✓';
+
+  @override
+  String get homePreviewPhotos => 'Previzualizează fotografiile';
+
+  @override
+  String get homeChooseKeep => 'Alege ce păstrezi';
+
+  @override
+  String get navHome => 'Acasă';
+
+  @override
+  String get navClean => 'Curățare';
+
+  @override
+  String get navSettings => 'Configurări';
+
+  @override
+  String get settingsTitle => 'Configurări';
+
+  @override
+  String get settingsLoading => 'Se încarcă…';
+
+  @override
+  String get settingsProPlan => 'Curățare Pro';
+
+  @override
+  String get settingsFreePlan => 'Plan gratuit';
+
+  @override
+  String get settingsUpgrade => 'Fă upgrade';
+
+  @override
+  String get settingsStorage => 'Stocare';
+
+  @override
+  String get settingsStorageTotal => 'Total';
+
+  @override
+  String get settingsStorageUsed => 'Utilizat';
+
+  @override
+  String get settingsStorageAvailable => 'Disponibil';
+
+  @override
+  String get settingsGeneral => 'General';
+
+  @override
+  String get settingsProcessingSubscription => 'Se procesează abonamentul…';
+
+  @override
+  String get settingsRestorePurchases => 'Restabilește achizițiile';
+
+  @override
+  String get settingsRestoredPro => 'Abonamentul Pro a fost restabilit.';
+
+  @override
+  String get settingsPrivacyPolicy => 'Politica de confidențialitate';
+
+  @override
+  String get settingsTerms => 'Condiții de utilizare';
+
+  @override
+  String get settingsRateApp => 'Evaluează-ne';
+
+  @override
+  String get settingsAbout => 'Despre';
+
+  @override
+  String get settingsVersion => 'Versiune';
+
+  @override
+  String get settingsLanguage => 'Limbă';
+
+  @override
+  String get settingsChooseLanguage => 'Alege limba';
+
+  @override
+  String get settingsSystemLanguage => 'Folosește limba sistemului';
+
+  @override
+  String homeUsedPercent(int percent) {
+    return '$percent%';
+  }
+
+  @override
+  String homeStorageTotal(String size) {
+    return 'Total $size';
+  }
+
+  @override
+  String homeIndexedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'S-au citit $count de elemente',
+      few: 'S-au citit $count elemente',
+      one: 'S-a citit 1 element',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeIndexedCountWithTotal(int count, int total) {
+    return 'S-au citit $count din $total elemente accesibile';
+  }
+
+  @override
+  String homeAnalysisSummary(int analyzed, int verified) {
+    return 'Analizate vizual: $analyzed. Originale verificate: $verified. Recomandările de păstrare pot fi retrase; tu decizi ce ștergi.';
+  }
+
+  @override
+  String homePhotoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de fotografii',
+      few: '$count fotografii',
+      one: '1 fotografie',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homePhotoCountPartial(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de fotografii (rezultate parțiale)',
+      few: '$count fotografii (rezultate parțiale)',
+      one: '1 fotografie (rezultate parțiale)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de elemente',
+      few: '$count elemente',
+      one: '1 element',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeVerifiedPhotosPending(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de fotografii verificate; altele în așteptare',
+      few: '$count fotografii verificate; altele în așteptare',
+      one: '1 fotografie verificată; altele în așteptare',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeVerifiedItemsPending(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de elemente verificate; altele în așteptare',
+      few: '$count elemente verificate; altele în așteptare',
+      one: '1 element verificat; altele în așteptare',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsLanguageSaveError =>
+      'Limba nu a putut fi salvată. Încearcă din nou.';
+
+  @override
+  String get scanSmartTitle => 'Curățare inteligentă';
+
+  @override
+  String get scanCancelKeepProgress =>
+      'Anulează scanarea și păstrează progresul';
+
+  @override
+  String get scanSwipeCleanup => 'Curățare prin glisare';
+
+  @override
+  String get scanSortFileSize => 'Dimensiunea fișierului';
+
+  @override
+  String get scanSortNewest => 'Cele mai noi';
+
+  @override
+  String get scanStartAlbumTitle => 'Începe scanarea bibliotecii';
+
+  @override
+  String get scanIncompleteTitle => 'Scanare incompletă';
+
+  @override
+  String get scanStartAlbumDescription =>
+      'Scanează toate fotografiile și videoclipurile accesibile. Verificarea conținutului original și analiza vizuală te ajută să le verifici înainte de a decide.';
+
+  @override
+  String get scanContinue => 'Continuă scanarea';
+
+  @override
+  String get scanStart => 'Începe scanarea';
+
+  @override
+  String get scanPreviewWhileRunning =>
+      'Poți previzualiza fotografiile și capturile de ecran. Selectarea, ștergerea și comprimarea video sunt suspendate în timpul scanării.';
+
+  @override
+  String get scanExactDescription =>
+      'Duplicatele exacte includ doar elemente cu resurse originale verificate. Recomandările de păstrare pot fi retrase.';
+
+  @override
+  String get scanSimilarDescription =>
+      'Fotografiile posibil similare apar pe măsură ce sunt analizate previzualizările locale. Conținutul poate diferi; recomandările de păstrare sunt doar orientative.';
+
+  @override
+  String get scanLargeDescription =>
+      'Sortate după dimensiunea verificată a resurselor. Dimensiunea fișierului poate diferi de spațiul recuperat real; sistemul stabilește spațiul recuperat.';
+
+  @override
+  String get scanManualDeleteDescription =>
+      'Vor fi șterse doar elementele selectate manual și confirmate.';
+
+  @override
+  String get scanVerifyOriginals =>
+      'Verifică originalele locale: duplicate exacte și dimensiune';
+
+  @override
+  String get scanResumePending =>
+      'Continuă scanarea / reîncearcă elementele în așteptare';
+
+  @override
+  String get scanKeepReasonDefault =>
+      'Această fotografie este recomandată pentru păstrare în grup.';
+
+  @override
+  String get scanRestoreKeepSuggestion =>
+      'Arată din nou recomandarea de păstrare';
+
+  @override
+  String get scanDismissKeepSuggestion => 'Retrage recomandarea de păstrare';
+
+  @override
+  String get scanKeepManualHint =>
+      'Recomandările nu selectează niciodată elemente automat. Atinge o miniatură pentru a o marca pentru ștergere.';
+
+  @override
+  String get scanEmptyUnverified =>
+      'Unele resurse originale mai trebuie verificate. Duplicatele exacte și fișierele mari nu pot fi determinate încă. Poți previzualiza fotografiile și capturile de ecran.';
+
+  @override
+  String get scanEmptyVisualPending =>
+      'Unele previzualizări foto mai trebuie analizate. Fotografiile posibil similare vor apărea treptat; poți previzualiza fotografiile și capturile de ecran.';
+
+  @override
+  String get scanEmptyIndexing =>
+      'Biblioteca este încă indexată. Această categorie se actualizează pe măsură ce indexarea avansează.';
+
+  @override
+  String get scanEmptyCategory =>
+      'Nu există elemente în această categorie printre cele analizate sau verificate până acum.';
+
+  @override
+  String get scanKeepBadge => 'Recomandată pentru păstrare';
+
+  @override
+  String get scanZoomPreview => 'Mărește previzualizarea';
+
+  @override
+  String get scanCompressVideo => 'Comprimă acest videoclip';
+
+  @override
+  String get scanContentPending => 'Analiza conținutului în așteptare';
+
+  @override
+  String get scanBackToCompare => 'Înapoi la comparație';
+
+  @override
+  String get scanConfirmDeleteTitle => 'Ștergi elementele selectate?';
+
+  @override
+  String get scanCancel => 'Anulează';
+
+  @override
+  String get scanNoItemsDeleted =>
+      'Nu s-a șters niciun element. Operația poate fi anulată sau eșuată.';
+
+  @override
+  String get scanConfirmDelete => 'Confirmă ștergerea';
+
+  @override
+  String get scanCategoryPhotos => 'Fotografii';
+
+  @override
+  String get scanCategoryExact => 'Duplicate exacte';
+
+  @override
+  String get scanCategorySimilar => 'Posibil similare';
+
+  @override
+  String get scanCategoryScreenshots => 'Capturi de ecran';
+
+  @override
+  String get scanCategoryVideos => 'Videoclipuri';
+
+  @override
+  String get scanCategoryLarge => 'Fișiere mari';
+
+  @override
+  String scanExactGroupCount(int count) {
+    return 'Fotografii identice: $count';
+  }
+
+  @override
+  String scanSimilarGroupCount(int count) {
+    return 'Fotografii posibil similare: $count';
+  }
+
+  @override
+  String scanRecommendedKeep(String reason) {
+    return 'Recomandată pentru păstrare: $reason';
+  }
+
+  @override
+  String scanSelectedCount(int count) {
+    return 'Elemente selectate: $count';
+  }
+
+  @override
+  String scanPreviewDeleteCount(int count) {
+    return 'Previzualizează și șterge elementele ($count)';
+  }
+
+  @override
+  String scanConfirmDeleteDescription(int count) {
+    return 'Elemente selectate: $count. Verifică selecția și recomandările de păstrare înainte de ștergere. Spațiul recuperat este stabilit de sistem.';
+  }
+
+  @override
+  String scanItemsDeleted(int count) {
+    return 'Elemente șterse: $count.';
+  }
+
+  @override
+  String get scanIndexingTitle => 'Indexarea bibliotecii foto';
+
+  @override
+  String get scanVerifyingTitle =>
+      'Verificarea originalelor pentru duplicate exacte';
+
+  @override
+  String get scanAnalyzingTitle => 'Analiza previzualizărilor foto locale';
+
+  @override
+  String get scanSlowOperationHint =>
+      'Această operație durează mai mult. O poți anula, păstra progresul și continua mai târziu.';
+
+  @override
+  String get scanProgressPreviewHint =>
+      'Poți vedea fotografiile și capturile de ecran indexate. Descărcările în așteptare sau analizele nereușite nu sunt considerate niciodată duplicate exacte.';
+
+  @override
+  String get scanCountConfirming => 'Se verifică';
+
+  @override
+  String scanIndexedCount(int indexed, String total) {
+    return 'Elemente indexate: $indexed / $total';
+  }
+
+  @override
+  String scanPreviewAttemptCount(int attempted, int total) {
+    return 'Previzualizări foto procesate: $attempted / $total';
+  }
+
+  @override
+  String scanOriginalAttemptCount(int attempted, int total) {
+    return 'Resurse originale procesate: $attempted / $total';
+  }
+
+  @override
+  String scanVisualSuccessCount(int count) {
+    return 'Analize vizuale finalizate: $count';
+  }
+
+  @override
+  String scanOriginalVerifiedCount(int count) {
+    return 'Originale verificate: $count';
+  }
+
+  @override
+  String scanCloudPendingCount(int count) {
+    return 'În așteptarea descărcării: $count';
+  }
+
+  @override
+  String scanStageRemainingCount(int count) {
+    return 'Neprocesate încă în această etapă: $count';
+  }
+
+  @override
+  String scanOperationWait(String operation, int seconds) {
+    return '$operation · Așteptare de $seconds secunde';
+  }
+
+  @override
+  String get swipeKeep => 'Păstrează';
+
+  @override
+  String get swipeDelete => 'Șterge';
+
+  @override
+  String get swipeReviewComplete => 'Verificare încheiată!';
+
+  @override
+  String get swipeRecoveredSpaceHint =>
+      'Spațiul recuperat este stabilit de sistem.';
+
+  @override
+  String get swipeUndoChoice => 'Anulează ultima alegere';
+
+  @override
+  String get swipeBack => 'Înapoi';
+
+  @override
+  String get swipeConfirmDeleteTitle =>
+      'Ștergi fotografiile marcate pentru ștergere?';
+
+  @override
+  String get swipeCancel => 'Anulează';
+
+  @override
+  String get swipeConfirmDelete => 'Confirmă ștergerea';
+
+  @override
+  String get swipeNoPhotosDeleted =>
+      'Nu s-a șters nicio fotografie. Operația poate fi anulată sau eșuată.';
+
+  @override
+  String get swipeExitTitle => 'Părăsești verificarea?';
+
+  @override
+  String get swipeContinueReview => 'Continuă verificarea';
+
+  @override
+  String get swipeLeave => 'Părăsește';
+
+  @override
+  String get swipeSkipRemainingTitle => 'Omiți fotografiile rămase?';
+
+  @override
+  String get swipeDone => 'Gata';
+
+  @override
+  String swipeDoneCount(int count) {
+    return 'Gata ($count)';
+  }
+
+  @override
+  String swipeProgressCount(int current, int total) {
+    return '$current/$total';
+  }
+
+  @override
+  String swipeDeleteCount(int count) {
+    return 'De șters: $count';
+  }
+
+  @override
+  String swipeKeepCount(int count) {
+    return 'De păstrat: $count';
+  }
+
+  @override
+  String swipeReviewSummary(int deleteCount, int keepCount) {
+    return 'Fotografii de șters: $deleteCount · De păstrat: $keepCount';
+  }
+
+  @override
+  String swipeDeletePhotos(int count) {
+    return 'Șterge fotografiile ($count)';
+  }
+
+  @override
+  String swipeConfirmDeleteDescription(int count) {
+    return 'Șterge fotografiile verificate ($count). Asigură-te că ai selectat corect ce dorești să păstrezi.';
+  }
+
+  @override
+  String swipePartialDeleted(int count) {
+    return 'Fotografii șterse: $count. Cele rămase nu au fost șterse.';
+  }
+
+  @override
+  String swipeExitDescription(int count) {
+    return 'Fotografii marcate pentru ștergere: $count. Părăsirea paginii nu le va șterge.';
+  }
+
+  @override
+  String swipeSkipRemainingDescription(int remaining, int deleteCount) {
+    return 'Fotografii neverificate: $remaining. Închei verificarea și confirmi fotografiile deja marcate pentru ștergere ($deleteCount)?';
+  }
+
+  @override
+  String assetDimensions(int width, int height) {
+    return '$width × $height';
+  }
+
+  @override
+  String assetPreviewDetails(int width, int height, String size) {
+    return '$width × $height · $size';
+  }
+
+  @override
+  String get assetReloadPreview => 'Reîncarcă previzualizarea';
+
+  @override
+  String get assetSizeUnknown => 'Dimensiune indisponibilă';
+
+  @override
+  String assetSizeGigabytes(String value) {
+    return '$value GB';
+  }
+
+  @override
+  String assetSizeMegabytes(String value) {
+    return '$value MB';
+  }
+
+  @override
+  String assetSizeKilobytes(String value) {
+    return '$value KB';
+  }
+
+  @override
+  String assetSizeBytes(int count) {
+    return '$count octeți';
+  }
+
+  @override
+  String get appName => 'Maestrul curățării';
+
+  @override
+  String get nativePhotoRead =>
+      'Accesează fotografiile și videoclipurile pentru care permiți accesul, ca să le previzualizezi, organizezi și confirmi ce ștergi.';
+
+  @override
+  String get nativePhotoAdd =>
+      'Salvează o copie video comprimată în Poze după confirmare. Originalul este păstrat.';
+
+  @override
+  String get nativeContacts =>
+      'Accesează contactele pentru a ajuta la organizarea detaliilor de contact duplicate.';
+
+  @override
+  String get nativeTracking =>
+      'Permite urmărirea pentru a personaliza experiența și a îmbunătăți serviciul.';
+
+  @override
+  String get serviceSubscriptionsUnavailable =>
+      'Abonamentele sunt momentan indisponibile. Încearcă din nou mai târziu.';
+
+  @override
+  String get serviceSubscriptionInitFailed =>
+      'Conectarea la serviciul de abonamente nu a reușit. Încearcă din nou mai târziu.';
+
+  @override
+  String get serviceNoPlans =>
+      'Nu sunt disponibile planuri de abonament acum. Încearcă din nou mai târziu.';
+
+  @override
+  String get servicePlansLoadFailed =>
+      'Planurile nu au putut fi încărcate. Verifică conexiunea și încearcă din nou.';
+
+  @override
+  String get servicePurchaseUnavailable =>
+      'Achizițiile sunt momentan indisponibile. Încearcă din nou mai târziu.';
+
+  @override
+  String get servicePurchaseFailed =>
+      'Achiziția nu s-a finalizat. Încearcă din nou mai târziu.';
+
+  @override
+  String get serviceRestoreUnavailable =>
+      'Restabilirea achizițiilor este momentan indisponibilă. Încearcă din nou mai târziu.';
+
+  @override
+  String get serviceNoSubscription =>
+      'Nu s-a găsit niciun abonament Pro activ.';
+
+  @override
+  String get serviceRestoreFailed =>
+      'Achizițiile nu au putut fi restabilite. Verifică conexiunea și încearcă din nou.';
+
+  @override
+  String get servicePurchaseCancelled => 'Achiziție anulată.';
+
+  @override
+  String get serviceScanPaused =>
+      'Suspendat. Rezultatele citite și analizate sunt păstrate. Poți continua scanarea.';
+
+  @override
+  String get serviceLimitedLibrary =>
+      'Sunt incluse doar fotografiile pentru care ai permis accesul, nu întreaga bibliotecă.';
+
+  @override
+  String get serviceNativeAnalysisUnavailable =>
+      'Analiza fișierelor originale nu este disponibilă pe acest dispozitiv. Dimensiunile și duplicatele exacte nu sunt verificate.';
+
+  @override
+  String get serviceOriginalVerificationNeeded =>
+      'Verifică originalele locale pentru a confirma dimensiunile fișierelor și duplicatele exacte. Elementele mari sau din cloud pot rămâne în așteptare; dimensiunile neverificate nu sunt estimate.';
+
+  @override
+  String get serviceReadingIndex => 'Citirea indexului bibliotecii';
+
+  @override
+  String get servicePhotoPermission =>
+      'Accesul la fotografii nu este permis. Permite accesul în Configurări și încearcă din nou.';
+
+  @override
+  String get serviceOriginalRoundLimit =>
+      'Această rundă de verificare a atins 60 de secunde. Rezultatele sunt păstrate; verifică din nou pentru a procesa întâi elementele neîncercate.';
+
+  @override
+  String get servicePreviewRoundLimit =>
+      'Această rundă de previzualizare a atins 30 de secunde. Rezultatele sunt păstrate; continuă pentru a procesa întâi fotografiile neîncercate.';
+
+  @override
+  String get serviceReadTimeout =>
+      'Unele citiri au expirat. Rezultatele actuale sunt păstrate; poți continua scanarea.';
+
+  @override
+  String get serviceReadInterrupted =>
+      'Unele citiri ale bibliotecii au fost întrerupte. Rezultatele actuale sunt păstrate; poți continua scanarea.';
+
+  @override
+  String get serviceVerifyingOriginals => 'Verificarea originalelor locale';
+
+  @override
+  String get serviceGroupingSimilar =>
+      'Gruparea fotografiilor posibil similare vizual';
+
+  @override
+  String get serviceQualityLowDetail =>
+      'Previzualizarea are prea puține detalii pentru o recomandare privind calitatea';
+
+  @override
+  String get serviceQualityDecodeFailed =>
+      'Previzualizarea nu a putut fi decodată; calitatea nu a fost evaluată';
+
+  @override
+  String get serviceQualityLowInformation =>
+      'Informații insuficiente în imagine pentru o recomandare privind calitatea';
+
+  @override
+  String get serviceQualityClearEdges =>
+      'Contururi mai clare în previzualizare';
+
+  @override
+  String get serviceQualityLessDetail =>
+      'Mai puține detalii ale contururilor în previzualizare';
+
+  @override
+  String get serviceQualityDark => 'Imaginea pare întunecată';
+
+  @override
+  String get serviceQualityBright => 'Imaginea pare luminoasă';
+
+  @override
+  String get serviceQualityBalanced => 'Luminozitate generală echilibrată';
+
+  @override
+  String get serviceKeepExact =>
+      'Resursele originale și cele editate sunt identice. Copie recomandată pentru păstrare.';
+
+  @override
+  String get serviceKeepHigherResolution =>
+      'Rezoluție mai mare în acest grup. Recomandată pentru păstrare; verifică conținutul fotografiei.';
+
+  @override
+  String get serviceVideoMissing =>
+      'Videoclipul nu a fost găsit. Scanează din nou.';
+
+  @override
+  String get serviceVideoCloud =>
+      'Videoclipul este în iCloud. Descarcă originalul în Poze și încearcă din nou.';
+
+  @override
+  String get serviceVideoUnreadable => 'Acest videoclip nu poate fi citit.';
+
+  @override
+  String get serviceVideoPreviousBusy =>
+      'Comprimarea anterioară încă se încheie. Încearcă din nou în scurt timp.';
+
+  @override
+  String get serviceVideoTemporaryUnavailable =>
+      'Stocarea temporară pentru videoclip nu a putut fi pregătită.';
+
+  @override
+  String get serviceVideoUnsupported =>
+      'Comprimarea video nu este disponibilă pe acest dispozitiv.';
+
+  @override
+  String get serviceVideoOutputInvalid =>
+      'Locația de ieșire nu este validă. Originalul este păstrat.';
+
+  @override
+  String get serviceVideoSaveUnknown =>
+      'Copia salvată nu a putut fi confirmată. Verifică Poze înainte să încerci din nou.';
+
+  @override
+  String get serviceVideoCancelled => 'Comprimare anulată.';
+
+  @override
+  String get serviceVideoOperationBusy =>
+      'Încheie mai întâi operația video curentă.';
+
+  @override
+  String get serviceVideoEmpty =>
+      'Originalul este gol și nu poate fi comprimat.';
+
+  @override
+  String get serviceVideoEncodeFailed =>
+      'Comprimarea nu s-a finalizat. Originalul este păstrat.';
+
+  @override
+  String get serviceVideoNoCopy =>
+      'Comprimarea nu a creat o copie separată. Originalul este păstrat.';
+
+  @override
+  String get serviceVideoNotSmaller =>
+      'Videoclipul comprimat nu este mai mic. Originalul este păstrat.';
+
+  @override
+  String get serviceVideoDurationMismatch =>
+      'Durata videoclipului comprimat nu corespunde. Originalul este păstrat.';
+
+  @override
+  String get serviceVideoValidationFailed =>
+      'Videoclipul nu a putut fi verificat. Originalul este păstrat.';
+
+  @override
+  String get serviceVideoPreviewFirst =>
+      'Finalizează comprimarea și verifică întâi previzualizarea.';
+
+  @override
+  String get serviceVideoSaveFailed =>
+      'Copia nu a putut fi salvată. Originalul este păstrat. Încearcă din nou.';
+
+  @override
+  String get serviceVideoGenericFailed =>
+      'Operația nu s-a finalizat. Originalul este păstrat. Verifică accesul la fotografii și spațiul liber, apoi încearcă din nou.';
+
+  @override
+  String get serviceOperationFailed =>
+      'Această operație nu a putut fi finalizată. Încearcă din nou.';
+
+  @override
+  String serviceIndexReadCount(int read, int total) {
+    return 'S-au citit $read / $total elemente accesibile.';
+  }
+
+  @override
+  String servicePhotosPending(int count) {
+    return 'Fotografii care mai necesită analiză vizuală: $count. Continuă pentru a procesa întâi fotografiile neîncercate. Originalele din cloud nu sunt descărcate automat.';
+  }
+
+  @override
+  String serviceReadingPreviews(int count) {
+    return 'Citirea previzualizărilor locale ($count)';
+  }
+
+  @override
+  String serviceAnalyzingPreviews(int count) {
+    return 'Analiza previzualizărilor locale ($count)';
+  }
+
+  @override
+  String serviceQualitySummary(String reasons) {
+    return '$reasons; doar recomandări orientative';
+  }
+}

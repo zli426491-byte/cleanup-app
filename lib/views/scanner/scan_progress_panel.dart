@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:cleanup_app/l10n/l10n.dart';
 
 import '../../services/photo_scanner_service.dart';
 import '../../utils/app_theme.dart';
@@ -58,10 +59,10 @@ class ScanProgressPanel extends StatelessWidget {
         children: [
           Text(
             indexing
-                ? '讀取相簿目錄'
+                ? context.l10n.scanIndexingTitle
                 : verifying
-                ? '驗證原始素材，確認真重複'
-                : '分析本機照片畫面',
+                ? context.l10n.scanVerifyingTitle
+                : context.l10n.scanAnalyzingTitle,
             style: AppTheme.body.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
@@ -71,39 +72,56 @@ class ScanProgressPanel extends StatelessWidget {
             backgroundColor: AppTheme.primaryLight,
           ),
           const SizedBox(height: 10),
-          Text('已讀取 $indexed / ${total ?? '確認中'} 個項目'),
-          Text('照片畫面已處理 $attempted / $totalPhotos 張'),
-          if (verifying) Text('原始素材已處理 $attemptedResources / $indexed 個項目'),
+          Text(
+            context.l10n.scanIndexedCount(
+              indexed,
+              total?.toString() ?? context.l10n.scanCountConfirming,
+            ),
+          ),
+          Text(context.l10n.scanPreviewAttemptCount(attempted, totalPhotos)),
+          if (verifying)
+            Text(
+              context.l10n.scanOriginalAttemptCount(
+                attemptedResources,
+                indexed,
+              ),
+            ),
           Wrap(
             spacing: 16,
             runSpacing: 6,
             children: [
-              Text('視覺分析成功 $visual 個'),
-              Text('原始素材已驗證 $verified 個'),
-              Text('待下載 ${scanner.cloudPendingCount} 個'),
-              Text('本階段尚未處理 ${math.max(0, (denominator ?? 0) - numerator)} 個'),
+              Text(context.l10n.scanVisualSuccessCount(visual)),
+              Text(context.l10n.scanOriginalVerifiedCount(verified)),
+              Text(
+                context.l10n.scanCloudPendingCount(scanner.cloudPendingCount),
+              ),
+              Text(
+                context.l10n.scanStageRemainingCount(
+                  math.max(0, (denominator ?? 0) - numerator),
+                ),
+              ),
             ],
           ),
           if (scanner.currentOperation != null) ...[
             const SizedBox(height: 8),
             Text(
-              '${scanner.currentOperation} · 已等待 ${scanner.currentWaitSeconds} 秒',
+              context.l10n.scanOperationWait(
+                context.localizeServiceMessage(scanner.currentOperation!),
+                scanner.currentWaitSeconds,
+              ),
               key: const ValueKey('current-scan-operation'),
               style: AppTheme.caption,
             ),
           ],
           if (scanner.currentWaitSeconds >= 10)
-            const Text('此項目讀取較慢，可先取消並保留進度，稍後續掃。', style: AppTheme.caption),
+            Text(context.l10n.scanSlowOperationHint, style: AppTheme.caption),
           if (!compact) ...[
             const SizedBox(height: 8),
-            const Text(
-              '已讀取的照片與截圖可先查看。待下載或未成功分析的項目不會被當成真重複。',
-              style: AppTheme.caption,
-            ),
+            Text(context.l10n.scanProgressPreviewHint, style: AppTheme.caption),
             TextButton.icon(
               onPressed: scanner.isScanning ? scanner.cancelScan : null,
               icon: const Icon(Icons.stop_circle_outlined),
-              label: const Text('取消掃描並保留進度'),
+              label: Text(context.l10n.scanCancelKeepProgress),
             ),
           ],
         ],

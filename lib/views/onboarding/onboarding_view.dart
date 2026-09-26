@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cleanup_app/l10n/l10n.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import '../../analytics/analytics_manager.dart';
 import '../../utils/app_theme.dart';
@@ -18,34 +19,34 @@ class _OnboardingViewState extends State<OnboardingView>
   bool _isCompleting = false;
   late AnimationController _pulseController;
 
-  static const _pages = [
+  List<_PageData> get _pages => [
     _PageData(
       Icons.auto_awesome_rounded,
-      '智慧清理',
-      '掃描你允許存取的照片與影片\n先預覽，再決定保留或刪除',
-      Color(0xFF4F6EF7),
-      Color(0xFF7B93FF),
+      context.l10n.onboardingSmartTitle,
+      context.l10n.onboardingSmartSubtitle,
+      const Color(0xFF4F6EF7),
+      const Color(0xFF7B93FF),
     ),
     _PageData(
       Icons.photo_library_rounded,
-      '照片整理',
-      '依內容查看重複與相似照片\n保留建議仍需由你逐張確認',
-      Color(0xFFFFAA33),
-      Color(0xFFFFD700),
+      context.l10n.onboardingPhotosTitle,
+      context.l10n.onboardingPhotosSubtitle,
+      const Color(0xFFFFAA33),
+      const Color(0xFFFFD700),
     ),
     _PageData(
       Icons.swipe_rounded,
-      '滑動整理',
-      '滑動選擇保留或刪除\n整理完成後統一確認',
-      Color(0xFF00D68F),
-      Color(0xFF00F5A0),
+      context.l10n.onboardingSwipeTitle,
+      context.l10n.onboardingSwipeSubtitle,
+      const Color(0xFF00D68F),
+      const Color(0xFF00F5A0),
     ),
     _PageData(
       Icons.check_circle_outline_rounded,
-      '由你決定',
-      '掃描與照片預覽免費使用\n刪除與影片壓縮需 Pro，原片不會自動刪除',
-      Color(0xFF9D6AFF),
-      Color(0xFFC084FC),
+      context.l10n.onboardingChoiceTitle,
+      context.l10n.onboardingChoiceSubtitle,
+      const Color(0xFF9D6AFF),
+      const Color(0xFFC084FC),
     ),
   ];
 
@@ -127,28 +128,36 @@ class _OnboardingViewState extends State<OnboardingView>
                   child: Row(
                     children: [
                       // Step indicator
-                      Text(
-                        '${_currentPage + 1}/${_pages.length}',
-                        style: const TextStyle(
-                          color: AppTheme.textMuted,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                      Flexible(
+                        child: Text(
+                          context.l10n.onboardingStep(
+                            _currentPage + 1,
+                            _pages.length,
+                          ),
+                          style: const TextStyle(
+                            color: AppTheme.textMuted,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                       const Spacer(),
                       if (_currentPage < _pages.length - 1)
-                        GestureDetector(
-                          onTap: () => _controller.animateToPage(
-                            _pages.length - 1,
-                            duration: const Duration(milliseconds: 400),
-                            curve: Curves.easeOut,
-                          ),
-                          child: const Text(
-                            '跳過',
-                            style: TextStyle(
-                              color: AppTheme.textMuted,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                        Flexible(
+                          child: GestureDetector(
+                            onTap: () => _controller.animateToPage(
+                              _pages.length - 1,
+                              duration: const Duration(milliseconds: 400),
+                              curve: Curves.easeOut,
+                            ),
+                            child: Text(
+                              context.l10n.onboardingSkip,
+                              textAlign: TextAlign.end,
+                              style: const TextStyle(
+                                color: AppTheme.textMuted,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
@@ -271,6 +280,7 @@ class _OnboardingViewState extends State<OnboardingView>
                 const SizedBox(height: 48),
                 Text(
                   page.title,
+                  textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 30,
                     fontWeight: FontWeight.w800,
@@ -301,12 +311,12 @@ class _OnboardingViewState extends State<OnboardingView>
   Widget _buildButton(_PageData page) {
     return Container(
       width: double.infinity,
-      height: 56,
+      constraints: const BoxConstraints(minHeight: 56),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [page.c1, page.c2],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
+          begin: AlignmentDirectional.centerStart,
+          end: AlignmentDirectional.centerEnd,
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
@@ -322,21 +332,26 @@ class _OnboardingViewState extends State<OnboardingView>
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: _isCompleting ? null : _onNext,
-          child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  _isCompleting
-                      ? '正在準備…'
-                      : _currentPage < _pages.length - 1
-                      ? '繼續'
-                      : '開始使用',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
+                Flexible(
+                  child: Text(
+                    _isCompleting
+                        ? context.l10n.onboardingPreparing
+                        : _currentPage < _pages.length - 1
+                        ? context.l10n.onboardingContinue
+                        : context.l10n.onboardingGetStarted,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 const SizedBox(width: 8),

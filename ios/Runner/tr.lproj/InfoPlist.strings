@@ -1,0 +1,6 @@
+/* Generated from lib/l10n/app_*.arb by scripts/check_localizations.py. */
+"CFBundleDisplayName" = "Temizlik Ustası";
+"NSPhotoLibraryUsageDescription" = "Önizleme, düzenleme ve silme onayı için izin verdiğiniz fotoğraf ve videolara erişilir.";
+"NSPhotoLibraryAddUsageDescription" = "Onayınızla sıkıştırılmış video kopyası Fotoğraflar'a kaydedilir. Orijinal korunur.";
+"NSContactsUsageDescription" = "Yinelenen iletişim bilgilerini düzenlemenize yardımcı olmak için kişilerinize erişilir.";
+"NSUserTrackingUsageDescription" = "Deneyiminizi kişiselleştirmek ve hizmeti geliştirmek için takibe izin verin.";

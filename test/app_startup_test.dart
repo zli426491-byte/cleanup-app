@@ -20,6 +20,12 @@ class _DelayedSubscriptionManager extends SubscriptionManager {
 }
 
 void main() {
+  final binding = TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() {
+    binding.platformDispatcher.localesTestValue = const [Locale('zh', 'TW')];
+  });
+  tearDown(binding.platformDispatcher.clearLocalesTestValue);
+
   testWidgets('dark system appearance keeps the supported light color scheme', (
     tester,
   ) async {

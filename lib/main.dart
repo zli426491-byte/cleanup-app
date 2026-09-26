@@ -13,11 +13,14 @@ import 'analytics/analytics_manager.dart';
 import 'views/onboarding/onboarding_view.dart';
 import 'views/home/main_tab_view.dart';
 import 'utils/app_theme.dart';
+import 'l10n/app_localizations.dart';
+import 'l10n/locale_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AnalyticsManager.instance.configure();
   final prefs = await SharedPreferences.getInstance();
+  final localeController = await LocaleController.load(prefs);
   final hasCompletedOnboarding =
       prefs.getBool('hasCompletedOnboarding') ?? false;
 
@@ -26,6 +29,7 @@ void main() async {
     hasCompletedOnboarding: hasCompletedOnboarding,
     subscriptionManager: subscriptionManager,
     isIos: Platform.isIOS,
+    localeController: localeController,
   );
 }
 
@@ -34,11 +38,13 @@ void launchCleanupApp({
   required bool hasCompletedOnboarding,
   required SubscriptionManager subscriptionManager,
   required bool isIos,
+  LocaleController? localeController,
 }) {
   runApp(
     CleanupApp(
       hasCompletedOnboarding: hasCompletedOnboarding,
       subscriptionManager: subscriptionManager,
+      localeController: localeController,
     ),
   );
   unawaited(_initializeSubscriptions(subscriptionManager, isIos: isIos));
@@ -58,30 +64,41 @@ Future<void> _initializeSubscriptions(
 class CleanupApp extends StatelessWidget {
   final bool hasCompletedOnboarding;
   final SubscriptionManager subscriptionManager;
+  final LocaleController? localeController;
   const CleanupApp({
     super.key,
     required this.hasCompletedOnboarding,
     required this.subscriptionManager,
+    this.localeController,
   });
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(
+          create: (_) => localeController ?? LocaleController(),
+        ),
         ChangeNotifierProvider.value(value: subscriptionManager),
         ChangeNotifierProvider(create: (_) => PhotoScannerService()),
         ChangeNotifierProvider(create: (_) => ContactsCleanupService()),
         ChangeNotifierProvider(create: (_) => SecretSpaceService()),
       ],
-      child: MaterialApp(
-        title: 'Cleanup',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.light,
-        home: hasCompletedOnboarding
-            ? const MainTabView()
-            : const OnboardingView(),
+      child: Consumer<LocaleController>(
+        builder: (context, languages, _) => MaterialApp(
+          onGenerateTitle: (context) => AppLocalizations.of(context).appName,
+          locale: languages.locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: LocaleController.supportedLocales,
+          localeListResolutionCallback: LocaleController.resolve,
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: ThemeMode.light,
+          home: hasCompletedOnboarding
+              ? const MainTabView()
+              : const OnboardingView(),
+        ),
       ),
     );
   }

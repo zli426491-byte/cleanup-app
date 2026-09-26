@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:cleanup_app/l10n/l10n.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
@@ -61,6 +62,7 @@ class _PaywallViewState extends State<PaywallView> {
         actions: [
           IconButton(
             icon: const Icon(Icons.close),
+            tooltip: context.l10n.paywallClose,
             onPressed: () => _dismiss(context),
           ),
         ],
@@ -81,28 +83,33 @@ class _PaywallViewState extends State<PaywallView> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Cleanup Pro',
+              Text(
+                context.l10n.paywallTitle,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               if (kDebugMode && _buildNumber != null) ...[
                 const SizedBox(height: 4),
                 Text(
-                  'Build $_buildNumber',
+                  context.l10n.paywallBuild(_buildNumber!),
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.grey[500], fontSize: 12),
                 ),
               ],
               const SizedBox(height: 6),
               Text(
-                '解鎖照片與影片整理，預覽後選擇要刪除的項目。',
+                context.l10n.paywallDescription,
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey[600]),
               ),
               const SizedBox(height: 24),
               if (sub.statusMessage.isNotEmpty) ...[
-                _StatusBanner(message: sub.statusMessage),
+                _StatusBanner(
+                  message: context.localizeServiceMessage(sub.statusMessage),
+                ),
                 const SizedBox(height: 16),
               ],
               ..._features.map(
@@ -128,7 +135,7 @@ class _PaywallViewState extends State<PaywallView> {
                 TextButton.icon(
                   onPressed: sub.isLoading ? null : () => sub.retry(),
                   icon: const Icon(Icons.refresh),
-                  label: const Text('重新載入方案'),
+                  label: Text(context.l10n.paywallReloadPlans),
                 ),
               ] else
                 ...plans.map(
@@ -152,12 +159,14 @@ class _PaywallViewState extends State<PaywallView> {
               _PurchaseButton(
                 isEnabled: canPurchase,
                 isLoading: sub.isLoading || _isPurchasing,
-                label: sub.isPlaceholder ? '訂閱尚未設定' : '繼續',
+                label: sub.isPlaceholder
+                    ? context.l10n.paywallNotConfigured
+                    : context.l10n.paywallContinue,
                 onTap: () => _purchase(sub),
               ),
               const SizedBox(height: 16),
               Text(
-                '購買會透過 App Store 完成，訂閱可在 Apple ID 設定中管理或取消。',
+                context.l10n.paywallStoreNotice,
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey[500], fontSize: 12),
               ),
@@ -170,17 +179,26 @@ class _PaywallViewState extends State<PaywallView> {
                     onPressed: sub.isPlaceholder || sub.isLoading
                         ? null
                         : () => _restore(sub),
-                    child: const Text('恢復購買', style: TextStyle(fontSize: 12)),
+                    child: Text(
+                      context.l10n.paywallRestorePurchases,
+                      style: const TextStyle(fontSize: 12),
+                    ),
                   ),
                   TextButton(
                     onPressed: () =>
                         launchUrl(Uri.parse(AppConstants.privacyPolicyUrl)),
-                    child: const Text('隱私權政策', style: TextStyle(fontSize: 12)),
+                    child: Text(
+                      context.l10n.paywallPrivacyPolicy,
+                      style: const TextStyle(fontSize: 12),
+                    ),
                   ),
                   TextButton(
                     onPressed: () =>
                         launchUrl(Uri.parse(AppConstants.termsUrl)),
-                    child: const Text('使用條款', style: TextStyle(fontSize: 12)),
+                    child: Text(
+                      context.l10n.paywallTerms,
+                      style: const TextStyle(fontSize: 12),
+                    ),
                   ),
                 ],
               ),
@@ -236,7 +254,9 @@ class _PaywallViewState extends State<PaywallView> {
       _dismiss(context);
     } else {
       _showMessage(
-        sub.statusMessage.isNotEmpty ? sub.statusMessage : '購買未完成，請稍後再試。',
+        sub.statusMessage.isNotEmpty
+            ? context.localizeServiceMessage(sub.statusMessage)
+            : context.l10n.paywallPurchaseIncomplete,
       );
     }
   }
@@ -246,11 +266,13 @@ class _PaywallViewState extends State<PaywallView> {
     if (!mounted) return;
 
     if (restored) {
-      _showMessage('已恢復 Pro 權限。');
+      _showMessage(context.l10n.paywallRestored);
       _dismiss(context);
     } else {
       _showMessage(
-        sub.statusMessage.isNotEmpty ? sub.statusMessage : '找不到可恢復的購買紀錄。',
+        sub.statusMessage.isNotEmpty
+            ? context.localizeServiceMessage(sub.statusMessage)
+            : context.l10n.paywallRestoreNotFound,
       );
     }
   }
@@ -308,26 +330,34 @@ class _PaywallViewState extends State<PaywallView> {
     };
   }
 
-  static String _titleFor(_PlanOption plan) {
+  String _titleFor(_PlanOption plan) {
     return switch (plan.product.identifier) {
-      AppConstants.weeklyProductId => '週訂閱',
-      AppConstants.yearlyProductId => '年訂閱',
+      AppConstants.weeklyProductId => context.l10n.paywallWeeklyPlan,
+      AppConstants.yearlyProductId => context.l10n.paywallYearlyPlan,
       _ => plan.product.title,
     };
   }
 
-  static String _subtitleFor(_PlanOption plan) {
+  String _subtitleFor(_PlanOption plan) {
     return switch (plan.product.identifier) {
-      AppConstants.yearlyProductId => '全年整理照片與影片',
-      AppConstants.weeklyProductId => '短期整理相簿時使用',
-      _ => plan.product.identifier,
+      AppConstants.yearlyProductId => context.l10n.paywallYearlySubtitle,
+      AppConstants.weeklyProductId => context.l10n.paywallWeeklySubtitle,
+      _ => context.l10n.paywallDescription,
     };
   }
 
-  static const _features = [
-    _PaywallFeature(Icons.copy, '重複與相似照片分組、逐張確認', AppTheme.danger),
-    _PaywallFeature(Icons.compress, '影片壓縮、預覽與另存副本', AppTheme.warning),
-    _PaywallFeature(Icons.swipe, '滑動式快速清理體驗', Colors.teal),
+  List<_PaywallFeature> get _features => [
+    _PaywallFeature(
+      Icons.copy,
+      context.l10n.paywallPhotoFeature,
+      AppTheme.danger,
+    ),
+    _PaywallFeature(
+      Icons.compress,
+      context.l10n.paywallVideoFeature,
+      AppTheme.warning,
+    ),
+    _PaywallFeature(Icons.swipe, context.l10n.paywallSwipeFeature, Colors.teal),
   ];
 }
 
@@ -396,10 +426,10 @@ class _EmptyPlans extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.withValues(alpha: 0.18)),
       ),
-      child: const Text(
-        '目前無法載入訂閱方案，請確認網路後重新載入。',
+      child: Text(
+        context.l10n.paywallPlansUnavailable,
         textAlign: TextAlign.center,
-        style: TextStyle(color: AppTheme.textSecondary),
+        style: const TextStyle(color: AppTheme.textSecondary),
       ),
     );
   }
@@ -434,7 +464,7 @@ class _PurchaseButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             onTap: isEnabled ? onTap : null,
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: isLoading
                   ? const Center(
                       child: SizedBox(
@@ -525,9 +555,9 @@ class _PlanCard extends StatelessWidget {
                             color: AppTheme.warning,
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: const Text(
-                            '最佳價值',
-                            style: TextStyle(
+                          child: Text(
+                            context.l10n.paywallBestValue,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 9,
                               fontWeight: FontWeight.bold,
@@ -544,13 +574,16 @@ class _PlanCard extends StatelessWidget {
                       fontSize: 12,
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  Text(
+                    price,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              price,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ],
         ),

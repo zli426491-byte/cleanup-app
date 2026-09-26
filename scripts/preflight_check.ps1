@@ -6,6 +6,10 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
+Write-Host "== Localization coverage and iOS resources =="
+python scripts/check_localizations.py
+if ($LASTEXITCODE -ne 0) { throw "Localization validation failed ($LASTEXITCODE)" }
+
 Write-Host "== Flutter analyze =="
 & $Flutter analyze
 if ($LASTEXITCODE -ne 0) { throw "Flutter analyze failed ($LASTEXITCODE)" }

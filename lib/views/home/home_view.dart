@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cleanup_app/l10n/l10n.dart';
 import '../../services/photo_scanner_service.dart';
 import '../../services/subscription_manager.dart';
 import '../../models/storage_info.dart';
@@ -66,7 +67,7 @@ class _HomeViewState extends State<HomeView>
                 _buildStorageCard(_storage!)
               else
                 Text(
-                  '裝置容量請至 iPhone 設定查看；此處整理可存取的照片與影片。',
+                  context.l10n.homeStorageUnavailable,
                   style: AppTheme.caption,
                 ),
               const SizedBox(height: AppTheme.s16),
@@ -79,11 +80,11 @@ class _HomeViewState extends State<HomeView>
                   children: [
                     TextButton(
                       onPressed: () => _openReview('photos'),
-                      child: const Text('查看已讀取照片'),
+                      child: Text(context.l10n.homeViewIndexedPhotos),
                     ),
                     TextButton(
                       onPressed: () => _openReview('screenshots'),
-                      child: const Text('查看已讀取截圖'),
+                      child: Text(context.l10n.homeViewIndexedScreenshots),
                     ),
                   ],
                 ),
@@ -97,11 +98,11 @@ class _HomeViewState extends State<HomeView>
                 _buildResults(scanner),
               ],
               const SizedBox(height: AppTheme.s24),
-              _buildSectionHeader('清理工具'),
+              _buildSectionHeader(context.l10n.homeCleanupTools),
               const SizedBox(height: AppTheme.s10),
               _buildToolList(scanner),
               const SizedBox(height: AppTheme.s16),
-              _buildSectionHeader('快速操作'),
+              _buildSectionHeader(context.l10n.homeQuickActions),
               const SizedBox(height: AppTheme.s10),
               _buildQuickActions(),
             ],
@@ -118,10 +119,10 @@ class _HomeViewState extends State<HomeView>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('清理大師', style: AppTheme.heading1),
+            Text(context.l10n.homeAppName, style: AppTheme.heading1),
             const SizedBox(height: 2),
             Text(
-              '先預覽，再整理照片與影片',
+              context.l10n.homeSubtitle,
               style: AppTheme.caption.copyWith(color: AppTheme.textMuted),
             ),
           ],
@@ -144,7 +145,7 @@ class _HomeViewState extends State<HomeView>
               ),
               const SizedBox(width: 3),
               Text(
-                'PRO',
+                context.l10n.homeProBadge,
                 style: AppTheme.label.copyWith(
                   color: AppTheme.primary,
                   fontSize: 10,
@@ -189,7 +190,7 @@ class _HomeViewState extends State<HomeView>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '${(pct * 100).toInt()}%',
+                          context.l10n.homeUsedPercent((pct * 100).toInt()),
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
@@ -197,7 +198,7 @@ class _HomeViewState extends State<HomeView>
                           ),
                         ),
                         Text(
-                          '已使用',
+                          context.l10n.homeStorageUsed,
                           style: AppTheme.small.copyWith(fontSize: 10),
                         ),
                       ],
@@ -220,15 +221,19 @@ class _HomeViewState extends State<HomeView>
                       ),
                     ),
                     Text(
-                      '共 ${info.totalSpaceFormatted}${info.estimateLabel}',
+                      context.l10n.homeStorageTotal(info.totalSpaceFormatted),
                       style: AppTheme.caption,
                     ),
                     const SizedBox(height: AppTheme.s12),
-                    Row(
+                    Wrap(
+                      spacing: AppTheme.s12,
+                      runSpacing: 4,
                       children: [
-                        _legend(ringColor, '已用'),
-                        const SizedBox(width: AppTheme.s12),
-                        _legend(AppTheme.success, '可用'),
+                        _legend(ringColor, context.l10n.homeUsedLegend),
+                        _legend(
+                          AppTheme.success,
+                          context.l10n.homeAvailableLegend,
+                        ),
                       ],
                     ),
                   ],
@@ -259,9 +264,11 @@ class _HomeViewState extends State<HomeView>
                   ),
                 ),
                 const SizedBox(width: AppTheme.s8),
-                Text(
-                  '尚未掃描，點擊下方按鈕開始',
-                  style: AppTheme.small.copyWith(color: AppTheme.primary),
+                Expanded(
+                  child: Text(
+                    context.l10n.homeStartScanHint,
+                    style: AppTheme.small.copyWith(color: AppTheme.primary),
+                  ),
                 ),
               ],
             ),
@@ -272,6 +279,7 @@ class _HomeViewState extends State<HomeView>
   }
 
   Widget _legend(Color c, String t) => Row(
+    mainAxisSize: MainAxisSize.min,
     children: [
       Container(
         width: 8,
@@ -347,12 +355,12 @@ class _HomeViewState extends State<HomeView>
                     Flexible(
                       child: Text(
                         s.isScanning
-                            ? '掃描中...'
+                            ? context.l10n.homeScanning
                             : s.isDeleting
-                            ? '刪除中...'
+                            ? context.l10n.homeDeleting
                             : _shouldResume(s)
-                            ? '繼續掃描並保留進度'
-                            : '掃描全部可存取照片與影片',
+                            ? context.l10n.homeResumeScan
+                            : context.l10n.homeScanAll,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: Colors.white,
@@ -386,26 +394,38 @@ class _HomeViewState extends State<HomeView>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '已讀取 ${s.scanResult.allAssets.length} 個項目${s.availableAssetCount == null ? '' : '，可存取共 ${s.availableAssetCount} 個'}',
+          s.availableAssetCount == null
+              ? context.l10n.homeIndexedCount(s.scanResult.allAssets.length)
+              : context.l10n.homeIndexedCountWithTotal(
+                  s.scanResult.allAssets.length,
+                  s.availableAssetCount!,
+                ),
           style: AppTheme.body.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 6),
         Text(
-          s.scanNotice ??
-              '視覺分析成功 ${s.analyzedAssetCount} 個，原始素材已驗證 ${s.verifiedOriginalCount} 個。保留建議可撤回，刪除由你決定。',
+          s.scanNotice == null
+              ? context.l10n.homeAnalysisSummary(
+                  s.analyzedAssetCount,
+                  s.verifiedOriginalCount,
+                )
+              : context.localizeServiceMessage(s.scanNotice!),
           style: AppTheme.small,
         ),
         const SizedBox(height: 8),
-        TextButton(onPressed: _openReview, child: const Text('預覽並整理')),
+        TextButton(
+          onPressed: _openReview,
+          child: Text(context.l10n.homePreviewOrganize),
+        ),
         if (!s.isScanning && s.pendingResourceCount > 0)
           TextButton(
             onPressed: s.isDeleting ? null : s.verifyOriginals,
-            child: const Text('驗證本機原始素材：確認真重複與容量'),
+            child: Text(context.l10n.homeVerifyOriginals),
           ),
         if (!s.isScanning && _shouldResume(s))
           TextButton(
             onPressed: s.isDeleting ? null : s.resumeScan,
-            child: const Text('繼續掃描／重試待處理項目'),
+            child: Text(context.l10n.homeRetryPending),
           ),
       ],
     ),
@@ -430,12 +450,12 @@ class _HomeViewState extends State<HomeView>
       _Tool(
         'duplicates',
         Icons.copy_all_rounded,
-        '真重複照片',
+        context.l10n.homeExactDuplicates,
         _resourceCountLabel(
           duplicateCount,
           s.pendingResourceCount,
           hasScanned,
-          '張',
+          photos: true,
         ),
         duplicateCount > 0
             ? _Status.warn
@@ -447,16 +467,16 @@ class _HomeViewState extends State<HomeView>
       _Tool(
         'similar',
         Icons.photo_library_rounded,
-        '視覺相似照片',
+        context.l10n.homeSimilarPhotos,
         !hasScanned
-            ? '尚未掃描'
+            ? context.l10n.homeNotScanned
             : s.pendingAnalysisCount > 0
             ? ts > 0
-                  ? '$ts 張（部分結果）'
-                  : '尚待畫面分析'
+                  ? context.l10n.homePhotoCountPartial(ts)
+                  : context.l10n.homePendingAnalysis
             : ts > 0
-            ? '$ts 張'
-            : '已分析項目中未發現',
+            ? context.l10n.homePhotoCount(ts)
+            : context.l10n.homeNoneAnalyzed,
         ts > 0
             ? _Status.warn
             : hasScanned && s.pendingAnalysisCount == 0
@@ -467,7 +487,7 @@ class _HomeViewState extends State<HomeView>
       _Tool(
         'screenshots',
         Icons.screenshot_rounded,
-        '螢幕截圖',
+        context.l10n.homeScreenshots,
         _photoCountLabel(s.scanResult.screenshots.length, hasScanned),
         s.scanResult.screenshots.isNotEmpty
             ? _Status.minor
@@ -479,12 +499,12 @@ class _HomeViewState extends State<HomeView>
       _Tool(
         'largeFiles',
         Icons.photo_size_select_large_rounded,
-        '大型檔案',
+        context.l10n.homeLargeFiles,
         _resourceCountLabel(
           s.scanResult.largeFiles.length,
           s.pendingResourceCount,
           hasScanned,
-          '個',
+          photos: false,
         ),
         s.scanResult.largeFiles.isNotEmpty
             ? _Status.minor
@@ -508,7 +528,15 @@ class _HomeViewState extends State<HomeView>
           return Column(
             children: [
               _buildToolRow(t),
-              if (i < items.length - 1) const Divider(indent: 60),
+              if (i < items.length - 1)
+                Divider(
+                  indent: Directionality.of(context) == TextDirection.rtl
+                      ? 0
+                      : 60,
+                  endIndent: Directionality.of(context) == TextDirection.rtl
+                      ? 60
+                      : 0,
+                ),
             ],
           );
         }).toList(),
@@ -517,19 +545,29 @@ class _HomeViewState extends State<HomeView>
   }
 
   String _photoCountLabel(int count, bool hasScanned) {
-    if (!hasScanned) return '尚未掃描';
-    return count > 0 ? '$count 張' : '未發現';
+    if (!hasScanned) return context.l10n.homeNotScanned;
+    return count > 0
+        ? context.l10n.homePhotoCount(count)
+        : context.l10n.homeNoneFound;
   }
 
   String _resourceCountLabel(
     int count,
     int pending,
-    bool hasScanned,
-    String unit,
-  ) {
-    if (!hasScanned) return '尚未掃描';
-    if (pending > 0) return count > 0 ? '已確認 $count $unit，仍有待驗證' : '尚待原始素材驗證';
-    return count > 0 ? '$count $unit' : '已驗證項目中未發現';
+    bool hasScanned, {
+    required bool photos,
+  }) {
+    if (!hasScanned) return context.l10n.homeNotScanned;
+    if (pending > 0) {
+      if (count == 0) return context.l10n.homePendingVerification;
+      return photos
+          ? context.l10n.homeVerifiedPhotosPending(count)
+          : context.l10n.homeVerifiedItemsPending(count);
+    }
+    if (count == 0) return context.l10n.homeNoneVerified;
+    return photos
+        ? context.l10n.homePhotoCount(count)
+        : context.l10n.homeItemCount(count);
   }
 
   Widget _buildToolRow(_Tool t) {
@@ -568,7 +606,7 @@ class _HomeViewState extends State<HomeView>
               ),
             ),
             // Status tag
-            _buildStatusTag(t.status),
+            Flexible(child: _buildStatusTag(t.status)),
           ],
         ),
       ),
@@ -585,7 +623,7 @@ class _HomeViewState extends State<HomeView>
             borderRadius: BorderRadius.circular(AppTheme.r50),
           ),
           child: Text(
-            '待確認',
+            context.l10n.homeNeedsReview,
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
@@ -601,7 +639,7 @@ class _HomeViewState extends State<HomeView>
             borderRadius: BorderRadius.circular(AppTheme.r50),
           ),
           child: Text(
-            '可檢視',
+            context.l10n.homeCanReview,
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
@@ -617,7 +655,7 @@ class _HomeViewState extends State<HomeView>
             borderRadius: BorderRadius.circular(AppTheme.r50),
           ),
           child: Text(
-            '可檢視',
+            context.l10n.homeCanReview,
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
@@ -627,12 +665,12 @@ class _HomeViewState extends State<HomeView>
         );
       case _Status.scan:
         return Text(
-          '掃描 ›',
+          context.l10n.homeScanStatus,
           style: AppTheme.small.copyWith(color: AppTheme.textMuted),
         );
       case _Status.done:
         return Text(
-          '已完成 ✓',
+          context.l10n.homeDoneStatus,
           style: AppTheme.small.copyWith(color: AppTheme.textMuted),
         );
     }
@@ -649,8 +687,8 @@ class _HomeViewState extends State<HomeView>
       children: [
         _buildQRow(
           Icons.photo_library_rounded,
-          '預覽照片',
-          '選擇要保留的項目',
+          context.l10n.homePreviewPhotos,
+          context.l10n.homeChooseKeep,
           AppTheme.primary,
           onTap: _openReview,
         ),
@@ -697,7 +735,9 @@ class _HomeViewState extends State<HomeView>
             ),
           ),
           Icon(
-            Icons.chevron_right_rounded,
+            Directionality.of(context) == TextDirection.rtl
+                ? Icons.chevron_left_rounded
+                : Icons.chevron_right_rounded,
             color: AppTheme.textMuted,
             size: 18,
           ),

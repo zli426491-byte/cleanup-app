@@ -1,0 +1,6 @@
+/* Generated from lib/l10n/app_*.arb by scripts/check_localizations.py. */
+"CFBundleDisplayName" = "Мастер очистки";
+"NSPhotoLibraryUsageDescription" = "Доступ к разрешённым вами фото и видео для просмотра, упорядочивания и подтверждения удаления.";
+"NSPhotoLibraryAddUsageDescription" = "Сохранение сжатой копии видео в Фото после вашего подтверждения. Оригинал сохраняется.";
+"NSContactsUsageDescription" = "Доступ к контактам для упорядочивания повторяющихся контактных данных.";
+"NSUserTrackingUsageDescription" = "Разрешите отслеживание для персонализации и улучшения сервиса.";

@@ -1,0 +1,1098 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for English (`en`).
+class AppLocalizationsEn extends AppLocalizations {
+  AppLocalizationsEn([String locale = 'en']) : super(locale);
+
+  @override
+  String get onboardingSmartTitle => 'Smart cleanup';
+
+  @override
+  String get onboardingSmartSubtitle =>
+      'Scan photos and videos you allow access to\nPreview first, then choose what to keep or delete';
+
+  @override
+  String get onboardingPhotosTitle => 'Organize photos';
+
+  @override
+  String get onboardingPhotosSubtitle =>
+      'Compare duplicate and similar photos by content\nReview every suggested photo to keep';
+
+  @override
+  String get onboardingSwipeTitle => 'Swipe to organize';
+
+  @override
+  String get onboardingSwipeSubtitle =>
+      'Swipe to choose what to keep or delete\nConfirm all your choices when you finish';
+
+  @override
+  String get onboardingChoiceTitle => 'You decide';
+
+  @override
+  String get onboardingChoiceSubtitle =>
+      'Scanning and photo previews are free\nDeleting and video compression require Pro. Originals are never deleted automatically.';
+
+  @override
+  String get onboardingSkip => 'Skip';
+
+  @override
+  String get onboardingPreparing => 'Getting ready…';
+
+  @override
+  String get onboardingContinue => 'Continue';
+
+  @override
+  String get onboardingGetStarted => 'Get started';
+
+  @override
+  String get paywallTitle => 'Cleanup Pro';
+
+  @override
+  String get paywallClose => 'Close';
+
+  @override
+  String get paywallDescription =>
+      'Unlock photo and video cleanup. Preview items before choosing what to delete.';
+
+  @override
+  String get paywallReloadPlans => 'Reload plans';
+
+  @override
+  String get paywallNotConfigured => 'Subscriptions unavailable';
+
+  @override
+  String get paywallContinue => 'Continue';
+
+  @override
+  String get paywallStoreNotice =>
+      'Purchases are completed through the App Store. Manage or cancel subscriptions in your Apple ID settings.';
+
+  @override
+  String get paywallRestorePurchases => 'Restore purchases';
+
+  @override
+  String get paywallPrivacyPolicy => 'Privacy policy';
+
+  @override
+  String get paywallTerms => 'Terms of use';
+
+  @override
+  String get paywallPurchaseIncomplete =>
+      'Purchase not completed. Please try again later.';
+
+  @override
+  String get paywallRestored => 'Pro access restored.';
+
+  @override
+  String get paywallRestoreNotFound => 'No purchases found to restore.';
+
+  @override
+  String get paywallWeeklyPlan => 'Weekly subscription';
+
+  @override
+  String get paywallYearlyPlan => 'Yearly subscription';
+
+  @override
+  String get paywallYearlySubtitle =>
+      'Organize photos and videos throughout the year';
+
+  @override
+  String get paywallWeeklySubtitle => 'For a short photo cleanup session';
+
+  @override
+  String get paywallPhotoFeature =>
+      'Group duplicate and similar photos, then review each item';
+
+  @override
+  String get paywallVideoFeature =>
+      'Compress videos, preview them, and save copies';
+
+  @override
+  String get paywallSwipeFeature => 'Organize quickly with swipe gestures';
+
+  @override
+  String get paywallPlansUnavailable =>
+      'Subscription plans could not be loaded. Check your connection and reload.';
+
+  @override
+  String get paywallBestValue => 'Best value';
+
+  @override
+  String get videoTitle => 'Video compression';
+
+  @override
+  String get videoDescription =>
+      'Compression reduces quality and creates a new copy. Check the picture, sound, and orientation before saving to Photos. The original is kept.';
+
+  @override
+  String get videoProRequired =>
+      'This feature requires Pro. Return to the cleanup page to view plans.';
+
+  @override
+  String get videoSaving => 'Saving to Photos. Please wait until it finishes.';
+
+  @override
+  String get videoCancelCompression => 'Cancel compression';
+
+  @override
+  String get videoLoadingPreview => 'Loading video preview…';
+
+  @override
+  String get videoCreatePreview => 'Create a compressed preview';
+
+  @override
+  String get videoStorageNotice =>
+      'Saving a copy temporarily uses more storage. After deleting the original and emptying Recently Deleted, check the system for actual available space.';
+
+  @override
+  String get videoViewOriginal => 'View original';
+
+  @override
+  String get videoViewCopy => 'View compressed copy';
+
+  @override
+  String get videoSaved =>
+      'The copy was saved to Photos and the original was kept. Scan again from Home, then choose whether to delete the original.';
+
+  @override
+  String get videoConfirmSave => 'Confirm the copy and save to Photos';
+
+  @override
+  String get videoPreviewUnavailable =>
+      'The preview could not be played. Try again. The original is kept.';
+
+  @override
+  String get videoPlaybackUnavailable =>
+      'The video cannot play right now. Reload the preview.';
+
+  @override
+  String get videoOperationIncomplete =>
+      'The operation did not finish. The original is kept. Check Photos permission and available storage, then try again.';
+
+  @override
+  String get videoPauseOriginal => 'Original: Pause';
+
+  @override
+  String get videoPlayOriginal => 'Original: Play';
+
+  @override
+  String get videoPauseCopy => 'Compressed copy: Pause';
+
+  @override
+  String get videoPlayCopy => 'Compressed copy: Play';
+
+  @override
+  String onboardingStep(int current, int total) {
+    return '$current/$total';
+  }
+
+  @override
+  String paywallBuild(String build) {
+    return 'Build $build';
+  }
+
+  @override
+  String videoCompressionProgress(int percent) {
+    return 'Preparing / compressing video $percent%';
+  }
+
+  @override
+  String videoOriginalSize(String size) {
+    return 'Original: $size';
+  }
+
+  @override
+  String videoCopySize(String size) {
+    return 'Copy: $size';
+  }
+
+  @override
+  String videoSizeDifference(String size) {
+    return 'File size difference: $size';
+  }
+
+  @override
+  String videoSizeGb(String size) {
+    return '$size GB';
+  }
+
+  @override
+  String videoSizeMb(String size) {
+    return '$size MB';
+  }
+
+  @override
+  String get homeStorageUnavailable =>
+      'Check device storage in iPhone Settings. Here, you can organize accessible photos and videos.';
+
+  @override
+  String get homeViewIndexedPhotos => 'View photos read so far';
+
+  @override
+  String get homeViewIndexedScreenshots => 'View screenshots read so far';
+
+  @override
+  String get homeCleanupTools => 'Cleaning tools';
+
+  @override
+  String get homeQuickActions => 'Quick actions';
+
+  @override
+  String get homeAppName => 'Cleanup';
+
+  @override
+  String get homeSubtitle => 'Preview first, then organize photos and videos';
+
+  @override
+  String get homeProBadge => 'PRO';
+
+  @override
+  String get homeStorageUsed => 'Used';
+
+  @override
+  String get homeUsedLegend => 'Used';
+
+  @override
+  String get homeAvailableLegend => 'Available';
+
+  @override
+  String get homeStartScanHint => 'Not scanned yet. Tap below to start.';
+
+  @override
+  String get homeScanning => 'Scanning…';
+
+  @override
+  String get homeDeleting => 'Deleting…';
+
+  @override
+  String get homeResumeScan => 'Continue scanning and keep progress';
+
+  @override
+  String get homeScanAll => 'Scan all accessible photos and videos';
+
+  @override
+  String get homePreviewOrganize => 'Preview and organize';
+
+  @override
+  String get homeVerifyOriginals =>
+      'Verify local originals for exact duplicates and file sizes';
+
+  @override
+  String get homeRetryPending => 'Continue scanning / retry pending items';
+
+  @override
+  String get homeExactDuplicates => 'Exact duplicate photos';
+
+  @override
+  String get homeSimilarPhotos => 'Visually similar photos';
+
+  @override
+  String get homeNotScanned => 'Not scanned yet';
+
+  @override
+  String get homePendingAnalysis => 'Visual analysis pending';
+
+  @override
+  String get homeNoneAnalyzed => 'None found among analyzed items';
+
+  @override
+  String get homeScreenshots => 'Screenshots';
+
+  @override
+  String get homeLargeFiles => 'Large files';
+
+  @override
+  String get homeNoneFound => 'None found';
+
+  @override
+  String get homePendingVerification => 'Original verification pending';
+
+  @override
+  String get homeNoneVerified => 'None found among verified items';
+
+  @override
+  String get homeNeedsReview => 'Needs review';
+
+  @override
+  String get homeCanReview => 'Review';
+
+  @override
+  String get homeScanStatus => 'Scan';
+
+  @override
+  String get homeDoneStatus => 'Done ✓';
+
+  @override
+  String get homePreviewPhotos => 'Preview photos';
+
+  @override
+  String get homeChooseKeep => 'Choose what to keep';
+
+  @override
+  String get navHome => 'Home';
+
+  @override
+  String get navClean => 'Clean';
+
+  @override
+  String get navSettings => 'Settings';
+
+  @override
+  String get settingsTitle => 'Settings';
+
+  @override
+  String get settingsLoading => 'Loading…';
+
+  @override
+  String get settingsProPlan => 'Cleanup Pro';
+
+  @override
+  String get settingsFreePlan => 'Free plan';
+
+  @override
+  String get settingsUpgrade => 'Upgrade';
+
+  @override
+  String get settingsStorage => 'Storage';
+
+  @override
+  String get settingsStorageTotal => 'Total';
+
+  @override
+  String get settingsStorageUsed => 'Used';
+
+  @override
+  String get settingsStorageAvailable => 'Available';
+
+  @override
+  String get settingsGeneral => 'General';
+
+  @override
+  String get settingsProcessingSubscription => 'Processing subscription…';
+
+  @override
+  String get settingsRestorePurchases => 'Restore purchases';
+
+  @override
+  String get settingsRestoredPro => 'Pro subscription restored.';
+
+  @override
+  String get settingsPrivacyPolicy => 'Privacy policy';
+
+  @override
+  String get settingsTerms => 'Terms of use';
+
+  @override
+  String get settingsRateApp => 'Rate us';
+
+  @override
+  String get settingsAbout => 'About';
+
+  @override
+  String get settingsVersion => 'Version';
+
+  @override
+  String get settingsLanguage => 'Language';
+
+  @override
+  String get settingsChooseLanguage => 'Choose language';
+
+  @override
+  String get settingsSystemLanguage => 'Follow system language';
+
+  @override
+  String homeUsedPercent(int percent) {
+    return '$percent%';
+  }
+
+  @override
+  String homeStorageTotal(String size) {
+    return 'Total $size';
+  }
+
+  @override
+  String homeIndexedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items',
+      one: '1 item',
+    );
+    return 'Read $_temp0';
+  }
+
+  @override
+  String homeIndexedCountWithTotal(int count, int total) {
+    return 'Read $count of $total accessible items';
+  }
+
+  @override
+  String homeAnalysisSummary(int analyzed, int verified) {
+    return 'Visually analyzed: $analyzed. Originals verified: $verified. Retention suggestions are reversible; you decide what to delete.';
+  }
+
+  @override
+  String homePhotoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos',
+      one: '1 photo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homePhotoCountPartial(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos (partial results)',
+      one: '1 photo (partial results)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items',
+      one: '1 item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeVerifiedPhotosPending(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos verified; more pending',
+      one: '1 photo verified; more pending',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeVerifiedItemsPending(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items verified; more pending',
+      one: '1 item verified; more pending',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsLanguageSaveError =>
+      'Could not save the language. Please try again.';
+
+  @override
+  String get scanSmartTitle => 'Smart cleanup';
+
+  @override
+  String get scanCancelKeepProgress => 'Cancel scan and keep progress';
+
+  @override
+  String get scanSwipeCleanup => 'Swipe cleanup';
+
+  @override
+  String get scanSortFileSize => 'File size';
+
+  @override
+  String get scanSortNewest => 'Newest';
+
+  @override
+  String get scanStartAlbumTitle => 'Start scanning your library';
+
+  @override
+  String get scanIncompleteTitle => 'Scan incomplete';
+
+  @override
+  String get scanStartAlbumDescription =>
+      'Scan all accessible photos and videos. Original content verification and visual analysis help you review them before deciding.';
+
+  @override
+  String get scanContinue => 'Continue scan';
+
+  @override
+  String get scanStart => 'Start scan';
+
+  @override
+  String get scanPreviewWhileRunning =>
+      'You can preview photos and screenshots. Selection, deletion and video compression are paused during scanning.';
+
+  @override
+  String get scanExactDescription =>
+      'Exact duplicates include only items with verified original resources. Keep recommendations can be dismissed.';
+
+  @override
+  String get scanSimilarDescription =>
+      'Visual candidates appear as local previews are analyzed. Their content may differ; keep recommendations are only a guide.';
+
+  @override
+  String get scanLargeDescription =>
+      'Sorted by verified resource size. File size and storage actually recovered may differ; the system determines recovered space.';
+
+  @override
+  String get scanManualDeleteDescription =>
+      'Only items you manually select and confirm will be deleted.';
+
+  @override
+  String get scanVerifyOriginals =>
+      'Verify local originals: exact duplicates and size';
+
+  @override
+  String get scanResumePending => 'Continue scan / retry pending items';
+
+  @override
+  String get scanKeepReasonDefault =>
+      'This photo is a suggested item to keep in this group.';
+
+  @override
+  String get scanRestoreKeepSuggestion => 'Show keep recommendation again';
+
+  @override
+  String get scanDismissKeepSuggestion => 'Dismiss keep recommendation';
+
+  @override
+  String get scanKeepManualHint =>
+      'Recommendations never select items automatically. Tap a thumbnail to mark it for deletion.';
+
+  @override
+  String get scanEmptyUnverified =>
+      'Some original resources still need verification. Exact duplicates and large files cannot yet be determined. You can preview photos and screenshots.';
+
+  @override
+  String get scanEmptyVisualPending =>
+      'Some photo previews still need analysis. Visual candidates will appear progressively; you can preview photos and screenshots.';
+
+  @override
+  String get scanEmptyIndexing =>
+      'The library is still being indexed. This category will update as indexing progresses.';
+
+  @override
+  String get scanEmptyCategory =>
+      'No items in this category among the currently analyzed or verified items.';
+
+  @override
+  String get scanKeepBadge => 'Suggested keep';
+
+  @override
+  String get scanZoomPreview => 'Enlarge preview';
+
+  @override
+  String get scanCompressVideo => 'Compress this video';
+
+  @override
+  String get scanContentPending => 'Content analysis pending';
+
+  @override
+  String get scanBackToCompare => 'Back to comparison';
+
+  @override
+  String get scanConfirmDeleteTitle => 'Delete these selected items?';
+
+  @override
+  String get scanCancel => 'Cancel';
+
+  @override
+  String get scanNoItemsDeleted =>
+      'No items were deleted. The operation may have been canceled or failed.';
+
+  @override
+  String get scanConfirmDelete => 'Confirm deletion';
+
+  @override
+  String get scanCategoryPhotos => 'Photos';
+
+  @override
+  String get scanCategoryExact => 'Exact duplicates';
+
+  @override
+  String get scanCategorySimilar => 'Visual candidates';
+
+  @override
+  String get scanCategoryScreenshots => 'Screenshots';
+
+  @override
+  String get scanCategoryVideos => 'Videos';
+
+  @override
+  String get scanCategoryLarge => 'Large files';
+
+  @override
+  String scanExactGroupCount(int count) {
+    return 'Exact duplicates: $count photos';
+  }
+
+  @override
+  String scanSimilarGroupCount(int count) {
+    return 'Visual candidates: $count photos';
+  }
+
+  @override
+  String scanRecommendedKeep(String reason) {
+    return 'Suggested keep: $reason';
+  }
+
+  @override
+  String scanSelectedCount(int count) {
+    return 'Selected items: $count';
+  }
+
+  @override
+  String scanPreviewDeleteCount(int count) {
+    return 'Preview and delete $count items';
+  }
+
+  @override
+  String scanConfirmDeleteDescription(int count) {
+    return '$count items selected. Review your selection and keep recommendations before deleting. Recovered storage is determined by the system.';
+  }
+
+  @override
+  String scanItemsDeleted(int count) {
+    return 'Items deleted: $count.';
+  }
+
+  @override
+  String get scanIndexingTitle => 'Indexing photo library';
+
+  @override
+  String get scanVerifyingTitle => 'Verifying originals for exact duplicates';
+
+  @override
+  String get scanAnalyzingTitle => 'Analyzing local photo previews';
+
+  @override
+  String get scanSlowOperationHint =>
+      'This operation is taking longer. You can cancel, keep progress and continue later.';
+
+  @override
+  String get scanProgressPreviewHint =>
+      'You can view indexed photos and screenshots. Pending downloads or unsuccessful analyses are never treated as exact duplicates.';
+
+  @override
+  String get scanCountConfirming => 'Checking';
+
+  @override
+  String scanIndexedCount(int indexed, String total) {
+    return 'Indexed $indexed / $total items';
+  }
+
+  @override
+  String scanPreviewAttemptCount(int attempted, int total) {
+    return 'Photo previews processed: $attempted / $total';
+  }
+
+  @override
+  String scanOriginalAttemptCount(int attempted, int total) {
+    return 'Original resources processed: $attempted / $total';
+  }
+
+  @override
+  String scanVisualSuccessCount(int count) {
+    return 'Visual analyses completed: $count';
+  }
+
+  @override
+  String scanOriginalVerifiedCount(int count) {
+    return 'Originals verified: $count';
+  }
+
+  @override
+  String scanCloudPendingCount(int count) {
+    return 'Pending download: $count';
+  }
+
+  @override
+  String scanStageRemainingCount(int count) {
+    return 'Not yet processed in this stage: $count';
+  }
+
+  @override
+  String scanOperationWait(String operation, int seconds) {
+    return '$operation · Waiting $seconds seconds';
+  }
+
+  @override
+  String get swipeKeep => 'Keep';
+
+  @override
+  String get swipeDelete => 'Delete';
+
+  @override
+  String get swipeReviewComplete => 'Review complete!';
+
+  @override
+  String get swipeRecoveredSpaceHint =>
+      'Recovered storage is determined by the system.';
+
+  @override
+  String get swipeUndoChoice => 'Undo last choice';
+
+  @override
+  String get swipeBack => 'Back';
+
+  @override
+  String get swipeConfirmDeleteTitle =>
+      'Delete the photos marked for deletion?';
+
+  @override
+  String get swipeCancel => 'Cancel';
+
+  @override
+  String get swipeConfirmDelete => 'Confirm deletion';
+
+  @override
+  String get swipeNoPhotosDeleted =>
+      'No photos were deleted. The operation may have been canceled or failed.';
+
+  @override
+  String get swipeExitTitle => 'Leave this review?';
+
+  @override
+  String get swipeContinueReview => 'Continue review';
+
+  @override
+  String get swipeLeave => 'Leave';
+
+  @override
+  String get swipeSkipRemainingTitle => 'Skip remaining photos?';
+
+  @override
+  String get swipeDone => 'Done';
+
+  @override
+  String swipeDoneCount(int count) {
+    return 'Done ($count)';
+  }
+
+  @override
+  String swipeProgressCount(int current, int total) {
+    return '$current/$total';
+  }
+
+  @override
+  String swipeDeleteCount(int count) {
+    return 'Delete: $count';
+  }
+
+  @override
+  String swipeKeepCount(int count) {
+    return 'Keep: $count';
+  }
+
+  @override
+  String swipeReviewSummary(int deleteCount, int keepCount) {
+    return '$deleteCount photos to delete · $keepCount photos to keep';
+  }
+
+  @override
+  String swipeDeletePhotos(int count) {
+    return 'Delete $count photos';
+  }
+
+  @override
+  String swipeConfirmDeleteDescription(int count) {
+    return 'Delete $count reviewed photos. Make sure the items you wish to keep have been selected correctly.';
+  }
+
+  @override
+  String swipePartialDeleted(int count) {
+    return '$count photos deleted. Remaining photos have not been deleted.';
+  }
+
+  @override
+  String swipeExitDescription(int count) {
+    return 'You marked $count photos for deletion. Leaving will not delete them.';
+  }
+
+  @override
+  String swipeSkipRemainingDescription(int remaining, int deleteCount) {
+    return '$remaining photos are not reviewed. Finish reviewing and confirm the $deleteCount photos already marked for deletion?';
+  }
+
+  @override
+  String assetDimensions(int width, int height) {
+    return '$width × $height';
+  }
+
+  @override
+  String assetPreviewDetails(int width, int height, String size) {
+    return '$width × $height · $size';
+  }
+
+  @override
+  String get assetReloadPreview => 'Reload preview';
+
+  @override
+  String get assetSizeUnknown => 'Size unavailable';
+
+  @override
+  String assetSizeGigabytes(String value) {
+    return '$value GB';
+  }
+
+  @override
+  String assetSizeMegabytes(String value) {
+    return '$value MB';
+  }
+
+  @override
+  String assetSizeKilobytes(String value) {
+    return '$value KB';
+  }
+
+  @override
+  String assetSizeBytes(int count) {
+    return '$count bytes';
+  }
+
+  @override
+  String get appName => 'Cleanup Master';
+
+  @override
+  String get nativePhotoRead =>
+      'Access the photos and videos you allow so you can preview, organize, and confirm what to delete.';
+
+  @override
+  String get nativePhotoAdd =>
+      'Save a compressed video copy to Photos when you confirm. The original is kept.';
+
+  @override
+  String get nativeContacts =>
+      'Access your contacts to help organize duplicate contact details.';
+
+  @override
+  String get nativeTracking =>
+      'Allow tracking to personalize your experience and improve the service.';
+
+  @override
+  String get serviceSubscriptionsUnavailable =>
+      'Subscriptions are currently unavailable. Please try again later.';
+
+  @override
+  String get serviceSubscriptionInitFailed =>
+      'Unable to connect to the subscription service. Please try again later.';
+
+  @override
+  String get serviceNoPlans =>
+      'No subscription plans are available right now. Please try again later.';
+
+  @override
+  String get servicePlansLoadFailed =>
+      'Unable to load plans. Check your connection and try again.';
+
+  @override
+  String get servicePurchaseUnavailable =>
+      'Purchases are currently unavailable. Please try again later.';
+
+  @override
+  String get servicePurchaseFailed =>
+      'Purchase not completed. Please try again later.';
+
+  @override
+  String get serviceRestoreUnavailable =>
+      'Restoring purchases is currently unavailable. Please try again later.';
+
+  @override
+  String get serviceNoSubscription => 'No active Pro subscription was found.';
+
+  @override
+  String get serviceRestoreFailed =>
+      'Unable to restore purchases. Check your connection and try again.';
+
+  @override
+  String get servicePurchaseCancelled => 'Purchase cancelled.';
+
+  @override
+  String get serviceScanPaused =>
+      'Paused. Read and analyzed results are kept. You can continue scanning.';
+
+  @override
+  String get serviceLimitedLibrary =>
+      'Only the photos you allowed are included, not your entire library.';
+
+  @override
+  String get serviceNativeAnalysisUnavailable =>
+      'Original-file analysis is unavailable on this device. Sizes and exact duplicates are unverified.';
+
+  @override
+  String get serviceOriginalVerificationNeeded =>
+      'Verify local originals to confirm file sizes and exact duplicates. Large or cloud items may remain pending; unverified sizes are not estimated.';
+
+  @override
+  String get serviceReadingIndex => 'Reading library index';
+
+  @override
+  String get servicePhotoPermission =>
+      'Photo access is not allowed. Allow access in Settings and try again.';
+
+  @override
+  String get serviceOriginalRoundLimit =>
+      'This verification round reached 60 seconds. Results are kept; verify again to process untried items first.';
+
+  @override
+  String get servicePreviewRoundLimit =>
+      'This preview round reached 30 seconds. Results are kept; continue to process untried photos first.';
+
+  @override
+  String get serviceReadTimeout =>
+      'Some reads timed out. Current results are kept; you can continue scanning.';
+
+  @override
+  String get serviceReadInterrupted =>
+      'Some library reads were interrupted. Current results are kept; you can continue scanning.';
+
+  @override
+  String get serviceVerifyingOriginals => 'Verifying local originals';
+
+  @override
+  String get serviceGroupingSimilar => 'Grouping visually similar candidates';
+
+  @override
+  String get serviceQualityLowDetail =>
+      'Preview has too little detail for a quality recommendation';
+
+  @override
+  String get serviceQualityDecodeFailed =>
+      'Preview could not be decoded; quality was not evaluated';
+
+  @override
+  String get serviceQualityLowInformation =>
+      'Insufficient image information for a quality recommendation';
+
+  @override
+  String get serviceQualityClearEdges => 'Clearer preview edges';
+
+  @override
+  String get serviceQualityLessDetail => 'Less preview edge detail';
+
+  @override
+  String get serviceQualityDark => 'Image appears dark';
+
+  @override
+  String get serviceQualityBright => 'Image appears bright';
+
+  @override
+  String get serviceQualityBalanced => 'Balanced overall brightness';
+
+  @override
+  String get serviceKeepExact =>
+      'Original and edited resources match exactly. Suggested copy to keep.';
+
+  @override
+  String get serviceKeepHigherResolution =>
+      'Higher resolution within this group. Suggested to keep; check the photo content.';
+
+  @override
+  String get serviceVideoMissing => 'Video not found. Scan again.';
+
+  @override
+  String get serviceVideoCloud =>
+      'The video is in iCloud. Download the original in Photos and try again.';
+
+  @override
+  String get serviceVideoUnreadable => 'Unable to read this video.';
+
+  @override
+  String get serviceVideoPreviousBusy =>
+      'The previous compression is still ending. Try again shortly.';
+
+  @override
+  String get serviceVideoTemporaryUnavailable =>
+      'Unable to prepare temporary video storage.';
+
+  @override
+  String get serviceVideoUnsupported =>
+      'Video compression is unavailable on this device.';
+
+  @override
+  String get serviceVideoOutputInvalid =>
+      'The output location is invalid. The original is kept.';
+
+  @override
+  String get serviceVideoSaveUnknown =>
+      'Unable to confirm the saved copy. Check Photos before trying again.';
+
+  @override
+  String get serviceVideoCancelled => 'Compression cancelled.';
+
+  @override
+  String get serviceVideoOperationBusy =>
+      'Finish the current video operation first.';
+
+  @override
+  String get serviceVideoEmpty =>
+      'The original is empty and cannot be compressed.';
+
+  @override
+  String get serviceVideoEncodeFailed =>
+      'Compression did not finish. The original is kept.';
+
+  @override
+  String get serviceVideoNoCopy =>
+      'Compression did not create a separate copy. The original is kept.';
+
+  @override
+  String get serviceVideoNotSmaller =>
+      'The compressed video is not smaller. The original is kept.';
+
+  @override
+  String get serviceVideoDurationMismatch =>
+      'The compressed video duration does not match. The original is kept.';
+
+  @override
+  String get serviceVideoValidationFailed =>
+      'Unable to verify the video. The original is kept.';
+
+  @override
+  String get serviceVideoPreviewFirst =>
+      'Finish compression and review the preview first.';
+
+  @override
+  String get serviceVideoSaveFailed =>
+      'Unable to save the copy. The original is kept. Try again.';
+
+  @override
+  String get serviceVideoGenericFailed =>
+      'Operation not completed. The original is kept. Check photo access and free space, then try again.';
+
+  @override
+  String get serviceOperationFailed =>
+      'Unable to complete this operation. Please try again.';
+
+  @override
+  String serviceIndexReadCount(int read, int total) {
+    return 'Read $read / $total accessible items.';
+  }
+
+  @override
+  String servicePhotosPending(int count) {
+    return '$count photos still need visual analysis. Continue to process untried photos first. Cloud originals are not downloaded automatically.';
+  }
+
+  @override
+  String serviceReadingPreviews(int count) {
+    return 'Reading local previews ($count)';
+  }
+
+  @override
+  String serviceAnalyzingPreviews(int count) {
+    return 'Analyzing local previews ($count)';
+  }
+
+  @override
+  String serviceQualitySummary(String reasons) {
+    return '$reasons; suggested guidance only';
+  }
+}

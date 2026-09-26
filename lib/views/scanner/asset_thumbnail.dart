@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:cleanup_app/l10n/l10n.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 import '../../services/photo_scanner_service.dart';
@@ -89,7 +90,7 @@ class _AssetThumbnailState extends State<AssetThumbnail> {
 
   Widget _retryButton() => Center(
     child: IconButton(
-      tooltip: '重新載入預覽',
+      tooltip: context.l10n.assetReloadPreview,
       onPressed: _retry,
       icon: const Icon(Icons.refresh_rounded, color: Colors.grey),
     ),

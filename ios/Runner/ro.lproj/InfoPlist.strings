@@ -1,0 +1,6 @@
+/* Generated from lib/l10n/app_*.arb by scripts/check_localizations.py. */
+"CFBundleDisplayName" = "Maestrul curățării";
+"NSPhotoLibraryUsageDescription" = "Accesează fotografiile și videoclipurile pentru care permiți accesul, ca să le previzualizezi, organizezi și confirmi ce ștergi.";
+"NSPhotoLibraryAddUsageDescription" = "Salvează o copie video comprimată în Poze după confirmare. Originalul este păstrat.";
+"NSContactsUsageDescription" = "Accesează contactele pentru a ajuta la organizarea detaliilor de contact duplicate.";
+"NSUserTrackingUsageDescription" = "Permite urmărirea pentru a personaliza experiența și a îmbunătăți serviciul.";

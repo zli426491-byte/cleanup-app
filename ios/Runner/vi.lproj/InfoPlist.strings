@@ -1,0 +1,6 @@
+/* Generated from lib/l10n/app_*.arb by scripts/check_localizations.py. */
+"CFBundleDisplayName" = "Bậc thầy dọn dẹp";
+"NSPhotoLibraryUsageDescription" = "Truy cập ảnh và video bạn cho phép để bạn xem trước, sắp xếp và xác nhận mục cần xóa.";
+"NSPhotoLibraryAddUsageDescription" = "Lưu bản sao video đã nén vào Ảnh khi bạn xác nhận. Bản gốc được giữ lại.";
+"NSContactsUsageDescription" = "Truy cập danh bạ để giúp sắp xếp thông tin liên hệ trùng lặp.";
+"NSUserTrackingUsageDescription" = "Cho phép theo dõi để cá nhân hóa trải nghiệm và cải thiện dịch vụ.";

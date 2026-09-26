@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cleanup_app/l10n/l10n.dart';
+import 'package:cleanup_app/l10n/locale_controller.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -18,7 +20,7 @@ class SettingsView extends StatefulWidget {
 
 class _SettingsViewState extends State<SettingsView> {
   StorageInfo? _storage;
-  String _version = '讀取中';
+  String? _version;
 
   @override
   void initState() {
@@ -36,9 +38,10 @@ class _SettingsViewState extends State<SettingsView> {
   @override
   Widget build(BuildContext context) {
     final sub = context.watch<SubscriptionManager>();
+    final localeController = context.watch<LocaleController>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('設定')),
+      appBar: AppBar(title: Text(context.l10n.settingsTitle)),
       body: ListView(
         children: [
           ListTile(
@@ -49,36 +52,66 @@ class _SettingsViewState extends State<SettingsView> {
               color: sub.isPro ? Colors.amber : Colors.grey,
             ),
             title: Text(
-              sub.isPro ? 'Cleanup Pro' : '免費方案',
+              sub.isPro
+                  ? context.l10n.settingsProPlan
+                  : context.l10n.settingsFreePlan,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             trailing: sub.isPro
                 ? null
-                : ElevatedButton(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const PaywallView()),
+                : ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.sizeOf(context).width * 0.35,
                     ),
-                    child: const Text('升級'),
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const PaywallView()),
+                      ),
+                      child: Text(
+                        context.l10n.settingsUpgrade,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   ),
           ),
           const Divider(),
 
           if (_storage != null && !_storage!.isEstimate) ...[
-            _settingsHeader('儲存空間'),
-            _settingsRow('總計', _storage!.totalSpaceFormatted),
-            _settingsRow('已使用', _storage!.usedSpaceFormatted),
+            _settingsHeader(context.l10n.settingsStorage),
             _settingsRow(
-              '可用',
+              context.l10n.settingsStorageTotal,
+              _storage!.totalSpaceFormatted,
+            ),
+            _settingsRow(
+              context.l10n.settingsStorageUsed,
+              _storage!.usedSpaceFormatted,
+            ),
+            _settingsRow(
+              context.l10n.settingsStorageAvailable,
               _storage!.freeSpaceFormatted,
               valueColor: AppTheme.success,
             ),
             const Divider(),
           ],
 
-          _settingsHeader('一般'),
+          _settingsHeader(context.l10n.settingsGeneral),
           ListTile(
-            title: Text(sub.isLoading ? '正在處理訂閱…' : '恢復購買'),
+            leading: const Icon(Icons.language),
+            title: Text(context.l10n.settingsLanguage),
+            subtitle: Text(
+              localeController.locale == null
+                  ? context.l10n.settingsSystemLanguage
+                  : localeController.localeLabel,
+            ),
+            onTap: () => _chooseLanguage(localeController),
+          ),
+          ListTile(
+            title: Text(
+              sub.isLoading
+                  ? context.l10n.settingsProcessingSubscription
+                  : context.l10n.settingsRestorePurchases,
+            ),
             onTap: sub.isLoading
                 ? null
                 : () async {
@@ -87,22 +120,26 @@ class _SettingsViewState extends State<SettingsView> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          restored ? '已恢復 Pro 訂閱。' : sub.statusMessage,
+                          restored
+                              ? context.l10n.settingsRestoredPro
+                              : context.localizeServiceMessage(
+                                  sub.statusMessage,
+                                ),
                         ),
                       ),
                     );
                   },
           ),
           ListTile(
-            title: const Text('隱私權政策'),
+            title: Text(context.l10n.settingsPrivacyPolicy),
             onTap: () => launchUrl(Uri.parse(AppConstants.privacyPolicyUrl)),
           ),
           ListTile(
-            title: const Text('使用條款'),
+            title: Text(context.l10n.settingsTerms),
             onTap: () => launchUrl(Uri.parse(AppConstants.termsUrl)),
           ),
           ListTile(
-            title: const Text('給我們評分'),
+            title: Text(context.l10n.settingsRateApp),
             onTap: () async {
               final review = InAppReview.instance;
               if (await review.isAvailable()) review.requestReview();
@@ -110,10 +147,81 @@ class _SettingsViewState extends State<SettingsView> {
           ),
           const Divider(),
 
-          _settingsHeader('關於'),
-          _settingsRow('版本', _version),
+          _settingsHeader(context.l10n.settingsAbout),
+          _settingsRow(
+            context.l10n.settingsVersion,
+            _version ?? context.l10n.settingsLoading,
+          ),
         ],
       ),
+    );
+  }
+
+  Future<void> _chooseLanguage(LocaleController controller) async {
+    var choosing = false;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        final options = LocaleController.languageOptions;
+        Future<void> choose(Locale? locale) async {
+          if (choosing) return;
+          choosing = true;
+          try {
+            await controller.setLocale(locale);
+            if (sheetContext.mounted) Navigator.pop(sheetContext);
+          } catch (_) {
+            choosing = false;
+            if (sheetContext.mounted) {
+              ScaffoldMessenger.of(sheetContext).showSnackBar(
+                SnackBar(
+                  content: Text(sheetContext.l10n.settingsLanguageSaveError),
+                ),
+              );
+            }
+          }
+        }
+
+        return SafeArea(
+          child: SizedBox(
+            height: MediaQuery.sizeOf(sheetContext).height * 0.75,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    sheetContext.l10n.settingsChooseLanguage,
+                    style: Theme.of(sheetContext).textTheme.titleLarge,
+                  ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: options.length + 1,
+                    itemBuilder: (_, index) {
+                      final option = index == 0 ? null : options[index - 1];
+                      final locale = option?.locale;
+                      final selected = controller.locale == locale;
+                      return ListTile(
+                        selected: selected,
+                        title: Text(
+                          option?.nativeName ??
+                              sheetContext.l10n.settingsSystemLanguage,
+                        ),
+                        trailing: Icon(
+                          selected
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_unchecked,
+                        ),
+                        onTap: () => choose(locale),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
