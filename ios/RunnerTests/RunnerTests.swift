@@ -37,12 +37,26 @@ private final class ControlledResourceIO: NativeResourceIO {
 
 final class RunnerTests: XCTestCase {
   private static var fixtureIdentifier: String?
+  private static var authorizationRequested = false
 
   private func simulatorPhoto() throws -> String {
     #if targetEnvironment(simulator)
-    let status: PHAuthorizationStatus
+    var status: PHAuthorizationStatus
     if #available(iOS 14, *) { status = PHPhotoLibrary.authorizationStatus(for: .readWrite) }
     else { status = PHPhotoLibrary.authorizationStatus() }
+    if status == .notDetermined && !Self.authorizationRequested {
+      Self.authorizationRequested = true
+      let authorized = expectation(description: "Resolve simulator read/write Photos authorization")
+      let handler: (PHAuthorizationStatus) -> Void = { resolved in
+        print("Simulator Photos read/write request resolved: \(resolved.rawValue)")
+        authorized.fulfill()
+      }
+      if #available(iOS 14, *) { PHPhotoLibrary.requestAuthorization(for: .readWrite, handler: handler) }
+      else { PHPhotoLibrary.requestAuthorization(handler) }
+      wait(for: [authorized], timeout: 10)
+      if #available(iOS 14, *) { status = PHPhotoLibrary.authorizationStatus(for: .readWrite) }
+      else { status = PHPhotoLibrary.authorizationStatus() }
+    }
     // Deliberately fail, rather than silently skip CI's Photos integration.
     guard status == .authorized else {
       let host = Bundle.main.bundleIdentifier ?? "unknown"
