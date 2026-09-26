@@ -45,16 +45,8 @@ final class RunnerTests: XCTestCase {
     if #available(iOS 14, *) { status = PHPhotoLibrary.authorizationStatus(for: .readWrite) }
     else { status = PHPhotoLibrary.authorizationStatus() }
     var legacyStatus = PHPhotoLibrary.authorizationStatus()
-    // simctl privacy can install a legacy v1 Photos grant which this runtime
-    // reports as authorized through the compatibility API, but notDetermined
-    // through the newer access-level API. This simulator-only fixture accepts
-    // that real grant; the six Photos tests must still perform real reads.
-    // It does not validate the app's modern full/limited authorization flow.
-    func hasFixtureReadAccess() -> Bool {
-      status == .authorized || (status == .notDetermined && legacyStatus == .authorized)
-    }
     print("Simulator Photos fixture access: modern=\(status.rawValue), legacy=\(legacyStatus.rawValue)")
-    if !hasFixtureReadAccess() && status == .notDetermined && !Self.authorizationRequested {
+    if status == .notDetermined && !Self.authorizationRequested {
       Self.authorizationRequested = true
       let device = ProcessInfo.processInfo.environment["SIMULATOR_UDID"] ?? "unknown"
       print("Simulator Photos request context: main=\(Thread.isMainThread), device=\(device), pid=\(ProcessInfo.processInfo.processIdentifier), host=\(Bundle.main.bundlePath)")
@@ -74,7 +66,7 @@ final class RunnerTests: XCTestCase {
       legacyStatus = PHPhotoLibrary.authorizationStatus()
     }
     // Deliberately fail, rather than silently skip CI's Photos integration.
-    guard hasFixtureReadAccess() else {
+    guard status == .authorized else {
       let host = Bundle.main.bundleIdentifier ?? "unknown"
       let testBundle = Bundle(for: RunnerTests.self).bundleIdentifier ?? "unknown"
       let addStatus: Int

@@ -43,7 +43,6 @@ XCODE_ARGUMENTS=(
   -destination-timeout 120 \
   -derivedDataPath "$DERIVED_DATA" \
   -parallel-testing-enabled NO \
-  -only-testing:RunnerTests \
   "ARCHS=$(uname -m)" \
   ONLY_ACTIVE_ARCH=YES \
   CODE_SIGNING_ALLOWED=YES \
@@ -59,6 +58,7 @@ CACHED_TEST_RUNS=("$PRODUCTS"/*.xctestrun)
 if [[ "${NATIVE_TEST_PRODUCTS_CACHE_HIT:-false}" == "true" ]] && \
    [[ -f "$PRODUCTS/.cleanup-build-succeeded" ]] && \
    [[ -d "$PRODUCTS/Debug-iphonesimulator/Runner.app/PlugIns/RunnerTests.xctest" ]] && \
+   [[ -d "$PRODUCTS/Debug-iphonesimulator/RunnerUITests-Runner.app/PlugIns/RunnerUITests.xctest" ]] && \
    [[ "${#CACHED_TEST_RUNS[@]}" == "1" ]] && [[ -f "${CACHED_TEST_RUNS[0]}" ]]; then
   echo "Reusing native test products from an exact source/toolchain cache hit."
 else
@@ -72,7 +72,9 @@ subprocess.run(['xcrun', 'simctl', 'bootstatus', sys.argv[1], '-b'],
                check=True, timeout=180)
 PY
 TEST_APP="$DERIVED_DATA/Build/Products/Debug-iphonesimulator/Runner.app"
+UI_TEST_APP="$DERIVED_DATA/Build/Products/Debug-iphonesimulator/RunnerUITests-Runner.app"
 test -d "$TEST_APP"
+test -d "$UI_TEST_APP/PlugIns/RunnerUITests.xctest"
 # Verify ad-hoc identity before installing. Simulator signatures use no account
 # credentials and do not change the release IPA's signing configuration.
 codesign --verify --strict "$TEST_APP"
@@ -80,6 +82,10 @@ codesign -dvvv "$TEST_APP" 2>&1 | tee "$RUN_DIRECTORY/host-signature.txt"
 codesign -dr - "$TEST_APP" 2>&1 | tee "$RUN_DIRECTORY/host-requirement.txt"
 codesign -dvvv "$TEST_APP/PlugIns/RunnerTests.xctest" \
   2>&1 | tee "$RUN_DIRECTORY/test-signature.txt"
+codesign --verify --strict "$UI_TEST_APP"
+codesign -dvvv "$UI_TEST_APP" 2>&1 | tee "$RUN_DIRECTORY/ui-runner-signature.txt"
+codesign -dvvv "$UI_TEST_APP/PlugIns/RunnerUITests.xctest" \
+  2>&1 | tee "$RUN_DIRECTORY/ui-test-signature.txt"
 XCTESTRUN_PATH="$(python3 - "$DERIVED_DATA/Build/Products" <<'PY'
 from pathlib import Path
 import sys
@@ -102,7 +108,7 @@ with run.open('rb') as source:
     configuration = plistlib.load(source)
 def test_paths(value):
     if isinstance(value, dict):
-        row = {key: value[key] for key in ('TestHostPath', 'TestBundlePath') if key in value}
+        row = {key: value[key] for key in ('TestHostPath', 'TestBundlePath', 'UITargetAppPath') if key in value}
         if row:
             yield row
         for child in value.values():
@@ -110,16 +116,20 @@ def test_paths(value):
     elif isinstance(value, list):
         for child in value:
             yield from test_paths(child)
+paths = list(test_paths(configuration))
+bundles = [row.get('TestBundlePath', '') for row in paths]
+assert any(path.endswith('/RunnerTests.xctest') for path in bundles), 'Unit test bundle is missing from xctestrun'
+assert any(path.endswith('/RunnerUITests.xctest') for path in bundles), 'UI authorization test bundle is missing from xctestrun'
+assert any(row.get('UITargetAppPath', '').endswith('/Runner.app') for row in paths), 'UI test target app is missing from xctestrun'
 print(json.dumps({'app': str(app), 'bundle_id': info['CFBundleIdentifier'],
     'executable_sha256': hashlib.sha256((app / info['CFBundleExecutable']).read_bytes()).hexdigest(),
-    'xctestrun': str(run), 'test_paths': list(test_paths(configuration))}, indent=2))
+    'xctestrun': str(run), 'test_paths': paths}, indent=2))
 PY
 xcrun simctl install "$SIMULATOR_ID" "$TEST_APP"
-# These permissions are confined to the disposable CI simulator.
+# Reset only the disposable CI simulator. The UI test must respond to the real
+# modern full-access prompt; simctl's legacy grant is deliberately not used.
 xcrun simctl privacy "$SIMULATOR_ID" reset photos-add com.cleanupapp.cleaner
 xcrun simctl privacy "$SIMULATOR_ID" reset photos com.cleanupapp.cleaner
-# Full Photos access includes fixture creation; do not replace it with add-only.
-xcrun simctl privacy "$SIMULATOR_ID" grant photos com.cleanupapp.cleaner
 xcrun simctl get_app_container "$SIMULATOR_ID" com.cleanupapp.cleaner app \
   | tee "$RUN_DIRECTORY/installed-host-path.txt"
 record_photos_permission() {
@@ -132,7 +142,7 @@ if database.exists():
     try:
         with sqlite3.connect(database.as_uri() + '?mode=ro', uri=True, timeout=3) as connection:
             available = {row[1] for row in connection.execute('PRAGMA table_info(access)')}
-            columns = [name for name in ('client', 'service', 'auth_value', 'auth_reason', 'flags', 'last_modified')
+            columns = [name for name in ('client', 'client_type', 'service', 'auth_value', 'auth_reason', 'auth_version', 'flags', 'last_modified')
                        if name in available]
             query = 'SELECT ' + ', '.join(columns) + ' FROM access WHERE client = ? AND service LIKE ?'
             result['records'] = [dict(zip(columns, row)) for row in connection.execute(
@@ -154,16 +164,31 @@ PY
 ) &
 SCREENSHOT_CAPTURE=$!
 TEST_EXIT=0
+# Use the same compiled product and simulator for both stages. Never run the
+# unit fixture tests unless the real full-access UI bootstrap has succeeded.
 xcodebuild test-without-building \
   -xctestrun "$XCTESTRUN_PATH" \
   -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
   -destination-timeout 120 \
   -parallel-testing-enabled NO \
-  -only-testing:RunnerTests \
-  -resultBundlePath "$RUN_DIRECTORY/Runner.xcresult" \
-  2>&1 | tee "$RUN_DIRECTORY/xcodebuild.log" || TEST_EXIT=$?
+  -only-testing:RunnerUITests \
+  -resultBundlePath "$RUN_DIRECTORY/PhotosAuthorization.xcresult" \
+  2>&1 | tee "$RUN_DIRECTORY/xcodebuild-authorization.log" || TEST_EXIT=$?
+record_photos_permission after-authorization || true
+if [[ "$TEST_EXIT" == "0" ]]; then
+  xcodebuild test-without-building \
+    -xctestrun "$XCTESTRUN_PATH" \
+    -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+    -destination-timeout 120 \
+    -parallel-testing-enabled NO \
+    -only-testing:RunnerTests \
+    -resultBundlePath "$RUN_DIRECTORY/Runner.xcresult" \
+    2>&1 | tee "$RUN_DIRECTORY/xcodebuild.log" || TEST_EXIT=$?
+else
+  echo "Photos authorization UI test failed; native fixture tests were not run."
+fi
 wait "$SCREENSHOT_CAPTURE" || true
-record_photos_permission after-test
+record_photos_permission after-test || true
 xcrun simctl spawn "$SIMULATOR_ID" log show --style compact --last 5m --info --debug \
   --predicate 'process == "tccd" OR process == "photolibraryd"' \
   > "$RUN_DIRECTORY/simulator-photos-system.log" 2>&1 || true

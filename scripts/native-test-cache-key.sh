@@ -28,7 +28,7 @@ flags = {
     "configuration": "Debug",
     "sdk": "iphonesimulator",
     "scheme": "Runner",
-    "test_target": "RunnerTests",
+    "test_targets": ["RunnerTests", "RunnerUITests"],
     "ARCHS": toolchain["host_architecture"],
     "ONLY_ACTIVE_ARCH": "YES",
     "CODE_SIGNING_ALLOWED": "YES",
@@ -39,7 +39,7 @@ flags = {
 }
 paths = set(path for path in root.glob("pubspec*") if path.is_file())
 inputs = (
-    "lib", "assets", "ios/Runner", "ios/RunnerTests",
+    "lib", "assets", "ios/Runner", "ios/RunnerTests", "ios/RunnerUITests",
     "ios/Runner.xcodeproj", "ios/Runner.xcworkspace", "ios/Flutter",
     "ios/Podfile", "ios/Podfile.lock",
 )
@@ -68,14 +68,14 @@ sources = {
     for path in sorted(paths) if source_input(path)
 }
 manifest = {
-    "cache_version": "v1-adhoc-active",
+    "cache_version": "v2-adhoc-active-ui",
     "toolchain": toolchain,
     "compile_flags": flags,
     "sources": sources,
     "absent_inputs": sorted(missing),
 }
 encoded = json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode()
-key = "native-products-v1-adhoc-active-" + hashlib.sha256(encoded).hexdigest()
+key = "native-products-v2-adhoc-active-ui-" + hashlib.sha256(encoded).hexdigest()
 manifest["key"] = key
 output = root / "build/native-tests/cache-inputs.json"
 output.parent.mkdir(parents=True, exist_ok=True)
