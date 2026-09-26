@@ -7,13 +7,18 @@ describes features that are not included in this restart build.
 
 - App Store version 1.1.2 is READY_FOR_SALE.
 - Version 1.1.3 is PREPARE_FOR_SUBMISSION.
-- Build 37 (1.1.3) is VALID and not expired, with internal state IN_BETA_TESTING.
-- The existing Internal Testing group includes build 37; external state is
+- Build 38 (1.1.3) is VALID and not expired, with internal state IN_BETA_TESTING.
+- The existing Internal Testing group includes build 38; external state is
   READY_FOR_BETA_SUBMISSION. No new tester invitations were sent.
 - Weekly and yearly subscriptions are READY_TO_SUBMIT, not approved for sale.
 - RevenueCat default offering returns the matching Apple weekly/yearly products.
 
 ## Automated checks
+
+Build 38 contains the bug fixes from commit bef47ac, following the build 37
+audit. GitHub iOS Release run 36251714219 succeeded. Local and cloud analyze
+passed, with all 48 tests passing in both. Apple status and internal group access
+were checked at 2026-09-26T15:35:50Z. Native device acceptance is still required.
 
 Run `scripts/preflight_check.ps1` before a new cloud build. It fails on analyze,
 test, plist, or Android permission validation errors.
