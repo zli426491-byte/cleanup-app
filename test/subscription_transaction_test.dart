@@ -167,4 +167,113 @@ void main() {
     expect(manager.statusMessage, '恢復購買失敗，請檢查網路後再試。');
     expect(manager.isPro, isFalse);
   });
+
+  testWidgets('product refresh cannot unlock a pending restore transaction', (
+    tester,
+  ) async {
+    await tester.runAsync(() => manager.init(isIos: true));
+    final restoredInfo = Completer<Object?>();
+    final transactionCalls = <String>[];
+    transaction = (call) {
+      transactionCalls.add(call.method);
+      return call.method == 'restorePurchases'
+          ? restoredInfo.future
+          : Future.value({'customerInfo': _customerInfo()});
+    };
+    final restore = manager.restorePurchases();
+    await tester.pump();
+
+    // Opening the paywall with no cached products refreshes offerings while
+    // StoreKit is still handling restore authentication.
+    await manager.loadProducts();
+    expect(manager.isLoading, isTrue);
+    expect(await manager.purchase(_package), isFalse);
+    expect(await manager.purchaseStoreProduct(_product), isFalse);
+    expect(transactionCalls, ['restorePurchases']);
+
+    restoredInfo.complete(_customerInfo(pro: true));
+    await tester.pump();
+    expect(await restore, isTrue);
+    expect(manager.isLoading, isFalse);
+  });
+
+  testWidgets('background initialization keeps fetching behind SDK setup', (
+    tester,
+  ) async {
+    final configured = Completer<Object?>();
+    var offeringRequests = 0;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_channel, (call) async {
+          switch (call.method) {
+            case 'setupPurchases':
+              return configured.future;
+            case 'getCustomerInfo':
+              return _customerInfo();
+            case 'getOfferings':
+              offeringRequests++;
+              return {'all': {}, 'current': null};
+            case 'getProductInfo':
+              return [];
+            default:
+              throw UnimplementedError(call.method);
+          }
+        });
+
+    final initialized = manager.init(isIos: true);
+    await tester.pump();
+    expect(manager.isInitializing, isTrue);
+    await manager.loadProducts();
+    expect(offeringRequests, 0);
+    expect(manager.isLoading, isTrue);
+    expect(await manager.purchase(_package), isFalse);
+
+    configured.complete(null);
+    await tester.pump();
+    await initialized;
+    expect(offeringRequests, 1);
+    expect(manager.isInitializing, isFalse);
+    expect(manager.isLoading, isFalse);
+  });
+
+  testWidgets('explicit retry recovers SDK setup after a transient failure', (
+    tester,
+  ) async {
+    var setupCalls = 0;
+    var offeringRequests = 0;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_channel, (call) async {
+          switch (call.method) {
+            case 'setupPurchases':
+              setupCalls++;
+              if (setupCalls == 1) {
+                throw PlatformException(code: '10', message: 'Offline');
+              }
+              return null;
+            case 'getCustomerInfo':
+              return _customerInfo();
+            case 'getOfferings':
+              offeringRequests++;
+              return {'all': {}, 'current': null};
+            case 'getProductInfo':
+              return [_product.toJson()];
+            default:
+              throw UnimplementedError(call.method);
+          }
+        });
+
+    await tester.runAsync(() => manager.init(isIos: true));
+    expect(manager.isLoading, isFalse);
+    expect(manager.storeProducts, isEmpty);
+    expect(manager.statusMessage, contains('初始化失敗'));
+    await manager.loadProducts();
+    expect(setupCalls, 1);
+    expect(offeringRequests, 0);
+
+    await tester.runAsync(() => manager.retry());
+    expect(setupCalls, 2);
+    expect(offeringRequests, 1);
+    expect(manager.storeProducts.single.identifier, _product.identifier);
+    expect(manager.statusMessage, isEmpty);
+    expect(manager.isLoading, isFalse);
+  });
 }

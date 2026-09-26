@@ -1,0 +1,116 @@
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:photo_manager/photo_manager.dart';
+import 'package:provider/provider.dart';
+
+import 'package:cleanup_app/services/photo_scanner_service.dart';
+import 'package:cleanup_app/services/subscription_manager.dart';
+import 'package:cleanup_app/views/scanner/asset_thumbnail.dart';
+import 'package:cleanup_app/views/scanner/smart_clean_view.dart';
+
+class ProSubscription extends SubscriptionManager {
+  @override
+  bool get isPro => true;
+}
+
+class GridScanner extends PhotoScannerService {
+  GridScanner(this.assets);
+  List<PhotoAsset> assets;
+  @override
+  ScanResult get scanResult => ScanResult(
+    allAssets: assets,
+    duplicateGroups: [],
+    similarGroups: [],
+    screenshots: [],
+    largeFiles: [],
+    videos: [],
+    blurryPhotos: [],
+    darkPhotos: [],
+    overexposedPhotos: [],
+    totalSavingsEstimate: 0,
+  );
+  @override
+  Future<Set<String>> deleteAssetsWithResult(List<PhotoAsset> toDelete) async {
+    final ids = toDelete.map((asset) => asset.id).toSet();
+    assets = assets.where((asset) => !ids.contains(asset.id)).toList();
+    notifyListeners();
+    return ids;
+  }
+}
+
+void main() {
+  testWidgets('swipe deletion clears matching grid selection when returning', (
+    tester,
+  ) async {
+    const channel = MethodChannel('com.fluttercandies/photo_manager');
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final pixel = base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aG2kAAAAASUVORK5CYII=',
+    );
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      final id = (call.arguments as Map)['id'] as String;
+      switch (call.method) {
+        case 'fetchEntityProperties':
+          return {'id': id, 'type': 1, 'width': 100, 'height': 100};
+        case 'getThumb':
+          return pixel;
+        default:
+          throw StateError('Unexpected photo API ${call.method}');
+      }
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+    final scanner = GridScanner(
+      List.generate(
+        2,
+        (index) => PhotoAsset(
+          id: 'grid-$index',
+          width: 100,
+          height: 100,
+          size: 0,
+          createDate: DateTime(2026),
+          type: AssetType.image,
+        ),
+      ),
+    );
+    final subscription = ProSubscription();
+    addTearDown(scanner.dispose);
+    addTearDown(subscription.dispose);
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<PhotoScannerService>.value(value: scanner),
+          ChangeNotifierProvider<SubscriptionManager>.value(
+            value: subscription,
+          ),
+        ],
+        child: const MaterialApp(home: SmartCleanView()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(Image), findsNWidgets(2));
+    expect(find.byTooltip('重新載入預覽'), findsNothing);
+    await tester.tap(find.byType(AssetThumbnail).first);
+    await tester.pump();
+    expect(find.text('已選擇 1 個項目'), findsOneWidget);
+    await tester.tap(find.byTooltip('滑動清理'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.close_rounded).first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.byIcon(Icons.favorite_rounded).last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('刪除 1 張照片'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('確認刪除'));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 2));
+    expect(scanner.assets.single.id, 'grid-1');
+    expect(find.text('已選擇 1 個項目'), findsNothing);
+    expect(find.text('預覽並刪除 1 個項目'), findsNothing);
+  });
+}

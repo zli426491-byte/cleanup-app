@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -17,20 +18,41 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AnalyticsManager.instance.configure();
   final prefs = await SharedPreferences.getInstance();
-  final hasCompletedOnboarding = prefs.getBool('hasCompletedOnboarding') ?? false;
+  final hasCompletedOnboarding =
+      prefs.getBool('hasCompletedOnboarding') ?? false;
 
-  // Initialize subscription manager safely (handles placeholder keys)
   final subscriptionManager = SubscriptionManager();
+  launchCleanupApp(
+    hasCompletedOnboarding: hasCompletedOnboarding,
+    subscriptionManager: subscriptionManager,
+    isIos: Platform.isIOS,
+  );
+}
+
+/// Photo review remains available while the store initializes or is offline.
+void launchCleanupApp({
+  required bool hasCompletedOnboarding,
+  required SubscriptionManager subscriptionManager,
+  required bool isIos,
+}) {
+  runApp(
+    CleanupApp(
+      hasCompletedOnboarding: hasCompletedOnboarding,
+      subscriptionManager: subscriptionManager,
+    ),
+  );
+  unawaited(_initializeSubscriptions(subscriptionManager, isIos: isIos));
+}
+
+Future<void> _initializeSubscriptions(
+  SubscriptionManager subscriptionManager, {
+  required bool isIos,
+}) async {
   try {
-    await subscriptionManager.init(isIos: Platform.isIOS);
+    await subscriptionManager.init(isIos: isIos);
   } catch (e) {
     debugPrint('SubscriptionManager init failed (safe): $e');
   }
-
-  runApp(CleanupApp(
-    hasCompletedOnboarding: hasCompletedOnboarding,
-    subscriptionManager: subscriptionManager,
-  ));
 }
 
 class CleanupApp extends StatelessWidget {
@@ -56,7 +78,7 @@ class CleanupApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
+        themeMode: ThemeMode.light,
         home: hasCompletedOnboarding
             ? const MainTabView()
             : const OnboardingView(),

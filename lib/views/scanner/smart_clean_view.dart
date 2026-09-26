@@ -40,6 +40,17 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final scanner = context.watch<PhotoScannerService>();
+    if (!scanner.isScanning) {
+      _selectedIds.retainAll(
+        scanner.scanResult.allAssets.map((asset) => asset.id).toSet(),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final scanner = context.watch<PhotoScannerService>();
     final sub = context.watch<SubscriptionManager>();
@@ -63,7 +74,9 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                   size: 16,
                 ),
               ),
-              onPressed: () => _openSwipeMode(scanner),
+              onPressed: scanner.isScanning || scanner.isDeleting || _isDeleting
+                  ? null
+                  : () => _openSwipeMode(scanner),
             ),
         ],
       ),
@@ -97,7 +110,8 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                 : _content(scanner),
           ),
           if (scanner.scanResult.allAssets.isNotEmpty &&
-              _selectedIds.isNotEmpty)
+              _selectedIds.isNotEmpty &&
+              !scanner.isScanning)
             _bottomBar(scanner, sub),
         ],
       ),
@@ -567,7 +581,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                 color: Colors.transparent,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(50),
-                  onTap: _isDeleting
+                  onTap: _isDeleting || scanner.isScanning || scanner.isDeleting
                       ? null
                       : () => _previewDelete(scanner, sub),
                   child: Center(
@@ -653,6 +667,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   }
 
   void _openSwipeMode(PhotoScannerService scanner) {
+    if (scanner.isScanning || scanner.isDeleting || _isDeleting) return;
     final assets = _assetsFor(_selectedCategory, scanner);
     if (assets.isEmpty) return;
     Navigator.push(
@@ -667,7 +682,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   }
 
   void _previewDelete(PhotoScannerService scanner, SubscriptionManager sub) {
-    if (_isDeleting) return;
+    if (_isDeleting || scanner.isScanning || scanner.isDeleting) return;
     if (!sub.isPro) {
       Navigator.push(
         context,
@@ -726,6 +741,9 @@ class _SmartCleanViewState extends State<SmartCleanView> {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
+              if (scanner.isScanning || scanner.isDeleting || !sub.isPro) {
+                return;
+              }
               setState(() => _isDeleting = true);
               final deletedIds = await scanner.deleteAssetsWithResult(toDelete);
               if (!mounted) return;

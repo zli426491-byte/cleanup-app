@@ -17,6 +17,7 @@ void main() {
   late PermissionState permission;
   late List<int> rangeEnds;
   Completer<int>? permissionResponse;
+  Completer<List<String>>? deletionResponse;
 
   Map<String, Object> photo(
     String id, {
@@ -39,6 +40,7 @@ void main() {
     rangeEnds = [];
     permission = PermissionState.authorized;
     permissionResponse = null;
+    deletionResponse = null;
     messenger.setMockMethodCallHandler(channel, (call) async {
       switch (call.method) {
         case 'requestPermissionExtend':
@@ -68,7 +70,9 @@ void main() {
           deletionRequests.add(
             List<String>.from((call.arguments as Map)['ids'] as List),
           );
-          return deletedBySystem;
+          return deletionResponse == null
+              ? deletedBySystem
+              : deletionResponse!.future;
         default:
           throw StateError('Unexpected photo API ${call.method}');
       }
@@ -159,6 +163,71 @@ void main() {
     expect(await scanner.deleteAssetsWithResult([]), isEmpty);
     expect(deletionRequests, isEmpty);
   });
+
+  test(
+    'native deletion cannot overlap a scan and resurrect deleted results',
+    () async {
+      await scanner.startFullScan();
+      final first = scanner.scanResult.allAssets.first;
+      deletedBySystem = [first.id];
+      Future<Set<String>>? deletion;
+      var requested = false;
+      scanner.addListener(() {
+        if (scanner.isScanning && scanner.scanProgress >= 0.70 && !requested) {
+          requested = true;
+          deletion = scanner.deleteAssetsWithResult([first]);
+        }
+      });
+      await scanner.startFullScan();
+      final deleted = await deletion!;
+      if (deleted.isNotEmpty) {
+        expect(
+          scanner.scanResult.allAssets.map((asset) => asset.id),
+          isNot(contains(first.id)),
+          reason:
+              'A completed scan must not reinstall an asset already deleted by the OS.',
+        );
+      }
+      expect(deletionRequests, isEmpty);
+    },
+  );
+
+  test('a rescan cannot overlap a pending native deletion', () async {
+    await scanner.startFullScan();
+    final priorPageCalls = rangeEnds.length;
+    deletionResponse = Completer<List<String>>();
+    final deletion = scanner.deleteAssetsWithResult([
+      scanner.scanResult.allAssets.first,
+    ]);
+    await Future<void>.delayed(Duration.zero);
+    await scanner.startFullScan();
+    deletionResponse!.complete(['first']);
+    await deletion;
+    expect(rangeEnds.length, priorPageCalls);
+    expect(
+      scanner.scanResult.allAssets.map((asset) => asset.id),
+      isNot(contains('first')),
+    );
+  });
+
+  test(
+    'native deletion completion after disposal returns confirmed IDs without notifications',
+    () async {
+      final subject = PhotoScannerService();
+      await subject.startFullScan();
+      deletionResponse = Completer<List<String>>();
+      var notifications = 0;
+      subject.addListener(() => notifications++);
+      final deletion = subject.deleteAssetsWithResult([
+        subject.scanResult.allAssets.first,
+      ]);
+      await Future<void>.delayed(Duration.zero);
+      subject.dispose();
+      deletionResponse!.complete(['first']);
+      expect(await deletion, {'first'});
+      expect(notifications, 1);
+    },
+  );
 
   testWidgets(
     'permission confirmation can wait longer than the scan watchdog',

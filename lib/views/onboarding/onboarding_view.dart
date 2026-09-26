@@ -15,6 +15,7 @@ class _OnboardingViewState extends State<OnboardingView>
     with TickerProviderStateMixin {
   final _controller = PageController();
   int _currentPage = 0;
+  bool _isCompleting = false;
   late AnimationController _pulseController;
 
   static const _pages = [
@@ -198,90 +199,101 @@ class _OnboardingViewState extends State<OnboardingView>
   }
 
   Widget _buildPage(_PageData page) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 36),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Triple ring icon
-          AnimatedBuilder(
-            animation: _pulseController,
-            builder: (_, child) {
-              final scale = 1.0 + _pulseController.value * 0.03;
-              return Transform.scale(
-                scale: scale,
-                child: Container(
-                  width: 160,
-                  height: 160,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: page.c1.withValues(alpha: 0.06),
-                      width: 1,
-                    ),
-                  ),
-                  child: Center(
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: page.c1.withValues(alpha: 0.1),
-                          width: 1,
-                        ),
-                      ),
-                      child: Center(
-                        child: Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: [page.c1, page.c2],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: page.c1.withValues(alpha: 0.35),
-                                blurRadius: 30,
-                                offset: const Offset(0, 12),
-                              ),
-                            ],
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Triple ring icon
+                AnimatedBuilder(
+                  animation: _pulseController,
+                  builder: (_, child) {
+                    final scale = 1.0 + _pulseController.value * 0.03;
+                    return Transform.scale(
+                      scale: scale,
+                      child: Container(
+                        width: 160,
+                        height: 160,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: page.c1.withValues(alpha: 0.06),
+                            width: 1,
                           ),
-                          child: Icon(page.icon, size: 36, color: Colors.white),
+                        ),
+                        child: Center(
+                          child: Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: page.c1.withValues(alpha: 0.1),
+                                width: 1,
+                              ),
+                            ),
+                            child: Center(
+                              child: Container(
+                                width: 80,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                    colors: [page.c1, page.c2],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: page.c1.withValues(alpha: 0.35),
+                                      blurRadius: 30,
+                                      offset: const Offset(0, 12),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  page.icon,
+                                  size: 36,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 48),
+                Text(
+                  page.title,
+                  style: const TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textPrimary,
+                    letterSpacing: -0.8,
+                    height: 1.1,
                   ),
                 ),
-              );
-            },
-          ),
-          const SizedBox(height: 48),
-          Text(
-            page.title,
-            style: const TextStyle(
-              fontSize: 30,
-              fontWeight: FontWeight.w800,
-              color: AppTheme.textPrimary,
-              letterSpacing: -0.8,
-              height: 1.1,
+                const SizedBox(height: 16),
+                Text(
+                  page.subtitle,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: AppTheme.textSecondary,
+                    height: 1.7,
+                    letterSpacing: 0.1,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
-          Text(
-            page.subtitle,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 15,
-              color: AppTheme.textSecondary,
-              height: 1.7,
-              letterSpacing: 0.1,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -309,13 +321,17 @@ class _OnboardingViewState extends State<OnboardingView>
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: _onNext,
+          onTap: _isCompleting ? null : _onNext,
           child: Center(
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _currentPage < _pages.length - 1 ? '繼續' : '開始使用',
+                  _isCompleting
+                      ? '正在準備…'
+                      : _currentPage < _pages.length - 1
+                      ? '繼續'
+                      : '開始使用',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -324,11 +340,21 @@ class _OnboardingViewState extends State<OnboardingView>
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Icon(
-                  Icons.arrow_forward_rounded,
-                  color: Colors.white,
-                  size: 18,
-                ),
+                if (_isCompleting)
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                else
+                  const Icon(
+                    Icons.arrow_forward_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
               ],
             ),
           ),
@@ -338,21 +364,29 @@ class _OnboardingViewState extends State<OnboardingView>
   }
 
   Future<void> _onNext() async {
+    if (_isCompleting || !mounted) return;
     if (_currentPage < _pages.length - 1) {
       _controller.nextPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeOutCubic,
       );
     } else {
-      AnalyticsManager.instance.track(AnalyticsEvent.onboardingCompleted.name);
-      await AnalyticsManager.instance.requestATT();
-      if (!mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const PaywallView(fromOnboarding: true),
-        ),
-      );
+      setState(() => _isCompleting = true);
+      try {
+        AnalyticsManager.instance.track(
+          AnalyticsEvent.onboardingCompleted.name,
+        );
+        await AnalyticsManager.instance.requestATT();
+        if (!mounted) return;
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const PaywallView(fromOnboarding: true),
+          ),
+        );
+      } finally {
+        if (mounted) setState(() => _isCompleting = false);
+      }
     }
   }
 }

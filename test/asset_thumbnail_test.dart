@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -18,6 +19,7 @@ void main() {
   );
   late List<String> thumbnailRequests;
   late bool failThumbnail;
+  Completer<Uint8List?>? slowResponse;
 
   PhotoAsset photo(String id) => PhotoAsset(
     id: id,
@@ -34,6 +36,7 @@ void main() {
   setUp(() {
     thumbnailRequests = [];
     failThumbnail = false;
+    slowResponse = null;
     messenger.setMockMethodCallHandler(channel, (call) async {
       final id = (call.arguments as Map)['id'] as String;
       switch (call.method) {
@@ -41,6 +44,9 @@ void main() {
           return {'id': id, 'type': 1, 'width': 100, 'height': 100};
         case 'getThumb':
           thumbnailRequests.add(id);
+          if (id.endsWith('-slow') && slowResponse != null) {
+            return slowResponse!.future;
+          }
           return failThumbnail ? null : pixel;
         default:
           throw StateError('Unexpected photo API ${call.method}');
@@ -80,4 +86,53 @@ void main() {
       expect(find.byType(Image), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'slow cloud preview still displays after the former 1.2 second deadline',
+    (tester) async {
+      slowResponse = Completer<Uint8List?>();
+      await tester.pumpWidget(subject('cloud-slow'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 2000));
+      slowResponse!.complete(pixel);
+      await tester.pumpAndSettle();
+      expect(find.byType(Image), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'failed preview retries on the current screen without reopening',
+    (tester) async {
+      failThumbnail = true;
+      await tester.pumpWidget(subject('onscreen-retry'));
+      await tester.pumpAndSettle();
+      expect(find.byType(Image), findsNothing);
+      failThumbnail = false;
+      await tester.tap(find.byTooltip('重新載入預覽'));
+      await tester.pumpAndSettle();
+      expect(thumbnailRequests, ['onscreen-retry', 'onscreen-retry']);
+      expect(find.byType(Image), findsOneWidget);
+    },
+  );
+
+  testWidgets('a late request cannot replace the newly selected asset', (
+    tester,
+  ) async {
+    slowResponse = Completer<Uint8List?>();
+    await tester.pumpWidget(subject('previous-slow'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    await tester.pumpWidget(subject('current-fast'));
+    await tester.pumpAndSettle();
+    expect(find.byType(Image), findsOneWidget);
+    // The old native response is deliberately unusable. It must never be
+    // installed into the new asset's Image or trigger that widget's retry.
+    slowResponse!.complete(Uint8List.fromList([0]));
+    await tester.pumpAndSettle();
+    expect(find.byType(Image), findsOneWidget);
+    expect(find.byTooltip('重新載入預覽'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }

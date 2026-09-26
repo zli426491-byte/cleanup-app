@@ -577,6 +577,7 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
       ),
     );
     if (!mounted || confirmed != true) return;
+    if (!sub.isPro) return;
     setState(() => _isDeleting = true);
     final requested = _toDelete.length;
     final deletedIds = await context

@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/photo_scanner_service.dart';
+import '../../services/subscription_manager.dart';
 import '../../models/storage_info.dart';
 import '../../utils/app_theme.dart';
 import '../scanner/smart_clean_view.dart';
@@ -41,6 +42,7 @@ class _HomeViewState extends State<HomeView>
   @override
   Widget build(BuildContext context) {
     final scanner = context.watch<PhotoScannerService>();
+    final isPro = context.watch<SubscriptionManager>().isPro;
 
     return Scaffold(
       body: SafeArea(
@@ -49,7 +51,7 @@ class _HomeViewState extends State<HomeView>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeader(),
+              _buildHeader(isPro),
               const SizedBox(height: AppTheme.s20),
               if (_storage != null && !_storage!.isEstimate)
                 _buildStorageCard(_storage!)
@@ -84,46 +86,48 @@ class _HomeViewState extends State<HomeView>
   }
 
   // ── Header ──
-  Widget _buildHeader() => Row(
+  Widget _buildHeader(bool isPro) => Row(
     children: [
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('清理大師', style: AppTheme.heading1),
-          const SizedBox(height: 2),
-          Text(
-            '先預覽，再整理照片與影片',
-            style: AppTheme.caption.copyWith(color: AppTheme.textMuted),
-          ),
-        ],
-      ),
-      const Spacer(),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: AppTheme.primary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(AppTheme.r50),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.workspace_premium_rounded,
-              color: AppTheme.primary,
-              size: 13,
-            ),
-            const SizedBox(width: 3),
+            const Text('清理大師', style: AppTheme.heading1),
+            const SizedBox(height: 2),
             Text(
-              'PRO',
-              style: AppTheme.label.copyWith(
-                color: AppTheme.primary,
-                fontSize: 10,
-                letterSpacing: 0.8,
-              ),
+              '先預覽，再整理照片與影片',
+              style: AppTheme.caption.copyWith(color: AppTheme.textMuted),
             ),
           ],
         ),
       ),
+      if (isPro)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: AppTheme.primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(AppTheme.r50),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.workspace_premium_rounded,
+                color: AppTheme.primary,
+                size: 13,
+              ),
+              const SizedBox(width: 3),
+              Text(
+                'PRO',
+                style: AppTheme.label.copyWith(
+                  color: AppTheme.primary,
+                  fontSize: 10,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ),
+        ),
     ],
   );
 
@@ -264,7 +268,7 @@ class _HomeViewState extends State<HomeView>
       return Transform.scale(
         scale: scale,
         child: Container(
-          height: 52,
+          constraints: const BoxConstraints(minHeight: 52),
           decoration: BoxDecoration(
             color: AppTheme.primary,
             borderRadius: BorderRadius.circular(AppTheme.r16),
@@ -280,35 +284,50 @@ class _HomeViewState extends State<HomeView>
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(AppTheme.r16),
-              onTap: s.isScanning ? null : () => s.startFullScan(),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (s.isScanning)
-                    const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
+              onTap: s.isScanning || s.isDeleting
+                  ? null
+                  : () => s.startFullScan(),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (s.isScanning)
+                      const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    else
+                      const Icon(
+                        Icons.play_arrow_rounded,
                         color: Colors.white,
+                        size: 20,
                       ),
-                    )
-                  else
-                    const Icon(
-                      Icons.play_arrow_rounded,
-                      color: Colors.white,
-                      size: 20,
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        s.isScanning
+                            ? '掃描中...'
+                            : s.isDeleting
+                            ? '刪除中...'
+                            : '快速整理近期照片',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
-                  const SizedBox(width: 8),
-                  Text(
-                    s.isScanning ? '掃描中...' : '快速整理近期照片',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -407,6 +426,7 @@ class _HomeViewState extends State<HomeView>
     );
     final items = [
       _Tool(
+        'review',
         Icons.photo_library_rounded,
         '待確認照片分組',
         _photoCountLabel(ts, hasScanned),
@@ -418,6 +438,7 @@ class _HomeViewState extends State<HomeView>
         const Color(0xFFF0997B),
       ),
       _Tool(
+        'screenshots',
         Icons.screenshot_rounded,
         '螢幕截圖',
         _photoCountLabel(s.scanResult.screenshots.length, hasScanned),
@@ -429,6 +450,7 @@ class _HomeViewState extends State<HomeView>
         const Color(0xFF1D9E75),
       ),
       _Tool(
+        'highResolution',
         Icons.photo_size_select_large_rounded,
         '高解析度照片',
         _itemCountLabel(s.scanResult.largeFiles.length, hasScanned),
@@ -474,7 +496,7 @@ class _HomeViewState extends State<HomeView>
 
   Widget _buildToolRow(_Tool t) {
     return InkWell(
-      onTap: _openReview,
+      onTap: () => _openReview(t.category),
       borderRadius: BorderRadius.circular(AppTheme.r12),
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -646,10 +668,12 @@ class _HomeViewState extends State<HomeView>
     ),
   );
 
-  void _openReview() {
+  void _openReview([String category = 'photos']) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const SmartCleanView()),
+      MaterialPageRoute(
+        builder: (_) => SmartCleanView(initialCategory: category),
+      ),
     );
   }
 }
@@ -659,11 +683,19 @@ enum _Status { critical, warn, minor, scan, done }
 
 // ── Tool Data ──
 class _Tool {
+  final String category;
   final IconData icon;
   final String title, subtitle;
   final _Status status;
   final Color color;
-  _Tool(this.icon, this.title, this.subtitle, this.status, this.color);
+  _Tool(
+    this.category,
+    this.icon,
+    this.title,
+    this.subtitle,
+    this.status,
+    this.color,
+  );
 }
 
 // ── Donut Chart Painter ──

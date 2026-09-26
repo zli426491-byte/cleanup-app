@@ -38,6 +38,17 @@ Mocks do not establish that real purchases or photo deletion work on a device.
 - [ ] Sandbox purchase, cancellation, restore, expiry and renewal update Pro correctly.
 - [ ] Tablet layout and native confirmation dialogs work in portrait and landscape.
 - [ ] Privacy/EULA links work, and settings show the actual installed version/build.
+- [ ] Slow/offline startup still shows the app; failed plans can be reloaded explicitly.
+- [ ] Onboarding remains usable in phone landscape and small iPad windows.
+- [ ] Repeated taps while completing onboarding open only one paywall.
+- [ ] A free account has no PRO badge, and home tools open their matching categories.
+- [ ] Large system text works on a small phone; the supported theme remains light.
+- [ ] A slow iCloud preview keeps loading and can be retried on the same screen.
+- [ ] Scan/delete cannot overlap; returning from swipe deletion clears stale selections.
+- [ ] Loading products during an unfinished restore never permits a second transaction.
+
+Photo library changes made outside this app currently require a manual home
+rescan. Automatic library-change refresh is not included in this restart scope.
 
 ## Release gates still outstanding
 

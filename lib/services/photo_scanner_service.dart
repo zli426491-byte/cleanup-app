@@ -145,6 +145,8 @@ class PhotoScannerService extends ChangeNotifier {
   static const _iosScreenshotMediaSubtype = 1 << 2;
 
   bool _isScanning = false;
+  bool _isDeleting = false;
+  bool _disposed = false;
   double _scanProgress = 0.0;
   ScanPhase _currentPhase = ScanPhase.idle;
   ScanResult _scanResult = ScanResult.empty;
@@ -155,6 +157,7 @@ class PhotoScannerService extends ChangeNotifier {
   bool _hasLimitedAccess = false;
 
   bool get isScanning => _isScanning;
+  bool get isDeleting => _isDeleting;
   double get scanProgress => _scanProgress;
   ScanPhase get currentPhase => _currentPhase;
   ScanResult get scanResult => _scanResult;
@@ -180,7 +183,7 @@ class PhotoScannerService extends ChangeNotifier {
   /// Index up to 900 accessible assets. Metadata groups require visual review;
   /// this scan does not verify identical content or calculate file sizes.
   Future<void> startFullScan() async {
-    if (_isScanning) return;
+    if (_disposed || _isScanning || _isDeleting) return;
     AnalyticsManager.instance.track(AnalyticsEvent.scanStarted.name);
     _isScanning = true;
     final runId = ++_scanRunId;
@@ -244,10 +247,15 @@ class PhotoScannerService extends ChangeNotifier {
   /// Return only IDs confirmed by the OS. A cancelled request returns no IDs.
   Future<Set<String>> deleteAssetsWithResult(List<PhotoAsset> assets) async {
     final ids = assets.map((a) => a.id).toSet();
-    if (ids.isEmpty) return <String>{};
+    if (_disposed || _isScanning || _isDeleting || ids.isEmpty) {
+      return <String>{};
+    }
+    _isDeleting = true;
+    notifyListeners();
     try {
       final result = await PhotoManager.editor.deleteWithIds(ids.toList());
       final deletedIds = result.toSet().intersection(ids);
+      if (_disposed) return deletedIds;
       if (deletedIds.isNotEmpty) {
         // Remove deleted assets from the current scan result.
         final remainingAssets = _scanResult.allAssets
@@ -314,6 +322,9 @@ class PhotoScannerService extends ChangeNotifier {
     } catch (e) {
       debugPrint('PhotoScannerService.deleteAssets error: $e');
       return <String>{};
+    } finally {
+      _isDeleting = false;
+      if (!_disposed) notifyListeners();
     }
   }
 
@@ -482,6 +493,7 @@ class PhotoScannerService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _isScanning = false;
     _scanRunId++;
     super.dispose();

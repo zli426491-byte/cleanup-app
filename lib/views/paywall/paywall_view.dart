@@ -42,6 +42,13 @@ class _PaywallViewState extends State<PaywallView> {
   Widget build(BuildContext context) {
     final sub = context.watch<SubscriptionManager>();
     final plans = _sortedPlans(sub);
+    if (plans.isNotEmpty &&
+        !plans.any(
+          (plan) =>
+              plan.product.identifier == _selectedPlan?.product.identifier,
+        )) {
+      _selectedPlan = plans.first;
+    }
     final canPurchase =
         !sub.isPlaceholder &&
         _selectedPlan != null &&
@@ -116,9 +123,14 @@ class _PaywallViewState extends State<PaywallView> {
                 ),
               ),
               const SizedBox(height: 28),
-              if (plans.isEmpty)
-                _EmptyPlans(isLoading: sub.isLoading)
-              else
+              if (plans.isEmpty) ...[
+                _EmptyPlans(isLoading: sub.isLoading),
+                TextButton.icon(
+                  onPressed: sub.isLoading ? null : () => sub.retry(),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('重新載入方案'),
+                ),
+              ] else
                 ...plans.map(
                   (plan) => Padding(
                     padding: const EdgeInsets.only(bottom: 8),
@@ -182,7 +194,9 @@ class _PaywallViewState extends State<PaywallView> {
   Future<void> _loadPlans() async {
     if (!mounted) return;
     final sub = context.read<SubscriptionManager>();
-    if (sub.availablePackages.isEmpty && sub.storeProducts.isEmpty) {
+    if (!sub.isInitializing &&
+        sub.availablePackages.isEmpty &&
+        sub.storeProducts.isEmpty) {
       await sub.loadProducts();
     }
     if (!mounted) return;
@@ -383,7 +397,7 @@ class _EmptyPlans extends StatelessWidget {
         border: Border.all(color: Colors.grey.withValues(alpha: 0.18)),
       ),
       child: const Text(
-        '目前沒有可顯示的訂閱方案。請確認 RevenueCat 產品 ID 與 App Store Connect 產品一致。',
+        '目前無法載入訂閱方案，請確認網路後重新載入。',
         textAlign: TextAlign.center,
         style: TextStyle(color: AppTheme.textSecondary),
       ),

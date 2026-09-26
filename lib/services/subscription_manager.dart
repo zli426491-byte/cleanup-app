@@ -20,7 +20,12 @@ class SubscriptionManager extends ChangeNotifier {
   static const _revenueCatTimeout = Duration(seconds: 12);
 
   bool _isPro = false;
-  bool _isLoading = false;
+  bool _isInitializing = false;
+  bool _isLoadingProducts = false;
+  bool _isTransactionInProgress = false;
+  bool _isConfigured = false;
+  bool _isDisposed = false;
+  bool? _isIos;
   bool _showPaywall = false;
   bool _isPlaceholder = true;
   String _statusMessage = '';
@@ -28,7 +33,9 @@ class SubscriptionManager extends ChangeNotifier {
   List<StoreProduct> _storeProducts = [];
 
   bool get isPro => _isPlaceholder ? false : _isPro;
-  bool get isLoading => _isLoading;
+  bool get isLoading =>
+      _isInitializing || _isLoadingProducts || _isTransactionInProgress;
+  bool get isInitializing => _isInitializing;
   bool get showPaywall => _showPaywall;
   bool get isPlaceholder => _isPlaceholder;
   String get statusMessage => _statusMessage;
@@ -52,7 +59,9 @@ class SubscriptionManager extends ChangeNotifier {
   }
 
   Future<void> init({required bool isIos}) async {
-    _isLoading = true;
+    if (_isDisposed || _isInitializing) return;
+    _isIos = isIos;
+    _isInitializing = true;
     _statusMessage = '';
     notifyListeners();
 
@@ -77,6 +86,8 @@ class SubscriptionManager extends ChangeNotifier {
       await Purchases.configure(
         PurchasesConfiguration(apiKey),
       ).timeout(_revenueCatTimeout);
+      if (_isDisposed) return;
+      _isConfigured = true;
 
       Purchases.addCustomerInfoUpdateListener(_onCustomerInfoUpdated);
 
@@ -90,19 +101,22 @@ class SubscriptionManager extends ChangeNotifier {
       debugPrint('SubscriptionManager.init error: $e');
       _statusMessage = '訂閱系統初始化失敗，請稍後再試。';
     } finally {
-      _isLoading = false;
+      _isInitializing = false;
       notifyListeners();
     }
   }
 
   Future<List<Package>> loadProducts() async {
+    if (_isDisposed || !_isConfigured || _isLoadingProducts) {
+      return _availablePackages;
+    }
     if (_isPlaceholder) {
       _availablePackages = [];
       _storeProducts = [];
       return _availablePackages;
     }
 
-    _isLoading = true;
+    _isLoadingProducts = true;
     _statusMessage = '';
     notifyListeners();
 
@@ -145,22 +159,33 @@ class SubscriptionManager extends ChangeNotifier {
       _storeProducts = [];
       _statusMessage = '訂閱方案載入失敗，請檢查 RevenueCat、App Store Connect 產品與網路狀態。';
     } finally {
-      _isLoading = false;
+      _isLoadingProducts = false;
       notifyListeners();
     }
 
     return _availablePackages;
   }
 
+  /// User-triggered recovery after a setup or product fetch failure.
+  /// Do not retry automatically while StoreKit is handling another operation.
+  Future<void> retry() async {
+    if (_isDisposed || isLoading) return;
+    if (_isConfigured) {
+      await loadProducts();
+    } else if (_isIos != null) {
+      await init(isIos: _isIos!);
+    }
+  }
+
   Future<bool> purchase(Package package) async {
-    if (_isLoading) return false;
+    if (_isDisposed || isLoading) return false;
     if (_isPlaceholder) {
       _statusMessage = '尚未設定 RevenueCat API Key，無法購買。';
       notifyListeners();
       return false;
     }
 
-    _isLoading = true;
+    _isTransactionInProgress = true;
     _statusMessage = '';
     notifyListeners();
 
@@ -179,20 +204,20 @@ class SubscriptionManager extends ChangeNotifier {
       _statusMessage = '購買未完成，請稍後再試。';
       return false;
     } finally {
-      _isLoading = false;
+      _isTransactionInProgress = false;
       notifyListeners();
     }
   }
 
   Future<bool> purchaseStoreProduct(StoreProduct product) async {
-    if (_isLoading) return false;
+    if (_isDisposed || isLoading) return false;
     if (_isPlaceholder) {
       _statusMessage = '尚未設定 RevenueCat API Key，無法購買。';
       notifyListeners();
       return false;
     }
 
-    _isLoading = true;
+    _isTransactionInProgress = true;
     _statusMessage = '';
     notifyListeners();
 
@@ -209,20 +234,20 @@ class SubscriptionManager extends ChangeNotifier {
       _statusMessage = '購買未完成，請稍後再試。';
       return false;
     } finally {
-      _isLoading = false;
+      _isTransactionInProgress = false;
       notifyListeners();
     }
   }
 
   Future<bool> restorePurchases() async {
-    if (_isLoading) return false;
+    if (_isDisposed || isLoading) return false;
     if (_isPlaceholder) {
       _statusMessage = '尚未設定 RevenueCat API Key，無法恢復購買。';
       notifyListeners();
       return false;
     }
 
-    _isLoading = true;
+    _isTransactionInProgress = true;
     _statusMessage = '';
     notifyListeners();
 
@@ -236,7 +261,7 @@ class SubscriptionManager extends ChangeNotifier {
       _statusMessage = '恢復購買失敗，請檢查網路後再試。';
       return false;
     } finally {
-      _isLoading = false;
+      _isTransactionInProgress = false;
       notifyListeners();
     }
   }
@@ -255,6 +280,7 @@ class SubscriptionManager extends ChangeNotifier {
   }
 
   void _onCustomerInfoUpdated(CustomerInfo info) {
+    if (_isDisposed) return;
     _updateProStatus(info);
     notifyListeners();
   }
@@ -265,6 +291,7 @@ class SubscriptionManager extends ChangeNotifier {
 
   @override
   void dispose() {
+    _isDisposed = true;
     Purchases.removeCustomerInfoUpdateListener(_onCustomerInfoUpdated);
     super.dispose();
   }
@@ -274,5 +301,10 @@ class SubscriptionManager extends ChangeNotifier {
             PurchasesErrorCode.purchaseCancelledError
         ? '已取消購買。'
         : '購買未完成，請稍後再試。';
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_isDisposed) super.notifyListeners();
   }
 }

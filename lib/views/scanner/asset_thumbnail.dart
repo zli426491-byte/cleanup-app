@@ -21,6 +21,7 @@ class AssetThumbnail extends StatefulWidget {
 
 class _AssetThumbnailState extends State<AssetThumbnail> {
   static const _maxCacheEntries = 120;
+  static const _requestTimeout = Duration(seconds: 30);
   static final Map<String, Future<Uint8List?>> _cache = {};
 
   late Future<Uint8List?> _thumbnail;
@@ -61,20 +62,38 @@ class _AssetThumbnailState extends State<AssetThumbnail> {
 
   static Future<Uint8List?> _loadThumbnail(String id, int size) async {
     try {
-      final entity = await AssetEntity.fromId(
+      return await _requestThumbnail(
         id,
-      ).timeout(const Duration(milliseconds: 800), onTimeout: () => null);
-      if (entity == null) return null;
-      return await entity
-          .thumbnailDataWithSize(
-            ThumbnailSize(size, size),
-            format: ThumbnailFormat.jpeg,
-          )
-          .timeout(const Duration(milliseconds: 1200), onTimeout: () => null);
+        size,
+      ).timeout(_requestTimeout, onTimeout: () => null);
     } catch (_) {
       return null;
     }
   }
+
+  static Future<Uint8List?> _requestThumbnail(String id, int size) async {
+    final entity = await AssetEntity.fromId(id);
+    if (entity == null) return null;
+    return entity.thumbnailDataWithSize(
+      ThumbnailSize(size, size),
+      format: ThumbnailFormat.jpeg,
+    );
+  }
+
+  void _retry() {
+    _cache.remove('${widget.asset.id}:${widget.previewSize}');
+    setState(() {
+      _thumbnail = _thumbnailFor(widget.asset, widget.previewSize);
+    });
+  }
+
+  Widget _retryButton() => Center(
+    child: IconButton(
+      tooltip: '重新載入預覽',
+      onPressed: _retry,
+      icon: const Icon(Icons.refresh_rounded, color: Colors.grey),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -85,17 +104,24 @@ class _AssetThumbnailState extends State<AssetThumbnail> {
             ? snapshot.data ?? widget.asset.thumbnail
             : widget.asset.thumbnail;
         if (bytes != null) {
-          return Image.memory(bytes, fit: BoxFit.cover);
+          return Image.memory(
+            bytes,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => _retryButton(),
+          );
         }
 
         return Container(
           color: Colors.grey[100],
-          child: Icon(
-            widget.asset.type == AssetType.video
-                ? Icons.videocam_rounded
-                : Icons.image_rounded,
-            color: Colors.grey,
-          ),
+          child: snapshot.connectionState != ConnectionState.done
+              ? const Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              : _retryButton(),
         );
       },
     );
