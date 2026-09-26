@@ -26,7 +26,9 @@ import Photos
       // never enter this simulator-only authorization bootstrap.
       nativePhotosFixtureObserver = NotificationCenter.default.addObserver(
         forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
-      ) { [weak self] _ in self?.requestNativePhotosFixtureAuthorization() }
+      ) { [weak self] _ in
+        DispatchQueue.main.async { [weak self] in self?.requestNativePhotosFixtureAuthorization() }
+      }
       DispatchQueue.main.async { [weak self] in self?.requestNativePhotosFixtureAuthorization() }
     }
     #endif
