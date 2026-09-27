@@ -38,7 +38,8 @@ void main() {
       final workload = manifest['workloadCount'] as int;
       final actualCount = manifest['actualFixtureCount'] as int;
       expect(workload, anyOf(1000, 10000));
-      expect(actualCount, greaterThanOrEqualTo(workload));
+      final shortVideoCount = workload ~/ 20;
+      expect(actualCount, workload + shortVideoCount + 2);
       final duplicateIds = List<String>.from(manifest['duplicateIds'] as List);
       final differentIds = List<String>.from(
         manifest['differentPhotoIds'] as List,
@@ -73,6 +74,11 @@ void main() {
       await _waitUntil(tester, () => !scanner.isScanning, 'home scan end');
       stages['initialPreviewMs'] = watch.elapsedMilliseconds;
       expect(scanner.scannedAssetCount, greaterThanOrEqualTo(actualCount));
+      expect(scanner.totalPhotoCount, greaterThanOrEqualTo(workload));
+      expect(
+        scanner.scanResult.videos.length,
+        greaterThanOrEqualTo(shortVideoCount + 2),
+      );
       expect(scanner.nativeOriginalAnalysisAvailable, isTrue);
       final indexed = scanner.scanResult.allAssets.map((a) => a.id).toSet();
       expect(
@@ -82,6 +88,8 @@ void main() {
       expect(scanner.verifiedHashAssetCount, 0);
       expect(scanner.knownSizeAssetCount, 0);
       stages['indexedCount'] = scanner.scannedAssetCount;
+      stages['indexedPhotoCount'] = scanner.totalPhotoCount;
+      stages['indexedVideoCount'] = scanner.scanResult.videos.length;
       stages['previewAnalyzedCount'] = scanner.analyzedAssetCount;
       stages['previewPendingCount'] = scanner.pendingAnalysisCount;
 
@@ -185,6 +193,8 @@ void main() {
       final report = <String, Object?>{
         'schemaVersion': 1,
         'workloadPhotos': workload,
+        'workloadShortVideos': shortVideoCount,
+        'workloadLargeVideos': 2,
         'actualFixtureCount': actualCount,
         'usesRealPhotosLibrary': true,
         'usesRealFlutterScannerAndNativeBridge': true,

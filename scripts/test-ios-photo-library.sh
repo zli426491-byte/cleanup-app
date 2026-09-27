@@ -48,8 +48,18 @@ assert manifest['owner'] == 'cleanup-native-photos-integration-v1'
 assert manifest['schemaVersion'] == 1 and manifest['status'] == 'native_verified'
 assert manifest['stage'] == workload and manifest['workloadCount'] == workload
 ids = manifest['allFixtureIds']
-assert len(ids) == len(set(ids)) == manifest['actualFixtureCount'] == workload + 2
+expected_total = workload + workload // 20 + 2
+assert len(ids) == len(set(ids)) == manifest['actualFixtureCount'] == expected_total
 assert len(manifest['photoFixtureIds']) == workload
+assert len(manifest['shortVideoIds']) == workload // 20
+assert len(manifest['videoFixtureIds']) == workload // 20 + 2
+assert set(manifest['shortVideoIds']) | set(manifest['largeVideoIds']) == set(manifest['videoFixtureIds'])
+assert set(manifest['videoFixtureIds']) <= set(ids) and set(manifest['photoFixtureIds']) <= set(ids)
+assert not set(manifest['videoFixtureIds']) & set(manifest['photoFixtureIds'])
+assert manifest['fixtureRoleCounts']['shortVideos'] == workload // 20
+assert manifest['shortVideoTemplateCount'] >= 10 and len(set(manifest['shortVideoTemplateSHA256'])) >= 10
+assert sum(manifest['photoResolutionCounts'].values()) == workload
+assert sum(manifest['videoResolutionCounts'].values()) == workload // 20 + 2
 assert len(manifest['duplicateIds']) == 2 and len(manifest['differentPhotoIds']) == 6
 assert len(manifest['largeVideoIds']) == 2
 marked = manifest['duplicateIds'] + manifest['differentPhotoIds'] + manifest['largeVideoIds']
