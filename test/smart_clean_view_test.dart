@@ -94,7 +94,10 @@ void main() {
     await tester.tap(find.byType(AssetThumbnail).first);
     await tester.pump();
     expect(find.text('已選擇 1 個項目'), findsOneWidget);
-    await tester.tap(find.byTooltip('滑動清理'));
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('start-category-swipe')),
+    );
+    await tester.tap(find.byKey(const ValueKey('start-category-swipe')));
     await tester.pumpAndSettle();
     final previews = tester
         .widgetList<Image>(
@@ -111,9 +114,11 @@ void main() {
       }
     });
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byIcon(Icons.close_rounded).first);
     await tester.tap(find.byIcon(Icons.close_rounded).first);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
+    await tester.ensureVisible(find.byIcon(Icons.favorite_rounded).last);
     await tester.tap(find.byIcon(Icons.favorite_rounded).last);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));

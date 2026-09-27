@@ -1103,4 +1103,74 @@ class AppLocalizationsTr extends AppLocalizations {
   String serviceQualitySummary(String reasons) {
     return '$reasons; yalnızca yol gösterici öneriler';
   }
+
+  @override
+  String get scanSwipeIntro =>
+      'Silmek üzere işaretlemek için sola, saklamak için sağa kaydırın. Yalnızca onaydan sonra silinir.';
+
+  @override
+  String get scanSwipeStart => 'Kaydırarak düzenlemeye başla';
+
+  @override
+  String get scanDetails => 'Tarama ayrıntıları';
+
+  @override
+  String get scanVerificationNeeded =>
+      'Orijinal dosyalar henüz kontrol edilmedi';
+
+  @override
+  String scanVerificationProgress(int verified, int total) {
+    return '$verified / $total öğe kontrol edildi';
+  }
+
+  @override
+  String get scanVerificationExplanation =>
+      'Tam kopyaları ve büyük dosyaları bulmak için önce dosya içeriklerini ve boyutlarını kontrol edin. Buluttaki öğeler bekleyebilir.';
+
+  @override
+  String get scanVerifyNow => 'Kopyaları ve büyük dosyaları kontrol et';
+
+  @override
+  String get scanBrowsePhotos => 'Önce fotoğrafları düzenle';
+
+  @override
+  String get scanSelectAll => 'Bu kategorideki tümünü seç';
+
+  @override
+  String get scanClearSelection => 'Seçimi temizle';
+
+  @override
+  String get scanKeepOneSelectOthers => 'Bu fotoğrafı sakla, diğerlerini seç';
+
+  @override
+  String get scanSelectOthersHint =>
+      'Saklanması önerilen fotoğrafı önizleyin, ardından gruptaki diğerlerini tek seferde seçin.';
+
+  @override
+  String get scanNotChecked => 'Kontrol bekliyor';
+
+  @override
+  String scanPendingCheckCount(int count) {
+    return '$count öğe kontrol bekliyor';
+  }
+
+  @override
+  String get swipeGestureTitle => 'Kaydırarak hızlı düzenleme';
+
+  @override
+  String get swipeGestureDelete => 'Silmek üzere işaretlemek için sola kaydır';
+
+  @override
+  String get swipeGestureKeep => 'Saklamak için sağa kaydır';
+
+  @override
+  String get swipeGestureSafety =>
+      'Fotoğraflar önce silinecekler listesine eklenir. Yalnızca Bitti’ye dokunup onayladıktan sonra silinir.';
+
+  @override
+  String get swipeGestureHelp => 'Kaydırarak nasıl düzenlenir?';
+
+  @override
+  String get homeSwipeDescription =>
+      'Fotoğrafları tek tek kaydırmak, küçük resimlere dokunmaktan daha hızlıdır.';
 }

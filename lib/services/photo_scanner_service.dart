@@ -240,6 +240,8 @@ class PhotoScannerService extends ChangeNotifier {
   int _verifiedCount = 0;
   int _pendingResourceCount = 0;
   int _attemptedResourceCount = 0;
+  int _knownSizeCount = 0;
+  int _verifiedHashCount = 0;
   String? _currentOperation;
   int _currentWaitSeconds = 0;
   Timer? _heartbeat;
@@ -295,6 +297,10 @@ class PhotoScannerService extends ChangeNotifier {
   int get verifiedOriginalCount => _verifiedCount;
   int get pendingResourceCount => _pendingResourceCount;
   int get attemptedResourceCount => _attemptedResourceCount;
+  int get knownSizeAssetCount => _knownSizeCount;
+  int get pendingSizeAssetCount => scannedAssetCount - _knownSizeCount;
+  int get verifiedHashAssetCount => _verifiedHashCount;
+  int get pendingHashAssetCount => totalPhotoCount - _verifiedHashCount;
   int get totalPhotoCount => _analyzedCount + _pendingCount;
   bool get isVerifyingOriginals => _isVerifyingOriginals;
   String? get currentOperation => _currentOperation;
@@ -523,10 +529,13 @@ class PhotoScannerService extends ChangeNotifier {
   void _resetCounters() {
     _analyzedCount = _pendingCount = _attemptedCount = _cloudCount = 0;
     _verifiedCount = _pendingResourceCount = _attemptedResourceCount = 0;
+    _knownSizeCount = _verifiedHashCount = 0;
   }
 
   void _countAsset(PhotoAsset asset, int direction) {
+    if (asset.sizeKnown) _knownSizeCount += direction;
     if (asset.type == AssetType.image) {
+      if (asset.hash != null) _verifiedHashCount += direction;
       if (asset.analysisPending) {
         _pendingCount += direction;
       } else {
@@ -717,14 +726,28 @@ class PhotoScannerService extends ChangeNotifier {
         .where((a) => a.resourceAnalysisPending)
         .toList();
     final ids = [
-      ...pending.where((a) => !a.resourceAnalysisAttempted).map((a) => a.id),
-      ...pending.where((a) => a.resourceAnalysisAttempted).map((a) => a.id),
+      // A local single-resource movie has a cheap exact file-size path. Do not
+      // spend the entire round on photo hashes before users see large videos.
+      for (final attempted in [false, true]) ...[
+        for (final type in [AssetType.video, AssetType.image])
+          ...pending
+              .where(
+                (a) =>
+                    a.resourceAnalysisAttempted == attempted && a.type == type,
+              )
+              .map((a) => a.id),
+      ],
     ];
     _startBudget(_resourceRoundBudget);
     var processed = 0;
     for (final id in ids) {
       _checkRun(runId);
+      final previous = _assets[id]!;
+      // Persist attempts before awaiting native work. A round deadline or a
+      // cancellation must not cause the next round to retry the same slow head.
+      _setAsset(previous.copyWith(resourceAnalysisAttempted: true));
       _setOperation('驗證本機原始素材');
+      notifyListeners();
       final token = '$_instanceId:$runId:original:$id';
       Map<dynamic, dynamic>? data;
       try {
@@ -751,30 +774,50 @@ class PhotoScannerService extends ChangeNotifier {
       _checkRun(runId);
       final size = data?['size'];
       final hash = data?['hash'];
+      final reason = data?['pendingReason'] is String
+          ? data!['pendingReason'] as String
+          : null;
+      final invalidated = const {
+        'asset_changed_during_analysis',
+        'asset_unavailable',
+        'no_resources',
+        'unknown_resource_type',
+        'original_resource_missing',
+        'live_photo_pair_missing',
+        'edited_photo_render_missing',
+        'edited_video_render_missing',
+        'edited_live_pair_missing',
+      }.contains(reason);
       final known =
-          data?['complete'] == true &&
+          !invalidated &&
+          (data?['complete'] == true || data?['sizeComplete'] == true) &&
           data?['sizeKnown'] == true &&
-          size is num &&
+          size is int &&
           size > 0;
       final verifiedHash =
-          known && hash is String && RegExp(r'^[a-f0-9]{64}$').hasMatch(hash)
+          known &&
+              data?['complete'] == true &&
+              data?['hashComplete'] != false &&
+              hash is String &&
+              RegExp(r'^[a-f0-9]{64}$').hasMatch(hash)
           ? hash
           : null;
+      final hasKnownSize = known || (previous.sizeKnown && !invalidated);
+      final needsHash =
+          previous.type == AssetType.image && verifiedHash == null;
+      final resourcePending = !hasKnownSize || needsHash;
       _setAsset(
         _assets[id]!.copyWith(
-          size: known ? size.toInt() : 0,
-          sizeKnown: known,
+          size: known ? size : (hasKnownSize ? previous.size : 0),
+          sizeKnown: hasKnownSize,
           hash: verifiedHash,
           clearHash: verifiedHash == null,
           resourceAnalysisAttempted: true,
           resourcePendingReason:
-              data?['pendingReason'] as String? ?? 'resource_timeout',
-          clearResourcePendingReason:
-              known &&
-              (_assets[id]!.type != AssetType.image || verifiedHash != null),
-          resourceAnalysisPending:
-              !known ||
-              (_assets[id]!.type == AssetType.image && verifiedHash == null),
+              reason ??
+              (hasKnownSize && needsHash ? 'hash_pending' : 'resource_timeout'),
+          clearResourcePendingReason: !resourcePending,
+          resourceAnalysisPending: resourcePending,
         ),
       );
       processed++;

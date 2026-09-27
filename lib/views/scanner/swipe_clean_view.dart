@@ -115,13 +115,25 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
             onPressed: _isDeleting ? null : _requestExit,
           ),
           actions: [
-            TextButton(
-              onPressed: _isDone || _isAnimating
-                  ? null
-                  : () => _showResultDialog(),
-              child: Text(
-                context.l10n.swipeDoneCount(_toDelete.length),
-                style: const TextStyle(fontWeight: FontWeight.w700),
+            IconButton(
+              tooltip: context.l10n.swipeGestureHelp,
+              icon: const Icon(Icons.help_outline_rounded),
+              onPressed: _showGestureHelp,
+            ),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width * 0.5,
+              ),
+              child: TextButton(
+                onPressed: _isDone || _isAnimating
+                    ? null
+                    : () => _showResultDialog(),
+                child: Text(
+                  context.l10n.swipeDoneCount(_toDelete.length),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
               ),
             ),
           ],
@@ -139,14 +151,11 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
 
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
-        child: SizedBox(
-          height:
-              constraints.maxHeight <
-                  (MediaQuery.textScalerOf(context).scale(12) > 16 ? 660 : 520)
-              ? (MediaQuery.textScalerOf(context).scale(12) > 16 ? 660 : 520)
-              : constraints.maxHeight,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
           child: Column(
             children: [
+              _gestureGuide(),
               // Progress bar
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -206,7 +215,8 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
               const SizedBox(height: 16),
 
               // Card stack
-              Expanded(
+              SizedBox(
+                height: 360,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
@@ -293,7 +303,7 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
 
               // Bottom buttons
               Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(40, 12, 40, 24),
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 24),
                 child: Row(
                   textDirection: TextDirection.ltr,
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -330,6 +340,97 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
                   ],
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _gestureGuide({bool expanded = false}) => Container(
+    key: expanded ? null : const ValueKey('swipe-gesture-guide'),
+    width: double.infinity,
+    margin: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (expanded) ...[
+          Text(context.l10n.swipeGestureTitle, style: AppTheme.heading3),
+          const SizedBox(height: 12),
+        ],
+        Wrap(
+          spacing: 16,
+          runSpacing: 8,
+          children: [
+            Text.rich(
+              TextSpan(
+                children: [
+                  const WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: Icon(
+                      Icons.arrow_back_rounded,
+                      textDirection: TextDirection.ltr,
+                      color: AppTheme.danger,
+                      size: 18,
+                    ),
+                  ),
+                  TextSpan(text: ' ${context.l10n.swipeGestureDelete}'),
+                ],
+              ),
+              style: AppTheme.body.copyWith(
+                color: AppTheme.danger,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(text: '${context.l10n.swipeGestureKeep} '),
+                  const WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: Icon(
+                      Icons.arrow_forward_rounded,
+                      textDirection: TextDirection.ltr,
+                      color: AppTheme.primary,
+                      size: 18,
+                    ),
+                  ),
+                ],
+              ),
+              style: AppTheme.body.copyWith(
+                color: AppTheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(context.l10n.swipeGestureSafety, style: AppTheme.caption),
+      ],
+    ),
+  );
+
+  void _showGestureHelp() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _gestureGuide(expanded: true),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(context.l10n.swipeContinueReview),
+              ),
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -456,35 +557,56 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
     required double size,
     required VoidCallback? onTap,
   }) {
-    return Tooltip(
-      message: label,
-      child: Semantics(
-        button: true,
-        enabled: onTap != null,
-        child: GestureDetector(
-          onTap: onTap,
-          child: Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: 0.2),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                ),
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                ),
-              ],
-            ),
-            child: Icon(
-              icon,
-              color: onTap == null ? Colors.grey : color,
-              size: size * 0.4,
+    return Expanded(
+      child: Tooltip(
+        message: label,
+        child: Semantics(
+          label: label,
+          button: true,
+          enabled: onTap != null,
+          excludeSemantics: true,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              child: Column(
+                children: [
+                  Container(
+                    width: size,
+                    height: size,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: color.withValues(alpha: 0.2),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      icon,
+                      color: onTap == null ? Colors.grey : color,
+                      size: size * 0.4,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: AppTheme.small.copyWith(
+                      color: onTap == null ? AppTheme.textMuted : color,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

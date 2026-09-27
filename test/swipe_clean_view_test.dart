@@ -84,6 +84,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     await waitForDecodedPreview(tester);
+    await tester.ensureVisible(find.byTooltip('刪除'));
     await tester.tap(find.byTooltip('刪除'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
@@ -186,6 +187,7 @@ void main() {
       ),
     );
     await mountReview(tester, photos);
+    await tester.ensureVisible(find.byTooltip('刪除'));
     await tester.tap(find.byTooltip('刪除'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('完成 (1)'));
@@ -252,13 +254,11 @@ void main() {
     await waitForDecodedPreview(tester);
     expect(thumbnailRequests, 2);
     expect(find.byType(Image), findsOneWidget);
-    final deleteTap = tester.widget<GestureDetector>(
-      find.descendant(
-        of: find.byTooltip('刪除'),
-        matching: find.byType(GestureDetector),
-      ),
+    final deleteTap = tester.widget<InkWell>(
+      find.descendant(of: find.byTooltip('刪除'), matching: find.byType(InkWell)),
     );
     expect(deleteTap.onTap, isNotNull);
+    await tester.ensureVisible(find.byTooltip('刪除'));
     await tester.tap(find.byTooltip('刪除'));
     await tester.pumpAndSettle();
     expect(find.text('審核完成！'), findsOneWidget);
@@ -268,6 +268,7 @@ void main() {
     tester,
   ) async {
     await mountReview(tester, [asset]);
+    await tester.ensureVisible(find.byTooltip('刪除'));
     await tester.tap(find.byTooltip('刪除'));
     await tester.pumpAndSettle();
     final navigator = tester.state<NavigatorState>(
@@ -301,10 +302,36 @@ void main() {
     tester,
   ) async {
     await mountReview(tester, [asset], reduceMotion: true);
+    await tester.ensureVisible(find.byTooltip('刪除'));
     await tester.tap(find.byTooltip('刪除'));
     await tester.pump();
     expect(find.text('審核完成！'), findsOneWidget);
   });
+
+  testWidgets(
+    'directions safety and visible action labels introduce swipe review',
+    (tester) async {
+      await mountReview(tester, [asset]);
+      expect(find.textContaining('左滑標記刪除', findRichText: true), findsOneWidget);
+      expect(find.textContaining('右滑保留', findRichText: true), findsOneWidget);
+      expect(find.text('照片會先加入待刪清單；按完成並確認後才刪除。'), findsOneWidget);
+      expect(find.text('刪除'), findsOneWidget);
+      expect(find.text('保留'), findsOneWidget);
+      expect(scanner.deletionRequests, 0);
+      await tester.tap(find.byTooltip('如何滑動整理'));
+      await tester.pumpAndSettle();
+      expect(find.text('快速滑動整理'), findsOneWidget);
+      await tester.tap(find.text('繼續審核'));
+      await tester.pumpAndSettle();
+      expect(find.text('快速滑動整理'), findsNothing);
+      await tester.ensureVisible(find.byTooltip('保留'));
+      await tester.tap(find.byTooltip('保留'));
+      await tester.pumpAndSettle();
+      expect(find.text('0 張要刪除 · 1 張保留'), findsOneWidget);
+      expect(scanner.deletionRequests, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'large-text review scrolls vertically over the photo and still swipes horizontally',

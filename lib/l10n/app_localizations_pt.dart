@@ -1103,4 +1103,76 @@ class AppLocalizationsPt extends AppLocalizations {
   String serviceQualitySummary(String reasons) {
     return '$reasons; apenas orientação sugerida';
   }
+
+  @override
+  String get scanSwipeIntro =>
+      'Deslize para a esquerda para marcar para eliminar e para a direita para manter. Só se elimina após confirmar.';
+
+  @override
+  String get scanSwipeStart => 'Começar a organizar deslizando';
+
+  @override
+  String get scanDetails => 'Detalhes da análise';
+
+  @override
+  String get scanVerificationNeeded =>
+      'Ficheiros originais ainda não verificados';
+
+  @override
+  String scanVerificationProgress(int verified, int total) {
+    return '$verified / $total itens verificados';
+  }
+
+  @override
+  String get scanVerificationExplanation =>
+      'Verifique primeiro o conteúdo e o tamanho dos ficheiros para encontrar duplicados exatos e ficheiros grandes. Os itens na nuvem podem esperar.';
+
+  @override
+  String get scanVerifyNow => 'Verificar duplicados e ficheiros grandes';
+
+  @override
+  String get scanBrowsePhotos => 'Organizar primeiro as fotos';
+
+  @override
+  String get scanSelectAll => 'Selecionar tudo nesta categoria';
+
+  @override
+  String get scanClearSelection => 'Limpar seleção';
+
+  @override
+  String get scanKeepOneSelectOthers =>
+      'Manter esta foto, selecionar as outras';
+
+  @override
+  String get scanSelectOthersHint =>
+      'Veja a foto sugerida para manter e selecione as restantes do grupo de uma só vez.';
+
+  @override
+  String get scanNotChecked => 'Por verificar';
+
+  @override
+  String scanPendingCheckCount(int count) {
+    return '$count itens por verificar';
+  }
+
+  @override
+  String get swipeGestureTitle => 'Organizar rapidamente deslizando';
+
+  @override
+  String get swipeGestureDelete =>
+      'Deslizar para a esquerda para marcar para eliminar';
+
+  @override
+  String get swipeGestureKeep => 'Deslizar para a direita para manter';
+
+  @override
+  String get swipeGestureSafety =>
+      'As fotos entram primeiro numa lista para eliminar. Só são eliminadas depois de tocar em Concluir e confirmar.';
+
+  @override
+  String get swipeGestureHelp => 'Como organizar deslizando';
+
+  @override
+  String get homeSwipeDescription =>
+      'Deslize foto a foto para organizar mais depressa do que tocando nas miniaturas.';
 }

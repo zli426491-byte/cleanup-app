@@ -26,10 +26,12 @@ class SmartCleanView extends StatefulWidget {
 class _SmartCleanViewState extends State<SmartCleanView> {
   int _selectedCategory = 0;
   int _videoSort = 0;
+  final _categoryKeys = List.generate(6, (_) => GlobalKey());
   final Set<String> _selectedIds = {};
   final Set<String> _dismissedSuggestions = {};
   bool _isDeleting = false;
   String? _focusedAssetId;
+  Set<String>? _selectionUndo;
   ScanResult? _cachedResult;
   ScanResult? _selectionSource;
   final Map<int, List<PhotoAsset>> _cachedAssets = {};
@@ -61,6 +63,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     };
     final index = _categoryIds.indexOf(category);
     _selectedCategory = index < 0 ? 0 : index;
+    _revealSelectedCategory();
   }
 
   void _updateSnapshot(PhotoScannerService scanner) {
@@ -97,26 +100,6 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                 icon: const Icon(Icons.stop_circle_outlined),
                 onPressed: scanner.cancelScan,
               ),
-            if (scanner.scanResult.allAssets.isNotEmpty)
-              IconButton(
-                tooltip: context.l10n.scanSwipeCleanup,
-                icon: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.primaryGradient,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.swipe_rounded,
-                    color: Colors.white,
-                    size: 16,
-                  ),
-                ),
-                onPressed:
-                    scanner.isScanning || scanner.isDeleting || _isDeleting
-                    ? null
-                    : () => _openSwipeMode(scanner),
-              ),
           ],
         ),
         body: Column(
@@ -145,73 +128,120 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   Widget _categoryBar(PhotoScannerService scanner) {
     return SizedBox(
       height: 44 + (MediaQuery.textScalerOf(context).scale(12) - 12) * 2,
-      child: ListView.separated(
+      child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _categories.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 6),
-        itemBuilder: (context, index) {
-          final selected = _selectedCategory == index;
-          final count = _countFor(index, scanner);
+        child: Row(
+          children: List.generate(_categories.length, (index) {
+            final selected = _selectedCategory == index;
+            final count = _countFor(index, scanner);
+            final pending = index == 1
+                ? scanner.pendingHashAssetCount
+                : index == 5
+                ? scanner.pendingSizeAssetCount
+                : 0;
 
-          return GestureDetector(
-            onTap: () {
-              if (_selectedCategory == index) return;
-              setState(() {
-                _selectedCategory = index;
-                _selectedIds.clear();
-              });
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: selected ? AppTheme.primary : Colors.white,
-                borderRadius: BorderRadius.circular(50),
-                border: selected
-                    ? null
-                    : Border.all(color: Colors.grey.withValues(alpha: 0.15)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _categories[index],
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: selected ? Colors.white : AppTheme.textSecondary,
+            return Padding(
+              padding: const EdgeInsetsDirectional.only(end: 6),
+              child: Semantics(
+                selected: selected,
+                button: true,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(50),
+                  onTap: () {
+                    if (_selectedCategory == index) return;
+                    setState(() {
+                      _selectedCategory = index;
+                      _selectedIds.clear();
+                      _selectionUndo = null;
+                    });
+                    _revealSelectedCategory();
+                  },
+                  child: Container(
+                    key: _categoryKeys[index],
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: selected ? AppTheme.primary : Colors.white,
+                      borderRadius: BorderRadius.circular(50),
+                      border: selected
+                          ? null
+                          : Border.all(
+                              color: Colors.grey.withValues(alpha: 0.15),
+                            ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _categories[index],
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: selected
+                                ? Colors.white
+                                : AppTheme.textSecondary,
+                          ),
+                        ),
+                        if (count == 0 && pending > 0) ...[
+                          const SizedBox(width: 4),
+                          Text(
+                            context.l10n.scanNotChecked,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: selected
+                                  ? Colors.white
+                                  : AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                        if (count > 0) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? Colors.white.withValues(alpha: 0.25)
+                                  : AppTheme.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                            child: Text(
+                              '$count',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: selected
+                                    ? Colors.white
+                                    : AppTheme.primary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                  if (count > 0) ...[
-                    const SizedBox(width: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? Colors.white.withValues(alpha: 0.25)
-                            : AppTheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(50),
-                      ),
-                      child: Text(
-                        '$count',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: selected ? Colors.white : AppTheme.primary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          }),
+        ),
       ),
     );
+  }
+
+  void _revealSelectedCategory() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final chipContext = _categoryKeys[_selectedCategory].currentContext;
+      if (chipContext != null) {
+        Scrollable.ensureVisible(chipContext, alignment: 0.5);
+      }
+    });
   }
 
   Widget _videoSortBar() {
@@ -365,49 +395,41 @@ class _SmartCleanViewState extends State<SmartCleanView> {
               child: Padding(
                 padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 12),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (scanner.isScanning) ...[
-                      ScanProgressPanel(scanner: scanner, compact: true),
+                    if (_isSwipeCategory && assets.isNotEmpty)
+                      _swipeCard(scanner),
+                    if (_isResourceCategory && _pendingChecks(scanner) > 0) ...[
                       const SizedBox(height: 12),
-                      Text(
-                        context.l10n.scanPreviewWhileRunning,
-                        style: AppTheme.caption,
+                      _verificationCard(
+                        scanner,
+                        compact: groups.isNotEmpty || assets.isNotEmpty,
                       ),
                     ],
-                    if (scanner.scanNotice != null)
-                      Text(
-                        context.localizeServiceMessage(scanner.scanNotice!),
-                        style: AppTheme.caption,
-                      ),
-                    Text(
-                      _selectedCategory == 1
-                          ? context.l10n.scanExactDescription
-                          : _selectedCategory == 2
-                          ? context.l10n.scanSimilarDescription
-                          : _selectedCategory == 5
-                          ? context.l10n.scanLargeDescription
-                          : context.l10n.scanManualDeleteDescription,
-                      style: AppTheme.caption,
-                    ),
-                    if (!scanner.isScanning && scanner.pendingResourceCount > 0)
-                      TextButton.icon(
-                        onPressed: scanner.isDeleting
-                            ? null
-                            : scanner.verifyOriginals,
-                        icon: const Icon(Icons.verified_outlined),
-                        label: Text(context.l10n.scanVerifyOriginals),
-                      ),
+                    const SizedBox(height: 8),
+                    _scanDetails(scanner),
                     if (!scanner.isScanning &&
                         (scanner.wasCancelled ||
                             scanner.pendingAnalysisCount > 0))
                       TextButton.icon(
-                        onPressed: scanner.isDeleting
+                        onPressed: scanner.isDeleting || _isDeleting
                             ? null
                             : scanner.resumeScan,
                         icon: const Icon(Icons.play_arrow_rounded),
                         label: Text(context.l10n.scanResumePending),
                       ),
+                    if (!_isResourceCategory &&
+                        !scanner.isScanning &&
+                        scanner.pendingResourceCount > 0)
+                      TextButton.icon(
+                        onPressed: scanner.isDeleting || _isDeleting
+                            ? null
+                            : scanner.verifyOriginals,
+                        icon: const Icon(Icons.verified_outlined),
+                        label: Text(context.l10n.scanVerifyNow),
+                      ),
+                    if (assets.isNotEmpty || _selectedIds.isNotEmpty)
+                      _selectionActions(scanner, assets),
                   ],
                 ),
               ),
@@ -436,7 +458,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                   ),
                 ),
               )
-            else
+            else if (!_isResourceCategory || _pendingChecks(scanner) == 0)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(32),
@@ -452,12 +474,301 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     );
   }
 
+  bool get _isResourceCategory =>
+      _selectedCategory == 1 || _selectedCategory == 5;
+  bool get _isManualCategory => const [0, 3, 4, 5].contains(_selectedCategory);
+
+  bool get _isSwipeCategory => _selectedCategory == 0 || _selectedCategory == 3;
+
+  int _pendingChecks(PhotoScannerService scanner) => _selectedCategory == 1
+      ? scanner.pendingHashAssetCount
+      : scanner.pendingSizeAssetCount;
+
+  int _verifiedChecks(PhotoScannerService scanner) => _selectedCategory == 1
+      ? scanner.verifiedHashAssetCount
+      : scanner.knownSizeAssetCount;
+
+  int _checkTotal(PhotoScannerService scanner) => _selectedCategory == 1
+      ? scanner.totalPhotoCount
+      : scanner.scannedAssetCount;
+
+  Widget _swipeCard(PhotoScannerService scanner) => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: AppTheme.primaryLight,
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.swipe_rounded, color: AppTheme.primary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                context.l10n.scanSwipeCleanup,
+                style: AppTheme.heading3,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(context.l10n.scanSwipeIntro, style: AppTheme.caption),
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          key: const ValueKey('start-category-swipe'),
+          onPressed: scanner.isScanning || scanner.isDeleting || _isDeleting
+              ? null
+              : () => _openSwipeMode(scanner),
+          icon: const Icon(Icons.swipe_rounded),
+          label: Text(context.l10n.scanSwipeStart),
+        ),
+      ],
+    ),
+  );
+
+  Widget _scanDetails(PhotoScannerService scanner) => AnimatedBuilder(
+    animation: scanner,
+    builder: (context, _) => ExpansionTile(
+      key: ValueKey('scan-details-$_selectedCategory'),
+      tilePadding: EdgeInsets.zero,
+      title: Text(context.l10n.scanDetails),
+      subtitle: Wrap(
+        spacing: 12,
+        runSpacing: 4,
+        children: [
+          Text(
+            context.l10n.scanVisualSuccessCount(scanner.analyzedAssetCount),
+            style: AppTheme.caption,
+          ),
+          Text(
+            context.l10n.scanOriginalVerifiedCount(
+              scanner.verifiedOriginalCount,
+            ),
+            style: AppTheme.caption,
+          ),
+        ],
+      ),
+      childrenPadding: const EdgeInsets.only(bottom: 12),
+      expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (scanner.isScanning) ...[
+          ScanProgressPanel(scanner: scanner, compact: true),
+          const SizedBox(height: 8),
+          Text(context.l10n.scanPreviewWhileRunning, style: AppTheme.caption),
+        ],
+        if (scanner.scanNotice != null)
+          Text(
+            context.localizeServiceMessage(scanner.scanNotice!),
+            style: AppTheme.caption,
+          ),
+        Text(
+          _selectedCategory == 1
+              ? context.l10n.scanExactDescription
+              : _selectedCategory == 2
+              ? context.l10n.scanSimilarDescription
+              : _selectedCategory == 5
+              ? context.l10n.scanLargeDescription
+              : context.l10n.scanManualDeleteDescription,
+          style: AppTheme.caption,
+        ),
+      ],
+    ),
+  );
+
+  Widget _verificationCard(
+    PhotoScannerService scanner, {
+    required bool compact,
+  }) => AnimatedBuilder(
+    animation: scanner,
+    builder: (context, _) {
+      final checking = scanner.isScanning && scanner.isVerifyingOriginals;
+      return Container(
+        key: const ValueKey('original-verification-card'),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryLight,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                if (checking)
+                  const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  const Icon(
+                    Icons.fact_check_outlined,
+                    color: AppTheme.primary,
+                  ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    checking
+                        ? context.l10n.scanCountConfirming
+                        : _verifiedChecks(scanner) == 0
+                        ? context.l10n.scanVerificationNeeded
+                        : _categories[_selectedCategory],
+                    style: AppTheme.heading3,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              context.l10n.scanVerificationProgress(
+                _verifiedChecks(scanner),
+                _checkTotal(scanner),
+              ),
+            ),
+            Text(
+              context.l10n.scanPendingCheckCount(_pendingChecks(scanner)),
+              style: AppTheme.caption,
+            ),
+            if (!compact) ...[
+              const SizedBox(height: 8),
+              Text(
+                context.l10n.scanVerificationExplanation,
+                style: AppTheme.caption,
+              ),
+            ],
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.icon(
+                  key: const ValueKey('verify-originals-cta'),
+                  onPressed:
+                      scanner.isScanning || scanner.isDeleting || _isDeleting
+                      ? null
+                      : scanner.verifyOriginals,
+                  icon: const Icon(Icons.fact_check_outlined),
+                  label: Text(context.l10n.scanVerifyNow),
+                ),
+                TextButton(
+                  onPressed: scanner.isDeleting || _isDeleting
+                      ? null
+                      : () {
+                          setState(() {
+                            _selectedCategory = 0;
+                            _selectedIds.clear();
+                            _selectionUndo = null;
+                          });
+                          _revealSelectedCategory();
+                        },
+                  child: Text(context.l10n.scanBrowsePhotos),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    },
+  );
+
+  Widget _selectionActions(
+    PhotoScannerService scanner,
+    List<PhotoAsset> assets,
+  ) {
+    final enabled = !scanner.isScanning && !scanner.isDeleting && !_isDeleting;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      children: [
+        if (_isManualCategory && assets.isNotEmpty)
+          TextButton.icon(
+            key: const ValueKey('select-current-category'),
+            onPressed: enabled
+                ? () => _changeSelection(
+                    () => _selectedIds.addAll(assets.map((asset) => asset.id)),
+                  )
+                : null,
+            icon: const Icon(Icons.select_all_rounded),
+            label: Text(context.l10n.scanSelectAll),
+          ),
+        if (_selectedIds.isNotEmpty)
+          TextButton.icon(
+            onPressed: enabled
+                ? () => _changeSelection(_selectedIds.clear)
+                : null,
+            icon: const Icon(Icons.deselect_rounded),
+            label: Text(context.l10n.scanClearSelection),
+          ),
+        if (_selectionUndo != null)
+          TextButton.icon(
+            onPressed: enabled
+                ? () => setState(() {
+                    _selectedIds.clear();
+                    _selectedIds.addAll(
+                      _selectionUndo!.intersection(
+                        scanner.scanResult.allAssets
+                            .map((asset) => asset.id)
+                            .toSet(),
+                      ),
+                    );
+                    _selectionUndo = null;
+                  })
+                : null,
+            icon: const Icon(Icons.undo_rounded),
+            label: Text(context.l10n.swipeUndoChoice),
+          ),
+      ],
+    );
+  }
+
+  void _changeSelection(VoidCallback change) {
+    final scanner = context.read<PhotoScannerService>();
+    if (scanner.isScanning || scanner.isDeleting || _isDeleting) return;
+    setState(() {
+      _selectionUndo = Set<String>.from(_selectedIds);
+      change();
+    });
+  }
+
+  void _selectGroupOthers(_ReviewGroup group, String keepId) {
+    if (!group.assets.any((asset) => asset.id == keepId)) return;
+    _changeSelection(() {
+      _selectedIds.removeAll(group.assets.map((asset) => asset.id));
+      _selectedIds.addAll(
+        group.assets
+            .where((asset) => asset.id != keepId)
+            .map((asset) => asset.id),
+      );
+    });
+  }
+
+  String _keeperActionLabel(PhotoAsset asset, int index) => [
+    context.l10n.scanCategoryPhotos,
+    index.toString(),
+    if (asset.title?.trim().isNotEmpty == true) asset.title!.trim(),
+    context.l10n.scanKeepOneSelectOthers,
+  ].join(' · ');
+
   Widget _groupRow(_ReviewGroup group) {
-    final suggested = !_dismissedSuggestions.contains(group.key)
+    final suggested =
+        !_dismissedSuggestions.contains(group.key) &&
+            group.assets.any((asset) => asset.id == group.bestAssetId)
         ? group.bestAssetId
         : null;
     final textScale = MediaQuery.textScalerOf(context).scale(12) / 12;
     final tileWidth = 112 * textScale.clamp(1.0, 1.5);
+    final actionText = TextPainter(
+      text: TextSpan(
+        text: context.l10n.scanKeepOneSelectOthers,
+        style: Theme.of(context).textTheme.labelLarge,
+      ),
+      textScaler: MediaQuery.textScalerOf(context),
+      textDirection: Directionality.of(context),
+    )..layout(maxWidth: tileWidth - 32);
+    final tileHeight = tileWidth + 60 * textScale + actionText.height + 32;
+    actionText.dispose();
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       padding: const EdgeInsets.all(14),
@@ -498,20 +809,64 @@ class _SmartCleanViewState extends State<SmartCleanView> {
               ),
             ),
           ],
-          Text(context.l10n.scanKeepManualHint, style: AppTheme.caption),
+          Text(context.l10n.scanSelectOthersHint, style: AppTheme.caption),
+          if (suggested != null)
+            FilledButton.icon(
+              key: ValueKey('keep-suggested-${group.key}'),
+              onPressed:
+                  context.read<PhotoScannerService>().isScanning ||
+                      context.read<PhotoScannerService>().isDeleting ||
+                      _isDeleting
+                  ? null
+                  : () => _selectGroupOthers(group, suggested),
+              icon: const Icon(Icons.bookmark_rounded),
+              label: Text(
+                context.l10n.scanKeepOneSelectOthers,
+                semanticsLabel: _keeperActionLabel(
+                  group.assets.firstWhere((asset) => asset.id == suggested),
+                  group.assets.indexWhere((asset) => asset.id == suggested) + 1,
+                ),
+              ),
+            ),
           const SizedBox(height: 10),
           SizedBox(
-            height: tileWidth + 52 * textScale,
+            height: tileHeight,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: group.assets.length,
               separatorBuilder: (context, index) => const SizedBox(width: 8),
               itemBuilder: (context, index) => SizedBox(
                 width: tileWidth,
-                child: _thumbnail(
-                  group.assets[index],
-                  recommended: suggested == group.assets[index].id,
-                  semanticIndex: index + 1,
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: _thumbnail(
+                        group.assets[index],
+                        recommended: suggested == group.assets[index].id,
+                        semanticIndex: index + 1,
+                      ),
+                    ),
+                    TextButton(
+                      key: ValueKey('keep-group-${group.assets[index].id}'),
+                      onPressed:
+                          context.read<PhotoScannerService>().isScanning ||
+                              context.read<PhotoScannerService>().isDeleting ||
+                              _isDeleting
+                          ? null
+                          : () => _selectGroupOthers(
+                              group,
+                              group.assets[index].id,
+                            ),
+                      child: Text(
+                        context.l10n.scanKeepOneSelectOthers,
+                        semanticsLabel: _keeperActionLabel(
+                          group.assets[index],
+                          index + 1,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -523,7 +878,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
 
   String _emptyCategoryMessage(PhotoScannerService scanner) {
     if ((_selectedCategory == 1 || _selectedCategory == 5) &&
-        scanner.pendingResourceCount > 0) {
+        _pendingChecks(scanner) > 0) {
       return context.l10n.scanEmptyUnverified;
     }
     if (_selectedCategory == 2 && scanner.pendingAnalysisCount > 0) {
@@ -543,10 +898,11 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   }) {
     final scanner = context.read<PhotoScannerService>();
     final selected = _selectedIds.contains(asset.id);
-    final enabled = !scanner.isScanning && !scanner.isDeleting;
+    final enabled = !scanner.isScanning && !scanner.isDeleting && !_isDeleting;
     void toggleSelection() {
-      if (scanner.isScanning || scanner.isDeleting) return;
+      if (scanner.isScanning || scanner.isDeleting || _isDeleting) return;
       setState(() {
+        _selectionUndo = null;
         selected ? _selectedIds.remove(asset.id) : _selectedIds.add(asset.id);
       });
     }
@@ -673,8 +1029,8 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                       icon: const Icon(Icons.compress_rounded, size: 20),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(
-                        minWidth: 32,
-                        minHeight: 32,
+                        minWidth: 44,
+                        minHeight: 44,
                       ),
                       onPressed: scanner.isScanning || scanner.isDeleting
                           ? null
@@ -887,7 +1243,12 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   }
 
   void _openSwipeMode(PhotoScannerService scanner) {
-    if (scanner.isScanning || scanner.isDeleting || _isDeleting) return;
+    if (!_isSwipeCategory ||
+        scanner.isScanning ||
+        scanner.isDeleting ||
+        _isDeleting) {
+      return;
+    }
     final assets = _assetsFor(_selectedCategory, scanner);
     if (assets.isEmpty) return;
     Navigator.push(

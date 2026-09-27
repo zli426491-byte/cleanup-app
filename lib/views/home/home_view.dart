@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:photo_manager/photo_manager.dart';
 import 'package:cleanup_app/l10n/l10n.dart';
 import '../../services/photo_scanner_service.dart';
 import '../../services/subscription_manager.dart';
@@ -8,6 +9,7 @@ import '../../models/storage_info.dart';
 import '../../utils/app_theme.dart';
 import '../scanner/smart_clean_view.dart';
 import '../scanner/scan_progress_panel.dart';
+import '../scanner/swipe_clean_view.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -64,6 +66,11 @@ class _HomeViewState extends State<HomeView> {
                     ),
                   const SizedBox(height: AppTheme.s16),
                   _buildScanButton(scanner),
+                  if (!scanner.isScanning ||
+                      scanner.scanResult.allAssets.isNotEmpty) ...[
+                    const SizedBox(height: AppTheme.s16),
+                    _buildSwipeEntry(scanner),
+                  ],
                   if (scanner.isScanning) ...[
                     const SizedBox(height: AppTheme.s12),
                     _buildProgress(scanner),
@@ -438,14 +445,16 @@ class _HomeViewState extends State<HomeView> {
         context.l10n.homeExactDuplicates,
         _resourceCountLabel(
           duplicateCount,
-          s.pendingResourceCount,
+          s.pendingHashAssetCount,
           hasScanned,
           photos: true,
         ),
         duplicateCount > 0
             ? _Status.warn
-            : indexComplete && s.pendingResourceCount == 0
+            : indexComplete && s.pendingHashAssetCount == 0
             ? _Status.done
+            : s.pendingHashAssetCount > 0
+            ? _Status.pending
             : _Status.scan,
         AppTheme.primary,
       ),
@@ -493,14 +502,16 @@ class _HomeViewState extends State<HomeView> {
         context.l10n.homeLargeFiles,
         _resourceCountLabel(
           s.scanResult.largeFiles.length,
-          s.pendingResourceCount,
+          s.pendingSizeAssetCount,
           hasScanned,
           photos: false,
         ),
         s.scanResult.largeFiles.isNotEmpty
             ? _Status.minor
-            : indexComplete && s.pendingResourceCount == 0
+            : indexComplete && s.pendingSizeAssetCount == 0
             ? _Status.done
+            : s.pendingSizeAssetCount > 0
+            ? _Status.pending
             : _Status.scan,
         const Color(0xFFE5A31A),
       ),
@@ -659,6 +670,11 @@ class _HomeViewState extends State<HomeView> {
           context.l10n.homeScanStatus,
           style: AppTheme.small.copyWith(color: AppTheme.textMuted),
         );
+      case _Status.pending:
+        return Text(
+          context.l10n.scanNotChecked,
+          style: AppTheme.small.copyWith(color: AppTheme.warning),
+        );
       case _Status.done:
         return Text(
           context.l10n.homeDoneStatus,
@@ -668,6 +684,54 @@ class _HomeViewState extends State<HomeView> {
   }
 
   // ── Quick Actions ──
+  Widget _buildSwipeEntry(PhotoScannerService scanner) {
+    final photos = scanner.scanResult.allAssets
+        .where((asset) => asset.type == AssetType.image)
+        .toList();
+    return Container(
+      key: const ValueKey('home-swipe-entry'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryLight,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.swipe_rounded, color: AppTheme.primary, size: 28),
+          const SizedBox(height: 8),
+          Text(context.l10n.scanSwipeCleanup, style: AppTheme.heading3),
+          const SizedBox(height: 6),
+          Text(context.l10n.homeSwipeDescription, style: AppTheme.body),
+          const SizedBox(height: 14),
+          FilledButton.icon(
+            onPressed: scanner.isScanning || scanner.isDeleting
+                ? null
+                : photos.isEmpty
+                ? () => _openReview('photos')
+                : () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SwipeCleanView(
+                        assets: photos,
+                        title: context.l10n.scanCategoryPhotos,
+                        categoryId: 'photos',
+                      ),
+                    ),
+                  ),
+            icon: const Icon(Icons.arrow_forward_rounded),
+            label: Text(
+              photos.isEmpty
+                  ? context.l10n.scanStart
+                  : context.l10n.scanSwipeStart,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildQuickActions() => Container(
     decoration: BoxDecoration(
       color: AppTheme.cardBg,
@@ -748,7 +812,7 @@ class _HomeViewState extends State<HomeView> {
 }
 
 // ── Status Enum ──
-enum _Status { critical, warn, minor, scan, done }
+enum _Status { critical, warn, minor, scan, pending, done }
 
 // ── Tool Data ──
 class _Tool {

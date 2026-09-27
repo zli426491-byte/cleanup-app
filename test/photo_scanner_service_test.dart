@@ -26,6 +26,8 @@ void main() {
   Completer<Map<String, Object>>? pageResponse;
   late Map<String, Map<String, Object>> nativeResults;
   late List<String> resourceRequests;
+  late List<Map> resourceArguments;
+  Future<Map<String, Object>> Function(String)? resourceHandler;
   late List<List<String>> previewRequests;
   Completer<Map<String, Object>>? previewResponse;
   Future<Map<String, Object>> Function(List<String>)? previewHandler;
@@ -89,6 +91,8 @@ void main() {
     pageResponse = null;
     nativeResults = {};
     resourceRequests = [];
+    resourceArguments = [];
+    resourceHandler = null;
     previewRequests = [];
     previewResponse = null;
     previewHandler = null;
@@ -128,7 +132,9 @@ void main() {
       expectSync(args['maxBytes'], 64 * 1024 * 1024);
       final id = args['assetId'] as String;
       resourceRequests.add(id);
+      resourceArguments.add(Map.of(args));
       if (resourceResponse != null) return resourceResponse!.future;
+      if (resourceHandler != null) return resourceHandler!(id);
       return nativeResults[id] ??
           {
             'sizeKnown': false,
@@ -954,6 +960,223 @@ void main() {
       );
       expect(subject.scanNotice, contains('尚未提供本機原始素材分析'));
       subject.dispose();
+    },
+  );
+
+  testWidgets(
+    'a 42k photo index does not starve a large local video size check',
+    (tester) async {
+      library = [
+        ...List.generate(42682, (i) => photo('photo-$i')),
+        photo('large-video', type: 2, created: 1600000000),
+      ];
+      final slowPhoto = Completer<Map<String, Object>>();
+      resourceHandler = (id) async => id == 'large-video'
+          ? {
+              'complete': true,
+              'sizeComplete': true,
+              'hashComplete': false,
+              'sizeKnown': true,
+              'size': 3 * 1024 * 1024 * 1024,
+            }
+          : slowPhoto.future;
+      final verification = scanner.verifyOriginals();
+      for (
+        var frame = 0;
+        frame < 1500 && resourceRequests.length < 2;
+        frame++
+      ) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      expect(scanner.scannedAssetCount, 42683);
+      expect(resourceRequests.first, 'large-video');
+      expect(resourceArguments.first['includeHash'], isFalse);
+      expect(scanner.knownSizeAssetCount, 1);
+      expect(scanner.pendingSizeAssetCount, 42682);
+      expect(scanner.verifiedHashAssetCount, 0);
+      expect(scanner.pendingHashAssetCount, 42682);
+      expect(scanner.scanResult.largeFiles.single.id, 'large-video');
+      expect(scanner.scanResult.largeFiles.single.size, 3221225472);
+      scanner.cancelScan();
+      await verification;
+      slowPhoto.complete(inspected('late-hash'));
+      await tester.pump();
+      expect(scanner.knownSizeAssetCount, 1);
+      expect(scanner.verifiedHashAssetCount, 0);
+    },
+  );
+
+  test(
+    'complete capacity survives incomplete hash verification and a failed retry',
+    () async {
+      library = [photo('size-only')];
+      nativeResults = {
+        'size-only': {
+          'sizeKnown': true,
+          'sizeComplete': true,
+          'size': 120 * 1024 * 1024,
+          'complete': false,
+          'hashComplete': false,
+          // Even a well-formed SHA must be ignored unless ALL content is verified.
+          'hash': sha256.convert(utf8.encode('unverified-prefix')).toString(),
+          'pendingReason': 'hash_byte_budget_exceeded',
+        },
+      };
+      await scanner.verifyOriginals();
+      final first = scanner.scanResult.allAssets.single;
+      expect(first.sizeKnown, isTrue);
+      expect(first.hash, isNull);
+      expect(first.resourceAnalysisPending, isTrue);
+      expect(scanner.knownSizeAssetCount, 1);
+      expect(scanner.pendingSizeAssetCount, 0);
+      expect(scanner.verifiedHashAssetCount, 0);
+      expect(scanner.pendingHashAssetCount, 1);
+      expect(scanner.scanResult.largeFiles.single.size, first.size);
+      nativeResults = {};
+      await scanner.verifyOriginals();
+      final retried = scanner.scanResult.allAssets.single;
+      expect(retried.sizeKnown, isTrue);
+      expect(retried.size, 120 * 1024 * 1024);
+      expect(retried.hash, isNull);
+      expect(scanner.knownSizeAssetCount, 1);
+      expect(scanner.scanResult.duplicateGroups, isEmpty);
+    },
+  );
+
+  test(
+    'verified SHA requires hash completeness while legacy full results stay compatible',
+    () async {
+      library = [photo('unverified'), photo('verified')];
+      nativeResults = {
+        'unverified': {...inspected('same'), 'hashComplete': false},
+        'verified': inspected('same'),
+      };
+      await scanner.verifyOriginals();
+      expect(scanner.knownSizeAssetCount, 2);
+      expect(scanner.pendingSizeAssetCount, 0);
+      expect(scanner.verifiedHashAssetCount, 1);
+      expect(scanner.pendingHashAssetCount, 1);
+      expect(scanner.scanResult.duplicateGroups, isEmpty);
+      expect(
+        scanner.scanResult.allAssets
+            .firstWhere((a) => a.id == 'unverified')
+            .hash,
+        isNull,
+      );
+    },
+  );
+
+  for (final reason in [
+    'asset_changed_during_analysis',
+    'asset_unavailable',
+    'original_resource_missing',
+  ]) {
+    test('explicit $reason invalidates previously measured capacity', () async {
+      library = [photo('size-only')];
+      nativeResults = {
+        'size-only': {
+          'sizeKnown': true,
+          'sizeComplete': true,
+          'size': 120 * 1024 * 1024,
+          'complete': false,
+          'hashComplete': false,
+        },
+      };
+      await scanner.verifyOriginals();
+      expect(scanner.knownSizeAssetCount, 1);
+      nativeResults = {
+        'size-only': {
+          'complete': false,
+          'sizeKnown': false,
+          'pendingReason': reason,
+        },
+      };
+      await scanner.verifyOriginals();
+      expect(scanner.knownSizeAssetCount, 0);
+      expect(scanner.pendingSizeAssetCount, 1);
+      expect(scanner.scanResult.largeFiles, isEmpty);
+      expect(scanner.scanResult.allAssets.single.size, 0);
+      expect(scanner.scanResult.allAssets.single.sizeKnown, isFalse);
+    });
+  }
+
+  test(
+    'capacity and SHA counters stay correct after deletion and a same-ID edit',
+    () async {
+      nativeResults = {'first': inspected('same'), 'second': inspected('same')};
+      await scanner.verifyOriginals();
+      expect(scanner.knownSizeAssetCount, 2);
+      expect(scanner.verifiedHashAssetCount, 2);
+      deletedBySystem = ['first'];
+      await scanner.deleteAssetsWithResult([
+        scanner.scanResult.allAssets.firstWhere((a) => a.id == 'first'),
+      ]);
+      expect(scanner.knownSizeAssetCount, 1);
+      expect(scanner.verifiedHashAssetCount, 1);
+      library = [
+        {...photo('second'), 'modifiedDt': 1900000000},
+      ];
+      nativeResults = {};
+      await scanner.resumeScan();
+      expect(scanner.knownSizeAssetCount, 0);
+      expect(scanner.pendingSizeAssetCount, 1);
+      expect(scanner.verifiedHashAssetCount, 0);
+      expect(scanner.pendingHashAssetCount, 1);
+    },
+  );
+
+  test(
+    'partial streams without a size completion flag never become large-file capacity',
+    () async {
+      library = [photo('prefix', type: 2), photo('fractional', type: 2)];
+      nativeResults = {
+        'prefix': {'complete': false, 'sizeKnown': true, 'size': 104857600},
+        'fractional': {
+          'complete': true,
+          'sizeKnown': true,
+          'size': 104857600.5,
+        },
+      };
+      await scanner.verifyOriginals();
+      expect(scanner.knownSizeAssetCount, 0);
+      expect(scanner.pendingSizeAssetCount, 2);
+      expect(scanner.scanResult.largeFiles, isEmpty);
+      expect(
+        scanner.scanResult.allAssets.every((a) => a.size == 0 && !a.sizeKnown),
+        isTrue,
+      );
+    },
+  );
+
+  testWidgets(
+    'cancelling a slow original checkpoints its attempt and resumes untouched work',
+    (tester) async {
+      library = [photo('slow-first'), photo('untouched-second')];
+      resourceResponse = Completer<Map<String, Object>>();
+      final first = scanner.verifyOriginals();
+      for (var i = 0; i < 30 && resourceRequests.isEmpty; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      expect(resourceRequests.single, 'slow-first');
+      expect(scanner.attemptedResourceCount, 1);
+      scanner.cancelScan();
+      await first;
+      final oldResponse = resourceResponse!;
+      resourceResponse = Completer<Map<String, Object>>();
+      final resumed = scanner.verifyOriginals();
+      for (var i = 0; i < 30 && resourceRequests.length == 1; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      expect(resourceRequests.last, 'untouched-second');
+      oldResponse.complete(inspected('obsolete'));
+      await tester.pump();
+      expect(scanner.knownSizeAssetCount, 0);
+      scanner.cancelScan();
+      await resumed;
+      resourceResponse!.complete(inspected('late-second'));
+      await tester.pump();
+      expect(scanner.knownSizeAssetCount, 0);
+      expect(scanner.verifiedHashAssetCount, 0);
     },
   );
 }

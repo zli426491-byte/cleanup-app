@@ -1095,4 +1095,73 @@ class AppLocalizationsEn extends AppLocalizations {
   String serviceQualitySummary(String reasons) {
     return '$reasons; suggested guidance only';
   }
+
+  @override
+  String get scanSwipeIntro =>
+      'Swipe left to mark for deletion, right to keep. Delete only after confirming.';
+
+  @override
+  String get scanSwipeStart => 'Start swipe cleanup';
+
+  @override
+  String get scanDetails => 'Scan details';
+
+  @override
+  String get scanVerificationNeeded => 'Original files not checked yet';
+
+  @override
+  String scanVerificationProgress(int verified, int total) {
+    return 'Checked $verified / $total items';
+  }
+
+  @override
+  String get scanVerificationExplanation =>
+      'Check file contents and sizes first to find exact duplicates and large files. Cloud items can wait.';
+
+  @override
+  String get scanVerifyNow => 'Check duplicates and large files';
+
+  @override
+  String get scanBrowsePhotos => 'Organize photos first';
+
+  @override
+  String get scanSelectAll => 'Select all in this category';
+
+  @override
+  String get scanClearSelection => 'Clear selection';
+
+  @override
+  String get scanKeepOneSelectOthers => 'Keep this photo, select the others';
+
+  @override
+  String get scanSelectOthersHint =>
+      'Preview the suggested photo to keep, then select the rest of this group in one go.';
+
+  @override
+  String get scanNotChecked => 'To check';
+
+  @override
+  String scanPendingCheckCount(int count) {
+    return '$count items to check';
+  }
+
+  @override
+  String get swipeGestureTitle => 'Quick swipe cleanup';
+
+  @override
+  String get swipeGestureDelete => 'Swipe left to mark for deletion';
+
+  @override
+  String get swipeGestureKeep => 'Swipe right to keep';
+
+  @override
+  String get swipeGestureSafety =>
+      'Photos go to a deletion list first. They are deleted only after you tap Done and confirm.';
+
+  @override
+  String get swipeGestureHelp => 'How to swipe';
+
+  @override
+  String get homeSwipeDescription =>
+      'Swipe through photos one by one for faster cleanup than tapping thumbnails.';
 }

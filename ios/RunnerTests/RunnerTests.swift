@@ -2,6 +2,8 @@ import Flutter
 import Photos
 import UIKit
 import XCTest
+import AVFoundation
+import CoreVideo
 @testable import Runner
 
 /// Real Swift queue/cancellation tests plus real Photos reads on the CI
@@ -35,10 +37,100 @@ private final class ControlledResourceIO: NativeResourceIO {
   }
 }
 
+private final class ControlledOriginalVideoIO: NativeOriginalVideoIO {
+  private let lock = NSLock()
+  var onRequest: (() -> Void)?
+  var onCancel: (() -> Void)?
+  var requestBarrier: DispatchSemaphore?
+  private var completed: ((AVAsset?, [AnyHashable: Any]?) -> Void)?
+  func request(_ asset: PHAsset, options: PHVideoRequestOptions,
+    completion: @escaping (AVAsset?, [AnyHashable: Any]?) -> Void) -> PHImageRequestID {
+    XCTAssertEqual(options.version, .original, "An edited render cannot stand in for the original file.")
+    XCTAssertFalse(options.isNetworkAccessAllowed, "Size lookup must never download an iCloud video.")
+    lock.lock(); completed = completion; lock.unlock()
+    onRequest?(); requestBarrier?.wait()
+    return 43
+  }
+  func cancel(_ identifier: PHImageRequestID) { XCTAssertEqual(identifier, 43); onCancel?() }
+  func settle(_ video: AVAsset?, info: [AnyHashable: Any]? = nil) {
+    lock.lock(); let callback = completed; lock.unlock(); callback?(video, info)
+  }
+}
+
 final class RunnerTests: XCTestCase {
   private static var fixtureIdentifier: String?
   private static var preparedFixtureIdentifier: String?
   private static var authorizationRequested = false
+  private static var videoFixtureIdentifier: String?
+
+  private func temporaryFile(bytes: UInt64) throws -> URL {
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("cleanup_native_\(UUID().uuidString)")
+    guard FileManager.default.createFile(atPath: url.path, contents: nil) else {
+      throw NSError(domain: "CleanupNativeTests", code: 4)
+    }
+    let handle = try FileHandle(forWritingTo: url)
+    do { try handle.truncate(atOffset: bytes); try handle.close() }
+    catch { try? handle.close(); try? FileManager.default.removeItem(at: url); throw error }
+    return url
+  }
+
+  private func simulatorVideo() throws -> String {
+    #if targetEnvironment(simulator)
+    // Reuse the existing isolated-simulator authorization setup.
+    _ = try simulatorPhoto()
+    if let existing = Self.videoFixtureIdentifier { return existing }
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("cleanup_video_\(UUID().uuidString).mov")
+    defer { try? FileManager.default.removeItem(at: url) }
+    let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
+    let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
+      AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: 16, AVVideoHeightKey: 16])
+    let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input,
+      sourcePixelBufferAttributes: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32ARGB,
+        kCVPixelBufferWidthKey as String: 16, kCVPixelBufferHeightKey as String: 16])
+    XCTAssertTrue(writer.canAdd(input)); writer.add(input)
+    XCTAssertTrue(writer.startWriting()); writer.startSession(atSourceTime: .zero)
+    var buffer: CVPixelBuffer?
+    XCTAssertEqual(CVPixelBufferCreate(kCFAllocatorDefault, 16, 16, kCVPixelFormatType_32ARGB,
+      nil, &buffer), kCVReturnSuccess)
+    let frame = try XCTUnwrap(buffer)
+    CVPixelBufferLockBaseAddress(frame, [])
+    if let base = CVPixelBufferGetBaseAddress(frame) {
+      memset(base, 0, CVPixelBufferGetBytesPerRow(frame) * CVPixelBufferGetHeight(frame))
+    }
+    CVPixelBufferUnlockBaseAddress(frame, [])
+    let written = expectation(description: "Write a disposable simulator video")
+    var appended = false
+    input.requestMediaDataWhenReady(on: DispatchQueue(label: "cleanup.test-video")) {
+      guard !appended, input.isReadyForMoreMediaData else { return }
+      appended = true
+      XCTAssertTrue(adaptor.append(frame, withPresentationTime: .zero))
+      input.markAsFinished(); writer.endSession(atSourceTime: CMTime(value: 1, timescale: 1))
+      writer.finishWriting { written.fulfill() }
+    }
+    wait(for: [written], timeout: 10)
+    XCTAssertEqual(writer.status, .completed, "\(String(describing: writer.error))")
+    let saved = expectation(description: "Import the simulator-only video")
+    let lock = NSLock(); var identifier: String?; var saveError: Error?
+    PHPhotoLibrary.shared().performChanges({
+      let creation = PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: url)
+      lock.lock(); identifier = creation?.placeholderForCreatedAsset?.localIdentifier; lock.unlock()
+    }, completionHandler: { success, error in
+      lock.lock(); saveError = success ? nil : error ?? NSError(domain: "CleanupNativeTests", code: 5); lock.unlock()
+      saved.fulfill()
+    })
+    wait(for: [saved], timeout: 10)
+    lock.lock(); let result = identifier; let error = saveError; lock.unlock()
+    if let error = error { throw error }
+    let value = try XCTUnwrap(result)
+    let asset = try XCTUnwrap(PHAsset.fetchAssets(withLocalIdentifiers: [value], options: nil).firstObject)
+    let types = PHAssetResource.assetResources(for: asset).map { $0.type }
+    XCTAssertEqual(asset.mediaType, .video); XCTAssertEqual(types, [.video])
+    Self.videoFixtureIdentifier = value
+    return value
+    #else
+    throw XCTSkip("Photos fixtures are restricted to an isolated simulator.")
+    #endif
+  }
 
   private func prepareSimulatorPhotoMetadata(_ identifier: String) throws -> String {
     if Self.preparedFixtureIdentifier == identifier { return identifier }
@@ -140,6 +232,161 @@ final class RunnerTests: XCTestCase {
     XCTAssertNil(stream.snapshot().digest, "An over-budget prefix is never a verified original hash.")
   }
 
+  func testOriginalVideoFileSizeRequiresExactlyOneVideoResourceAndNoHash() {
+    XCTAssertTrue(PhotoResourceInspection.canReadOriginalVideoFileSize(
+      mediaType: .video, resourceTypes: [.video], includeHash: false))
+    let unsupportedResources: [[PHAssetResourceType]] = [[], [.photo], [.video, .audio], [.video, .video],
+      [.video, .adjustmentData, .fullSizeVideo], [.photo, .pairedVideo]]
+    for types in unsupportedResources {
+      XCTAssertFalse(PhotoResourceInspection.canReadOriginalVideoFileSize(
+        mediaType: .video, resourceTypes: types, includeHash: false))
+    }
+    XCTAssertFalse(PhotoResourceInspection.canReadOriginalVideoFileSize(
+      mediaType: .image, resourceTypes: [.video], includeHash: false))
+    XCTAssertFalse(PhotoResourceInspection.canReadOriginalVideoFileSize(
+      mediaType: .video, resourceTypes: [.video], includeHash: true))
+  }
+
+  func testLocalVideoFileSizeExceedsStreamBudgetWithoutIntegerTruncation() throws {
+    // A sparse file exercises a real stat without allocating or reading GiBs.
+    let bytes: UInt64 = 3 * 1024 * 1024 * 1024 + 17
+    let url = try temporaryFile(bytes: bytes)
+    defer { try? FileManager.default.removeItem(at: url) }
+    XCTAssertEqual(PhotoResourceInspection.localRegularFileSize(at: url), Int64(bytes))
+  }
+
+  func testLocalVideoFileSizeRejectsMissingEmptyDirectoryAndRemoteURLs() throws {
+    let empty = try temporaryFile(bytes: 0)
+    defer { try? FileManager.default.removeItem(at: empty) }
+    XCTAssertNil(PhotoResourceInspection.localRegularFileSize(at: empty))
+    XCTAssertNil(PhotoResourceInspection.localRegularFileSize(at:
+      empty.appendingPathExtension("missing")))
+    XCTAssertNil(PhotoResourceInspection.localRegularFileSize(at: FileManager.default.temporaryDirectory))
+    XCTAssertNil(PhotoResourceInspection.localRegularFileSize(at:
+      try XCTUnwrap(URL(string: "https://example.invalid/movie.mov"))))
+    XCTAssertNil(PhotoResourceInspection.localRegularFileSize(at:
+      try XCTUnwrap(URL(string: "file://remote.invalid/movie.mov"))))
+  }
+
+  func testOriginalVideoSizeAboveByteBudgetDoesNotStreamOrVerifyHash() throws {
+    let identifier = try simulatorVideo()
+    let bytes: UInt64 = 80 * 1024 * 1024 + 1
+    let url = try temporaryFile(bytes: bytes)
+    defer { try? FileManager.default.removeItem(at: url) }
+    let video = ControlledOriginalVideoIO(); let stream = ControlledResourceIO()
+    let started = expectation(description: "Request the original local video")
+    let replied = expectation(description: "Stat returns a complete size")
+    video.onRequest = { started.fulfill() }
+    stream.onRequest = { XCTFail("A usable single-resource file must not be streamed.") }
+    var response: [String: Any]?
+    let job = PhotoResourceInspection(assetId: identifier, includeHash: false,
+      includeThumbnail: false, timeoutSeconds: 2, maximumBytes: 1, io: stream, videoIO: video) {
+      response = $0; replied.fulfill()
+    }
+    job.start(); wait(for: [started], timeout: 2)
+    video.settle(AVURLAsset(url: url))
+    wait(for: [replied], timeout: 2)
+    XCTAssertEqual((response?["size"] as? NSNumber)?.int64Value, Int64(bytes))
+    XCTAssertEqual(response?["sizeKnown"] as? Bool, true)
+    XCTAssertEqual(response?["sizeComplete"] as? Bool, true)
+    XCTAssertEqual(response?["complete"] as? Bool, true)
+    XCTAssertEqual(response?["hashComplete"] as? Bool, false)
+    XCTAssertNil(response?["hash"])
+  }
+
+  func testOriginalVideoCompositionFallsBackToBoundedResourceStream() throws {
+    let identifier = try simulatorVideo()
+    let video = ControlledOriginalVideoIO(); let stream = ControlledResourceIO()
+    let started = expectation(description: "Original video request starts")
+    let fallback = expectation(description: "Composition uses bounded resource read")
+    let replied = expectation(description: "Fallback returns its complete byte count")
+    video.onRequest = { started.fulfill() }; stream.onRequest = { fallback.fulfill() }
+    var response: [String: Any]?
+    let job = PhotoResourceInspection(assetId: identifier, includeHash: false,
+      includeThumbnail: false, timeoutSeconds: 2, maximumBytes: 6, io: stream, videoIO: video) {
+      response = $0; replied.fulfill()
+    }
+    job.start(); wait(for: [started], timeout: 2)
+    video.settle(AVMutableComposition())
+    wait(for: [fallback], timeout: 2)
+    stream.send(Data("abc".utf8)); stream.settle()
+    wait(for: [replied], timeout: 2)
+    XCTAssertEqual((response?["size"] as? NSNumber)?.int64Value, 3)
+    XCTAssertEqual(response?["sizeComplete"] as? Bool, true)
+    XCTAssertEqual(response?["hashComplete"] as? Bool, false)
+    XCTAssertNil(response?["hash"])
+  }
+
+  func testOriginalVideoDeadlineCancelsRequestAndIgnoresLateSize() throws {
+    let identifier = try simulatorVideo()
+    let url = try temporaryFile(bytes: 80 * 1024 * 1024)
+    defer { try? FileManager.default.removeItem(at: url) }
+    let video = ControlledOriginalVideoIO(); let stream = ControlledResourceIO()
+    let started = expectation(description: "Original video request starts")
+    let replied = expectation(description: "Original-video deadline returns")
+    let cancelled = expectation(description: "Deadline cancels the Photos image request")
+    video.onRequest = { started.fulfill() }
+    video.onCancel = { video.settle(AVURLAsset(url: url)); cancelled.fulfill() }
+    stream.onRequest = { XCTFail("A cancelled late callback must not start resource reads.") }
+    var calls = 0
+    let job = PhotoResourceInspection(assetId: identifier, includeHash: false,
+      includeThumbnail: false, timeoutSeconds: 1, io: stream, videoIO: video) { result in
+      calls += 1
+      XCTAssertEqual(result["pendingReason"] as? String, "resource_time_budget")
+      XCTAssertEqual(result["sizeComplete"] as? Bool, false)
+      XCTAssertEqual(result["hashComplete"] as? Bool, false)
+      XCTAssertNil(result["hash"]); replied.fulfill()
+    }
+    job.start(); wait(for: [started, replied, cancelled], timeout: 3)
+    XCTAssertEqual(calls, 1)
+  }
+
+  func testOriginalVideoCancellationRepliesBeforeLateRequestIdentifier() throws {
+    let identifier = try simulatorVideo()
+    let url = try temporaryFile(bytes: 80 * 1024 * 1024)
+    defer { try? FileManager.default.removeItem(at: url) }
+    let video = ControlledOriginalVideoIO(); let stream = ControlledResourceIO()
+    let started = expectation(description: "Original video request is blocked")
+    let replied = expectation(description: "Cancel replies without waiting for the request identifier")
+    let cancelled = expectation(description: "Late Photos image request identifier is cancelled")
+    let barrier = DispatchSemaphore(value: 0); video.requestBarrier = barrier
+    defer { barrier.signal() }
+    video.onRequest = { started.fulfill() }
+    video.onCancel = { video.settle(AVURLAsset(url: url)); cancelled.fulfill() }
+    stream.onRequest = { XCTFail("Cancel must prevent a fallback resource read.") }
+    var calls = 0
+    let job = PhotoResourceInspection(assetId: identifier, includeHash: false,
+      includeThumbnail: false, timeoutSeconds: 3, io: stream, videoIO: video) { result in
+      calls += 1
+      XCTAssertEqual(result["pendingReason"] as? String, "cancelled")
+      XCTAssertEqual(result["sizeKnown"] as? Bool, false)
+      XCTAssertNil(result["hash"]); replied.fulfill()
+    }
+    job.start(); wait(for: [started], timeout: 2); job.cancel()
+    wait(for: [replied], timeout: 1)
+    barrier.signal(); wait(for: [cancelled], timeout: 2)
+    XCTAssertEqual(calls, 1)
+  }
+
+  func testRealPhotosOriginalVideoSizeUsesLocalFileWithoutStreaming() throws {
+    let identifier = try simulatorVideo()
+    let stream = ControlledResourceIO()
+    stream.onRequest = { XCTFail("The real simulator video should expose a local original URL.") }
+    let replied = expectation(description: "Read the real original video file size")
+    var response: [String: Any]?
+    let job = PhotoResourceInspection(assetId: identifier, includeHash: false,
+      includeThumbnail: false, timeoutSeconds: 8, maximumBytes: 1, io: stream) {
+      response = $0; replied.fulfill()
+    }
+    job.start(); wait(for: [replied], timeout: 10)
+    XCTAssertEqual(response?["sizeKnown"] as? Bool, true, "\(String(describing: response))")
+    XCTAssertEqual(response?["sizeComplete"] as? Bool, true)
+    XCTAssertEqual(response?["complete"] as? Bool, true)
+    XCTAssertGreaterThan((response?["size"] as? NSNumber)?.int64Value ?? 0, 1)
+    XCTAssertEqual(response?["hashComplete"] as? Bool, false)
+    XCTAssertNil(response?["hash"])
+  }
+
   func testDeadlineRepliesWithoutWaitingForBlockingCancellation() {
     let replied = expectation(description: "Deadline replies on main")
     let cancelling = expectation(description: "Native cancellation is independently running")
@@ -215,6 +462,8 @@ final class RunnerTests: XCTestCase {
     let result = try XCTUnwrap(response)
     XCTAssertEqual(result["complete"] as? Bool, true, "\(result)")
     XCTAssertEqual(result["sizeKnown"] as? Bool, true)
+    XCTAssertEqual(result["sizeComplete"] as? Bool, true)
+    XCTAssertEqual(result["hashComplete"] as? Bool, true)
     XCTAssertGreaterThan((result["size"] as? NSNumber)?.int64Value ?? 0, 0)
     XCTAssertEqual((result["hash"] as? String)?.count, 64)
     XCTAssertNil(result["thumbnail"])
@@ -295,6 +544,8 @@ final class RunnerTests: XCTestCase {
     XCTAssertEqual((response?["partialBytes"] as? NSNumber)?.int64Value, 6)
     XCTAssertEqual(response?["complete"] as? Bool, false)
     XCTAssertEqual(response?["sizeKnown"] as? Bool, false)
+    XCTAssertEqual(response?["sizeComplete"] as? Bool, false)
+    XCTAssertEqual(response?["hashComplete"] as? Bool, false)
     XCTAssertNil(response?["hash"])
     io.settle()
   }

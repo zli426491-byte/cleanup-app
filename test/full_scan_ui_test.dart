@@ -61,6 +61,14 @@ class _Scanner extends PhotoScannerService {
   @override
   int get verifiedOriginalCount => 900;
   @override
+  int get verifiedHashAssetCount => 1200;
+  @override
+  int get pendingHashAssetCount => 0;
+  @override
+  int get knownSizeAssetCount => 1200;
+  @override
+  int get pendingSizeAssetCount => 0;
+  @override
   int get cloudPendingCount => 200;
   @override
   String? get currentOperation => null;
@@ -212,10 +220,13 @@ void main() {
     (tester) async {
       final scanner = _Scanner(scanning: true);
       await _mount(tester, scanner, const SmartCleanView());
+      await tester.tap(find.byKey(const ValueKey('scan-details-0')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('已讀取 1200 / 6000 個項目'), findsOneWidget);
       expect(find.text('照片畫面已處理 1000 / 1200 張'), findsOneWidget);
-      expect(find.text('視覺分析成功 1000 個'), findsOneWidget);
-      expect(find.text('原始素材已驗證 900 個'), findsOneWidget);
+      expect(find.text('視覺分析成功 1000 個'), findsNWidgets(2));
+      expect(find.text('原始素材已驗證 900 個'), findsNWidgets(2));
       expect(find.text('待下載 200 個'), findsOneWidget);
       expect(find.textContaining('最多讀取 900'), findsNothing);
       await tester.tap(find.byTooltip('取消掃描並保留進度'));
@@ -233,6 +244,8 @@ void main() {
       _Scanner(),
       const SmartCleanView(initialCategory: 'videos'),
     );
+    await tester.ensureVisible(find.byTooltip('壓縮此影片'));
+    await tester.pump();
     await tester.tap(find.byTooltip('壓縮此影片'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
@@ -257,7 +270,16 @@ void main() {
         );
         expect(tester.takeException(), isNull);
         if (category == 'duplicates') {
-          await tester.ensureVisible(find.byTooltip('放大預覽').first);
+          await tester.scrollUntilVisible(
+            find.byTooltip('放大預覽').first,
+            200,
+            scrollable: find
+                .descendant(
+                  of: find.byType(CustomScrollView),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          );
           await tester.pump();
           await tester.tap(find.byTooltip('放大預覽').first);
           await tester.pump();

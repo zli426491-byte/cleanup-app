@@ -1114,4 +1114,74 @@ class AppLocalizationsPl extends AppLocalizations {
   String serviceQualitySummary(String reasons) {
     return '$reasons; wyłącznie wskazówka';
   }
+
+  @override
+  String get scanSwipeIntro =>
+      'Przesuń w lewo, by oznaczyć do usunięcia, w prawo, by zachować. Usuwanie następuje dopiero po potwierdzeniu.';
+
+  @override
+  String get scanSwipeStart => 'Zacznij porządkować przesuwaniem';
+
+  @override
+  String get scanDetails => 'Szczegóły skanowania';
+
+  @override
+  String get scanVerificationNeeded => 'Oryginalne pliki jeszcze niesprawdzone';
+
+  @override
+  String scanVerificationProgress(int verified, int total) {
+    return 'Sprawdzono $verified / $total elementów';
+  }
+
+  @override
+  String get scanVerificationExplanation =>
+      'Najpierw sprawdź zawartość i rozmiary plików, aby znaleźć identyczne kopie i duże pliki. Elementy w chmurze mogą poczekać.';
+
+  @override
+  String get scanVerifyNow => 'Sprawdź kopie i duże pliki';
+
+  @override
+  String get scanBrowsePhotos => 'Najpierw uporządkuj zdjęcia';
+
+  @override
+  String get scanSelectAll => 'Wybierz wszystko w tej kategorii';
+
+  @override
+  String get scanClearSelection => 'Wyczyść wybór';
+
+  @override
+  String get scanKeepOneSelectOthers =>
+      'Zachowaj to zdjęcie, wybierz pozostałe';
+
+  @override
+  String get scanSelectOthersHint =>
+      'Podejrzyj zdjęcie sugerowane do zachowania, a następnie wybierz resztę grupy naraz.';
+
+  @override
+  String get scanNotChecked => 'Do sprawdzenia';
+
+  @override
+  String scanPendingCheckCount(int count) {
+    return 'Do sprawdzenia: $count';
+  }
+
+  @override
+  String get swipeGestureTitle => 'Szybkie porządkowanie przesuwaniem';
+
+  @override
+  String get swipeGestureDelete => 'Przesuń w lewo, by oznaczyć do usunięcia';
+
+  @override
+  String get swipeGestureKeep => 'Przesuń w prawo, by zachować';
+
+  @override
+  String get swipeGestureSafety =>
+      'Zdjęcia najpierw trafiają na listę do usunięcia. Zostaną usunięte dopiero po naciśnięciu Gotowe i potwierdzeniu.';
+
+  @override
+  String get swipeGestureHelp => 'Jak porządkować przesuwaniem';
+
+  @override
+  String get homeSwipeDescription =>
+      'Przesuwaj zdjęcia jedno po drugim, aby porządkować je szybciej niż stukając miniatury.';
 }

@@ -1107,4 +1107,75 @@ class AppLocalizationsEs extends AppLocalizations {
   String serviceQualitySummary(String reasons) {
     return '$reasons; solo orientación';
   }
+
+  @override
+  String get scanSwipeIntro =>
+      'Desliza a la izquierda para marcar para borrar y a la derecha para conservar. Solo se borra tras confirmar.';
+
+  @override
+  String get scanSwipeStart => 'Empezar a organizar deslizando';
+
+  @override
+  String get scanDetails => 'Detalles del análisis';
+
+  @override
+  String get scanVerificationNeeded => 'Archivos originales aún sin comprobar';
+
+  @override
+  String scanVerificationProgress(int verified, int total) {
+    return '$verified / $total elementos comprobados';
+  }
+
+  @override
+  String get scanVerificationExplanation =>
+      'Comprueba primero el contenido y el tamaño de los archivos para encontrar duplicados exactos y archivos grandes. Los elementos en la nube pueden esperar.';
+
+  @override
+  String get scanVerifyNow => 'Comprobar duplicados y archivos grandes';
+
+  @override
+  String get scanBrowsePhotos => 'Organizar primero las fotos';
+
+  @override
+  String get scanSelectAll => 'Seleccionar todo en esta categoría';
+
+  @override
+  String get scanClearSelection => 'Quitar selección';
+
+  @override
+  String get scanKeepOneSelectOthers =>
+      'Conservar esta foto, seleccionar las demás';
+
+  @override
+  String get scanSelectOthersHint =>
+      'Previsualiza la foto recomendada para conservar y selecciona el resto del grupo de una vez.';
+
+  @override
+  String get scanNotChecked => 'Por comprobar';
+
+  @override
+  String scanPendingCheckCount(int count) {
+    return '$count elementos por comprobar';
+  }
+
+  @override
+  String get swipeGestureTitle => 'Organizar rápido deslizando';
+
+  @override
+  String get swipeGestureDelete =>
+      'Deslizar a la izquierda para marcar para borrar';
+
+  @override
+  String get swipeGestureKeep => 'Deslizar a la derecha para conservar';
+
+  @override
+  String get swipeGestureSafety =>
+      'Las fotos van primero a una lista para borrar. Solo se borran después de pulsar Listo y confirmar.';
+
+  @override
+  String get swipeGestureHelp => 'Cómo organizar deslizando';
+
+  @override
+  String get homeSwipeDescription =>
+      'Desliza las fotos una a una para organizarlas más rápido que tocando las miniaturas.';
 }

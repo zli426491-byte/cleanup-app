@@ -1052,4 +1052,73 @@ class AppLocalizationsKo extends AppLocalizations {
   String serviceQualitySummary(String reasons) {
     return '$reasons; 추천은 참고용입니다';
   }
+
+  @override
+  String get scanSwipeIntro =>
+      '왼쪽으로 밀면 삭제 후보, 오른쪽으로 밀면 보관합니다. 마지막 확인 후에만 삭제됩니다.';
+
+  @override
+  String get scanSwipeStart => '밀어서 정리 시작';
+
+  @override
+  String get scanDetails => '스캔 상세 정보';
+
+  @override
+  String get scanVerificationNeeded => '원본 파일 확인 전';
+
+  @override
+  String scanVerificationProgress(int verified, int total) {
+    return '$verified / $total개 확인됨';
+  }
+
+  @override
+  String get scanVerificationExplanation =>
+      '파일 내용과 크기를 먼저 확인해야 완전히 같은 사진과 큰 파일을 볼 수 있습니다. 클라우드 항목은 나중에 처리해도 됩니다.';
+
+  @override
+  String get scanVerifyNow => '중복 및 큰 파일 확인';
+
+  @override
+  String get scanBrowsePhotos => '사진부터 정리';
+
+  @override
+  String get scanSelectAll => '이 분류 모두 선택';
+
+  @override
+  String get scanClearSelection => '선택 해제';
+
+  @override
+  String get scanKeepOneSelectOthers => '이 사진은 보관하고 나머지 선택';
+
+  @override
+  String get scanSelectOthersHint =>
+      '보관 추천 사진을 미리 본 다음, 그룹의 나머지 사진을 한 번에 선택하세요.';
+
+  @override
+  String get scanNotChecked => '확인 대기';
+
+  @override
+  String scanPendingCheckCount(int count) {
+    return '확인 대기 $count개';
+  }
+
+  @override
+  String get swipeGestureTitle => '밀어서 빠르게 정리';
+
+  @override
+  String get swipeGestureDelete => '왼쪽으로 밀어 삭제 후보로 표시';
+
+  @override
+  String get swipeGestureKeep => '오른쪽으로 밀어 보관';
+
+  @override
+  String get swipeGestureSafety =>
+      '사진은 먼저 삭제 후보 목록에 추가됩니다. 완료를 누르고 확인한 후에만 삭제됩니다.';
+
+  @override
+  String get swipeGestureHelp => '밀어서 정리하는 방법';
+
+  @override
+  String get homeSwipeDescription =>
+      '사진을 한 장씩 좌우로 밀면 썸네일을 누르는 것보다 빠르게 정리할 수 있습니다.';
 }

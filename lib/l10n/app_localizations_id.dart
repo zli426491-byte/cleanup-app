@@ -1100,4 +1100,73 @@ class AppLocalizationsId extends AppLocalizations {
   String serviceQualitySummary(String reasons) {
     return '$reasons; hanya sebagai saran';
   }
+
+  @override
+  String get scanSwipeIntro =>
+      'Geser ke kiri untuk menandai hapus, ke kanan untuk menyimpan. Foto hanya dihapus setelah dikonfirmasi.';
+
+  @override
+  String get scanSwipeStart => 'Mulai merapikan dengan geser';
+
+  @override
+  String get scanDetails => 'Detail pemindaian';
+
+  @override
+  String get scanVerificationNeeded => 'File asli belum diperiksa';
+
+  @override
+  String scanVerificationProgress(int verified, int total) {
+    return '$verified / $total item diperiksa';
+  }
+
+  @override
+  String get scanVerificationExplanation =>
+      'Periksa isi dan ukuran file dahulu untuk menemukan duplikat persis dan file besar. Item di cloud bisa ditangani nanti.';
+
+  @override
+  String get scanVerifyNow => 'Periksa duplikat dan file besar';
+
+  @override
+  String get scanBrowsePhotos => 'Rapikan foto dahulu';
+
+  @override
+  String get scanSelectAll => 'Pilih semua dalam kategori ini';
+
+  @override
+  String get scanClearSelection => 'Hapus pilihan';
+
+  @override
+  String get scanKeepOneSelectOthers => 'Simpan foto ini, pilih yang lain';
+
+  @override
+  String get scanSelectOthersHint =>
+      'Pratinjau foto yang disarankan untuk disimpan, lalu pilih foto lain dalam grup sekaligus.';
+
+  @override
+  String get scanNotChecked => 'Belum diperiksa';
+
+  @override
+  String scanPendingCheckCount(int count) {
+    return '$count item belum diperiksa';
+  }
+
+  @override
+  String get swipeGestureTitle => 'Rapikan cepat dengan geser';
+
+  @override
+  String get swipeGestureDelete => 'Geser ke kiri untuk menandai hapus';
+
+  @override
+  String get swipeGestureKeep => 'Geser ke kanan untuk menyimpan';
+
+  @override
+  String get swipeGestureSafety =>
+      'Foto masuk ke daftar hapus dahulu. Foto hanya dihapus setelah mengetuk Selesai dan mengonfirmasi.';
+
+  @override
+  String get swipeGestureHelp => 'Cara merapikan dengan geser';
+
+  @override
+  String get homeSwipeDescription =>
+      'Geser foto satu per satu agar lebih cepat daripada mengetuk gambar mini.';
 }

@@ -1083,4 +1083,73 @@ class AppLocalizationsTh extends AppLocalizations {
   String serviceQualitySummary(String reasons) {
     return '$reasons; คำแนะนำเป็นเพียงแนวทาง';
   }
+
+  @override
+  String get scanSwipeIntro =>
+      'ปัดซ้ายเพื่อทำเครื่องหมายลบ ปัดขวาเพื่อเก็บ จะลบหลังยืนยันเท่านั้น';
+
+  @override
+  String get scanSwipeStart => 'เริ่มจัดรูปด้วยการปัด';
+
+  @override
+  String get scanDetails => 'รายละเอียดการสแกน';
+
+  @override
+  String get scanVerificationNeeded => 'ยังไม่ได้ตรวจไฟล์ต้นฉบับ';
+
+  @override
+  String scanVerificationProgress(int verified, int total) {
+    return 'ตรวจแล้ว $verified / $total รายการ';
+  }
+
+  @override
+  String get scanVerificationExplanation =>
+      'ตรวจเนื้อหาและขนาดไฟล์ก่อนเพื่อค้นหารูปซ้ำที่เหมือนกันทุกประการและไฟล์ขนาดใหญ่ รายการบนคลาวด์จัดการทีหลังได้';
+
+  @override
+  String get scanVerifyNow => 'ตรวจรูปซ้ำและไฟล์ขนาดใหญ่';
+
+  @override
+  String get scanBrowsePhotos => 'จัดรูปก่อน';
+
+  @override
+  String get scanSelectAll => 'เลือกทั้งหมดในหมวดนี้';
+
+  @override
+  String get scanClearSelection => 'ล้างการเลือก';
+
+  @override
+  String get scanKeepOneSelectOthers => 'เก็บรูปนี้ เลือกรูปอื่น';
+
+  @override
+  String get scanSelectOthersHint =>
+      'ดูตัวอย่างรูปที่แนะนำให้เก็บ แล้วเลือกรูปที่เหลือในกลุ่มพร้อมกัน';
+
+  @override
+  String get scanNotChecked => 'รอตรวจ';
+
+  @override
+  String scanPendingCheckCount(int count) {
+    return 'รอตรวจ $count รายการ';
+  }
+
+  @override
+  String get swipeGestureTitle => 'จัดรูปอย่างรวดเร็วด้วยการปัด';
+
+  @override
+  String get swipeGestureDelete => 'ปัดซ้ายเพื่อทำเครื่องหมายลบ';
+
+  @override
+  String get swipeGestureKeep => 'ปัดขวาเพื่อเก็บ';
+
+  @override
+  String get swipeGestureSafety =>
+      'รูปจะเข้ารายการรอลบก่อน และจะลบเมื่อแตะเสร็จสิ้นและยืนยันเท่านั้น';
+
+  @override
+  String get swipeGestureHelp => 'วิธีจัดรูปด้วยการปัด';
+
+  @override
+  String get homeSwipeDescription =>
+      'ปัดดูรูปทีละรูป จัดได้เร็วกว่าการแตะรูปย่อ';
 }

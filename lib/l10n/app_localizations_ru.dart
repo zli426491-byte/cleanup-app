@@ -1117,4 +1117,73 @@ class AppLocalizationsRu extends AppLocalizations {
   String serviceQualitySummary(String reasons) {
     return '$reasons; только рекомендательные подсказки';
   }
+
+  @override
+  String get scanSwipeIntro =>
+      'Смахните влево, чтобы отметить для удаления, вправо — чтобы сохранить. Удаление только после подтверждения.';
+
+  @override
+  String get scanSwipeStart => 'Начать разбор смахиванием';
+
+  @override
+  String get scanDetails => 'Подробности сканирования';
+
+  @override
+  String get scanVerificationNeeded => 'Оригинальные файлы ещё не проверены';
+
+  @override
+  String scanVerificationProgress(int verified, int total) {
+    return 'Проверено: $verified / $total';
+  }
+
+  @override
+  String get scanVerificationExplanation =>
+      'Сначала проверьте содержимое и размер файлов, чтобы найти точные копии и большие файлы. Объекты в облаке можно проверить позже.';
+
+  @override
+  String get scanVerifyNow => 'Проверить копии и большие файлы';
+
+  @override
+  String get scanBrowsePhotos => 'Сначала разобрать фото';
+
+  @override
+  String get scanSelectAll => 'Выбрать всё в этой категории';
+
+  @override
+  String get scanClearSelection => 'Снять выделение';
+
+  @override
+  String get scanKeepOneSelectOthers => 'Сохранить это фото, выбрать остальные';
+
+  @override
+  String get scanSelectOthersHint =>
+      'Просмотрите фото, которое предложено сохранить, затем выберите остальные в группе одним действием.';
+
+  @override
+  String get scanNotChecked => 'Ожидает проверки';
+
+  @override
+  String scanPendingCheckCount(int count) {
+    return 'Ожидают проверки: $count';
+  }
+
+  @override
+  String get swipeGestureTitle => 'Быстрый разбор смахиванием';
+
+  @override
+  String get swipeGestureDelete => 'Смахнуть влево — отметить для удаления';
+
+  @override
+  String get swipeGestureKeep => 'Смахнуть вправо — сохранить';
+
+  @override
+  String get swipeGestureSafety =>
+      'Фото сначала попадают в список на удаление. Они удаляются только после нажатия «Готово» и подтверждения.';
+
+  @override
+  String get swipeGestureHelp => 'Как разбирать фото смахиванием';
+
+  @override
+  String get homeSwipeDescription =>
+      'Смахивайте фото по одному — это быстрее, чем нажимать на миниатюры.';
 }

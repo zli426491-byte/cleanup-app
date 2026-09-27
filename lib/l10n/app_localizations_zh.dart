@@ -979,6 +979,70 @@ class AppLocalizationsZh extends AppLocalizations {
   String serviceQualitySummary(String reasons) {
     return '$reasons；僅供保留參考';
   }
+
+  @override
+  String get scanSwipeIntro => '左滑標記刪除，右滑保留；最後確認才刪除。';
+
+  @override
+  String get scanSwipeStart => '開始滑動整理';
+
+  @override
+  String get scanDetails => '掃描詳情';
+
+  @override
+  String get scanVerificationNeeded => '尚未檢查原始檔案';
+
+  @override
+  String scanVerificationProgress(int verified, int total) {
+    return '已檢查 $verified / $total 個';
+  }
+
+  @override
+  String get scanVerificationExplanation => '先檢查檔案內容與容量，才能顯示真重複和大檔。雲端項目可稍後再處理。';
+
+  @override
+  String get scanVerifyNow => '檢查真重複與大檔';
+
+  @override
+  String get scanBrowsePhotos => '先整理照片';
+
+  @override
+  String get scanSelectAll => '全選本分類';
+
+  @override
+  String get scanClearSelection => '清除選取';
+
+  @override
+  String get scanKeepOneSelectOthers => '保留這張，選取其他';
+
+  @override
+  String get scanSelectOthersHint => '先預覽建議保留的照片，再一次選取這組其他照片。';
+
+  @override
+  String get scanNotChecked => '待檢查';
+
+  @override
+  String scanPendingCheckCount(int count) {
+    return '待檢查 $count 個';
+  }
+
+  @override
+  String get swipeGestureTitle => '快速滑動整理';
+
+  @override
+  String get swipeGestureDelete => '左滑標記刪除';
+
+  @override
+  String get swipeGestureKeep => '右滑保留';
+
+  @override
+  String get swipeGestureSafety => '照片會先加入待刪清單；按完成並確認後才刪除。';
+
+  @override
+  String get swipeGestureHelp => '如何滑動整理';
+
+  @override
+  String get homeSwipeDescription => '逐張左右滑動，比點選縮圖更快。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -1992,6 +2056,71 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String serviceQualitySummary(String reasons) {
     return '$reasons；仅供保留参考';
   }
+
+  @override
+  String get scanSwipeIntro => '左滑标记删除，右滑保留；最后确认才删除。';
+
+  @override
+  String get scanSwipeStart => '开始滑动整理';
+
+  @override
+  String get scanDetails => '扫描详情';
+
+  @override
+  String get scanVerificationNeeded => '尚未检查原始文件';
+
+  @override
+  String scanVerificationProgress(int verified, int total) {
+    return '已检查 $verified / $total 个';
+  }
+
+  @override
+  String get scanVerificationExplanation =>
+      '先检查文件内容与大小，才能显示真正重复和大文件。云端项目可稍后再处理。';
+
+  @override
+  String get scanVerifyNow => '检查真正重复与大文件';
+
+  @override
+  String get scanBrowsePhotos => '先整理照片';
+
+  @override
+  String get scanSelectAll => '全选本分类';
+
+  @override
+  String get scanClearSelection => '清除选择';
+
+  @override
+  String get scanKeepOneSelectOthers => '保留这张，选择其他';
+
+  @override
+  String get scanSelectOthersHint => '先预览建议保留的照片，再一次选中这组其他照片。';
+
+  @override
+  String get scanNotChecked => '待检查';
+
+  @override
+  String scanPendingCheckCount(int count) {
+    return '待检查 $count 个';
+  }
+
+  @override
+  String get swipeGestureTitle => '快速滑动整理';
+
+  @override
+  String get swipeGestureDelete => '左滑标记删除';
+
+  @override
+  String get swipeGestureKeep => '右滑保留';
+
+  @override
+  String get swipeGestureSafety => '照片会先加入待删列表；点击完成并确认后才删除。';
+
+  @override
+  String get swipeGestureHelp => '如何滑动整理';
+
+  @override
+  String get homeSwipeDescription => '逐张左右滑动，比点选缩略图更快。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2969,4 +3098,68 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String serviceQualitySummary(String reasons) {
     return '$reasons；僅供保留參考';
   }
+
+  @override
+  String get scanSwipeIntro => '左滑標記刪除，右滑保留；最後確認才刪除。';
+
+  @override
+  String get scanSwipeStart => '開始滑動整理';
+
+  @override
+  String get scanDetails => '掃描詳情';
+
+  @override
+  String get scanVerificationNeeded => '尚未檢查原始檔案';
+
+  @override
+  String scanVerificationProgress(int verified, int total) {
+    return '已檢查 $verified / $total 個';
+  }
+
+  @override
+  String get scanVerificationExplanation => '先檢查檔案內容與容量，才能顯示真重複和大檔。雲端項目可稍後再處理。';
+
+  @override
+  String get scanVerifyNow => '檢查真重複與大檔';
+
+  @override
+  String get scanBrowsePhotos => '先整理照片';
+
+  @override
+  String get scanSelectAll => '全選本分類';
+
+  @override
+  String get scanClearSelection => '清除選取';
+
+  @override
+  String get scanKeepOneSelectOthers => '保留這張，選取其他';
+
+  @override
+  String get scanSelectOthersHint => '先預覽建議保留的照片，再一次選取這組其他照片。';
+
+  @override
+  String get scanNotChecked => '待檢查';
+
+  @override
+  String scanPendingCheckCount(int count) {
+    return '待檢查 $count 個';
+  }
+
+  @override
+  String get swipeGestureTitle => '快速滑動整理';
+
+  @override
+  String get swipeGestureDelete => '左滑標記刪除';
+
+  @override
+  String get swipeGestureKeep => '右滑保留';
+
+  @override
+  String get swipeGestureSafety => '照片會先加入待刪清單；按完成並確認後才刪除。';
+
+  @override
+  String get swipeGestureHelp => '如何滑動整理';
+
+  @override
+  String get homeSwipeDescription => '逐張左右滑動，比點選縮圖更快。';
 }

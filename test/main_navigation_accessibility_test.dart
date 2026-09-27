@@ -94,6 +94,30 @@ void main() {
     }
   }
 
+  testWidgets(
+    'light pages and transparent app bars request dark status icons',
+    (tester) async {
+      final sub = SubscriptionManager();
+      await tester.pumpWidget(
+        CleanupApp(hasCompletedOnboarding: true, subscriptionManager: sub),
+      );
+      await tester.pump();
+      final overlays = tester.widgetList<AnnotatedRegion<SystemUiOverlayStyle>>(
+        find.byType(AnnotatedRegion<SystemUiOverlayStyle>),
+      );
+      expect(overlays, isNotEmpty);
+      for (final overlay in overlays) {
+        expect(overlay.value.statusBarBrightness, Brightness.light);
+        expect(overlay.value.statusBarIconBrightness, Brightness.dark);
+      }
+      final appBar = AppTheme.lightTheme.appBarTheme.systemOverlayStyle!;
+      expect(appBar.statusBarBrightness, Brightness.light);
+      expect(appBar.statusBarIconBrightness, Brightness.dark);
+      await tester.pumpWidget(const SizedBox());
+      sub.dispose();
+    },
+  );
+
   test('shared normal-text and action colors maintain readable contrast', () {
     double contrast(Color a, Color b) {
       final first = a.computeLuminance();

@@ -1116,4 +1116,76 @@ class AppLocalizationsRo extends AppLocalizations {
   String serviceQualitySummary(String reasons) {
     return '$reasons; doar recomandări orientative';
   }
+
+  @override
+  String get scanSwipeIntro =>
+      'Glisează la stânga pentru a marca pentru ștergere, la dreapta pentru a păstra. Se șterge doar după confirmare.';
+
+  @override
+  String get scanSwipeStart => 'Începe sortarea prin glisare';
+
+  @override
+  String get scanDetails => 'Detalii scanare';
+
+  @override
+  String get scanVerificationNeeded =>
+      'Fișierele originale nu au fost verificate';
+
+  @override
+  String scanVerificationProgress(int verified, int total) {
+    return 'Verificate: $verified / $total';
+  }
+
+  @override
+  String get scanVerificationExplanation =>
+      'Verifică mai întâi conținutul și dimensiunea fișierelor pentru a găsi duplicate identice și fișiere mari. Elementele din cloud pot aștepta.';
+
+  @override
+  String get scanVerifyNow => 'Verifică duplicatele și fișierele mari';
+
+  @override
+  String get scanBrowsePhotos => 'Sortează întâi fotografiile';
+
+  @override
+  String get scanSelectAll => 'Selectează tot din această categorie';
+
+  @override
+  String get scanClearSelection => 'Golește selecția';
+
+  @override
+  String get scanKeepOneSelectOthers =>
+      'Păstrează această fotografie, selectează restul';
+
+  @override
+  String get scanSelectOthersHint =>
+      'Previzualizează fotografia recomandată de păstrat, apoi selectează restul grupului dintr-o dată.';
+
+  @override
+  String get scanNotChecked => 'De verificat';
+
+  @override
+  String scanPendingCheckCount(int count) {
+    return 'De verificat: $count';
+  }
+
+  @override
+  String get swipeGestureTitle => 'Sortare rapidă prin glisare';
+
+  @override
+  String get swipeGestureDelete =>
+      'Glisează la stânga pentru a marca pentru ștergere';
+
+  @override
+  String get swipeGestureKeep => 'Glisează la dreapta pentru a păstra';
+
+  @override
+  String get swipeGestureSafety =>
+      'Fotografiile intră mai întâi într-o listă de ștergere. Sunt șterse doar după ce apeși Gata și confirmi.';
+
+  @override
+  String get swipeGestureHelp => 'Cum sortezi prin glisare';
+
+  @override
+  String get homeSwipeDescription =>
+      'Glisează fotografiile pe rând pentru a le sorta mai repede decât atingând miniaturile.';
 }

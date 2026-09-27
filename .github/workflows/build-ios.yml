@@ -7,9 +7,16 @@ on:
   push:
     branches: [master, main]
   workflow_dispatch: # Manual trigger
+    inputs:
+      native_verification_only:
+        description: Run only Flutter checks and iOS Simulator native tests
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   build-ios:
+    if: ${{ inputs.native_verification_only != true }}
     runs-on: macos-15
     timeout-minutes: 30
 
@@ -42,6 +49,7 @@ jobs:
           path: build/ios/iphoneos/
 
   build-android:
+    if: ${{ inputs.native_verification_only != true }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -78,3 +86,72 @@ jobs:
         with:
           name: android-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+
+  verify-ios:
+    if: ${{ inputs.native_verification_only == true }}
+    permissions:
+      contents: read
+    runs-on: macos-26
+    timeout-minutes: 40
+
+    # Simulator-only: no Apple account credentials, IPA export, or publication.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.41.7'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Check language coverage and iOS permission resources
+        run: python3 scripts/check_localizations.py
+
+      - name: Test
+        run: flutter test
+
+      - name: Identify exact native test product inputs
+        id: native-products-key
+        run: |
+          set -euo pipefail
+          mkdir -p build/native-tests
+          flutter build ios --simulator --debug --no-codesign --config-only 2>&1 | tee build/native-tests/cache-configuration.log
+          NATIVE_PRODUCTS_KEY="$(bash scripts/native-test-cache-key.sh)"
+          echo "key=$NATIVE_PRODUCTS_KEY" >> "$GITHUB_OUTPUT"
+
+      - name: Restore exact native test products
+        id: native-products-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: build/native-test-derived-data/Build/Products
+          key: ${{ steps.native-products-key.outputs.key }}
+
+      - name: Test native Photos inspection on iOS Simulator
+        id: native-tests
+        timeout-minutes: 20
+        env:
+          NATIVE_TEST_PRODUCTS_CACHE_HIT: ${{ steps.native-products-cache.outputs.cache-hit }}
+        run: bash scripts/test-ios-native.sh
+
+      - name: Save successfully built native test products
+        if: ${{ always() && steps.native-products-key.outcome == 'success' && steps.native-products-cache.outputs.cache-hit != 'true' && hashFiles('build/native-test-derived-data/Build/Products/.cleanup-build-succeeded') != '' }}
+        uses: actions/cache/save@v4
+        with:
+          path: build/native-test-derived-data/Build/Products
+          key: ${{ steps.native-products-key.outputs.key }}
+
+      - name: Upload native test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-native-tests
+          path: build/native-tests
+          if-no-files-found: ignore

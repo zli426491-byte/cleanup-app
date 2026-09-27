@@ -1108,4 +1108,74 @@ class AppLocalizationsDe extends AppLocalizations {
   String serviceQualitySummary(String reasons) {
     return '$reasons; nur als Orientierung';
   }
+
+  @override
+  String get scanSwipeIntro =>
+      'Nach links wischen zum Vormerken zum Löschen, nach rechts zum Behalten. Gelöscht wird erst nach Bestätigung.';
+
+  @override
+  String get scanSwipeStart => 'Fotos per Wischen sortieren';
+
+  @override
+  String get scanDetails => 'Scan-Details';
+
+  @override
+  String get scanVerificationNeeded => 'Originaldateien noch nicht geprüft';
+
+  @override
+  String scanVerificationProgress(int verified, int total) {
+    return '$verified / $total Elemente geprüft';
+  }
+
+  @override
+  String get scanVerificationExplanation =>
+      'Prüfe zuerst Inhalt und Größe der Dateien, um exakte Duplikate und große Dateien zu finden. Cloud-Inhalte können warten.';
+
+  @override
+  String get scanVerifyNow => 'Duplikate und große Dateien prüfen';
+
+  @override
+  String get scanBrowsePhotos => 'Zuerst Fotos sortieren';
+
+  @override
+  String get scanSelectAll => 'Alles in dieser Kategorie auswählen';
+
+  @override
+  String get scanClearSelection => 'Auswahl aufheben';
+
+  @override
+  String get scanKeepOneSelectOthers =>
+      'Dieses Foto behalten, andere auswählen';
+
+  @override
+  String get scanSelectOthersHint =>
+      'Sieh dir das zum Behalten empfohlene Foto an und wähle dann den Rest der Gruppe auf einmal aus.';
+
+  @override
+  String get scanNotChecked => 'Noch zu prüfen';
+
+  @override
+  String scanPendingCheckCount(int count) {
+    return '$count Elemente noch zu prüfen';
+  }
+
+  @override
+  String get swipeGestureTitle => 'Schnell per Wischen sortieren';
+
+  @override
+  String get swipeGestureDelete => 'Nach links zum Löschen vormerken';
+
+  @override
+  String get swipeGestureKeep => 'Nach rechts zum Behalten wischen';
+
+  @override
+  String get swipeGestureSafety =>
+      'Fotos kommen zuerst auf eine Löschliste. Erst nach „Fertig“ und deiner Bestätigung werden sie gelöscht.';
+
+  @override
+  String get swipeGestureHelp => 'So sortierst du per Wischen';
+
+  @override
+  String get homeSwipeDescription =>
+      'Wische Foto für Foto nach links oder rechts – schneller als das Antippen von Vorschaubildern.';
 }

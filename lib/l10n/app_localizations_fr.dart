@@ -1107,4 +1107,74 @@ class AppLocalizationsFr extends AppLocalizations {
   String serviceQualitySummary(String reasons) {
     return '$reasons ; indications uniquement';
   }
+
+  @override
+  String get scanSwipeIntro =>
+      'Glissez à gauche pour marquer à supprimer, à droite pour garder. Rien n’est supprimé sans confirmation.';
+
+  @override
+  String get scanSwipeStart => 'Trier en glissant';
+
+  @override
+  String get scanDetails => 'Détails de l’analyse';
+
+  @override
+  String get scanVerificationNeeded => 'Fichiers originaux non vérifiés';
+
+  @override
+  String scanVerificationProgress(int verified, int total) {
+    return '$verified / $total éléments vérifiés';
+  }
+
+  @override
+  String get scanVerificationExplanation =>
+      'Vérifiez le contenu et la taille des fichiers pour trouver les doublons exacts et les gros fichiers. Les éléments dans le cloud peuvent attendre.';
+
+  @override
+  String get scanVerifyNow => 'Vérifier doublons et gros fichiers';
+
+  @override
+  String get scanBrowsePhotos => 'Trier les photos d’abord';
+
+  @override
+  String get scanSelectAll => 'Tout sélectionner dans cette catégorie';
+
+  @override
+  String get scanClearSelection => 'Effacer la sélection';
+
+  @override
+  String get scanKeepOneSelectOthers =>
+      'Garder cette photo, sélectionner les autres';
+
+  @override
+  String get scanSelectOthersHint =>
+      'Prévisualisez la photo conseillée à garder, puis sélectionnez le reste du groupe en une fois.';
+
+  @override
+  String get scanNotChecked => 'À vérifier';
+
+  @override
+  String scanPendingCheckCount(int count) {
+    return '$count éléments à vérifier';
+  }
+
+  @override
+  String get swipeGestureTitle => 'Tri rapide par glissement';
+
+  @override
+  String get swipeGestureDelete => 'Glisser à gauche pour marquer à supprimer';
+
+  @override
+  String get swipeGestureKeep => 'Glisser à droite pour garder';
+
+  @override
+  String get swipeGestureSafety =>
+      'Les photos vont d’abord dans une liste de suppression. Elles ne sont supprimées qu’après avoir appuyé sur Terminer et confirmé.';
+
+  @override
+  String get swipeGestureHelp => 'Comment trier en glissant';
+
+  @override
+  String get homeSwipeDescription =>
+      'Glissez d’une photo à l’autre pour trier plus vite qu’en touchant les vignettes.';
 }

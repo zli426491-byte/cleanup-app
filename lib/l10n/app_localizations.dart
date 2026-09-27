@@ -1853,6 +1853,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{reasons}; suggested guidance only'**
   String serviceQualitySummary(String reasons);
+
+  /// No description provided for @scanSwipeIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe left to mark for deletion, right to keep. Delete only after confirming.'**
+  String get scanSwipeIntro;
+
+  /// No description provided for @scanSwipeStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start swipe cleanup'**
+  String get scanSwipeStart;
+
+  /// No description provided for @scanDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan details'**
+  String get scanDetails;
+
+  /// No description provided for @scanVerificationNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Original files not checked yet'**
+  String get scanVerificationNeeded;
+
+  /// Number of original resources checked out of the total indexed items.
+  ///
+  /// In en, this message translates to:
+  /// **'Checked {verified} / {total} items'**
+  String scanVerificationProgress(int verified, int total);
+
+  /// No description provided for @scanVerificationExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Check file contents and sizes first to find exact duplicates and large files. Cloud items can wait.'**
+  String get scanVerificationExplanation;
+
+  /// No description provided for @scanVerifyNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Check duplicates and large files'**
+  String get scanVerifyNow;
+
+  /// No description provided for @scanBrowsePhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Organize photos first'**
+  String get scanBrowsePhotos;
+
+  /// No description provided for @scanSelectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select all in this category'**
+  String get scanSelectAll;
+
+  /// No description provided for @scanClearSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear selection'**
+  String get scanClearSelection;
+
+  /// No description provided for @scanKeepOneSelectOthers.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep this photo, select the others'**
+  String get scanKeepOneSelectOthers;
+
+  /// No description provided for @scanSelectOthersHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview the suggested photo to keep, then select the rest of this group in one go.'**
+  String get scanSelectOthersHint;
+
+  /// No description provided for @scanNotChecked.
+  ///
+  /// In en, this message translates to:
+  /// **'To check'**
+  String get scanNotChecked;
+
+  /// Number of original resources waiting to be checked.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} items to check'**
+  String scanPendingCheckCount(int count);
+
+  /// No description provided for @swipeGestureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick swipe cleanup'**
+  String get swipeGestureTitle;
+
+  /// No description provided for @swipeGestureDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe left to mark for deletion'**
+  String get swipeGestureDelete;
+
+  /// No description provided for @swipeGestureKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe right to keep'**
+  String get swipeGestureKeep;
+
+  /// No description provided for @swipeGestureSafety.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos go to a deletion list first. They are deleted only after you tap Done and confirm.'**
+  String get swipeGestureSafety;
+
+  /// No description provided for @swipeGestureHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'How to swipe'**
+  String get swipeGestureHelp;
+
+  /// No description provided for @homeSwipeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe through photos one by one for faster cleanup than tapping thumbnails.'**
+  String get homeSwipeDescription;
 }
 
 class _AppLocalizationsDelegate

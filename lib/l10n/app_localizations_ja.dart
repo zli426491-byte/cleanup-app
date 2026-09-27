@@ -1042,4 +1042,69 @@ class AppLocalizationsJa extends AppLocalizations {
   String serviceQualitySummary(String reasons) {
     return '$reasons；提案は参考用です';
   }
+
+  @override
+  String get scanSwipeIntro => '左にスワイプして削除候補、右にスワイプして残します。最後に確認するまで削除されません。';
+
+  @override
+  String get scanSwipeStart => 'スワイプで整理を開始';
+
+  @override
+  String get scanDetails => 'スキャンの詳細';
+
+  @override
+  String get scanVerificationNeeded => '元のファイルは未確認';
+
+  @override
+  String scanVerificationProgress(int verified, int total) {
+    return '$verified / $total 件を確認済み';
+  }
+
+  @override
+  String get scanVerificationExplanation =>
+      'ファイルの内容とサイズを確認すると、完全に同じ写真と大きなファイルが表示されます。クラウドの項目は後で処理できます。';
+
+  @override
+  String get scanVerifyNow => '重複と大きなファイルを確認';
+
+  @override
+  String get scanBrowsePhotos => '先に写真を整理';
+
+  @override
+  String get scanSelectAll => 'このカテゴリをすべて選択';
+
+  @override
+  String get scanClearSelection => '選択を解除';
+
+  @override
+  String get scanKeepOneSelectOthers => 'この写真を残して他を選択';
+
+  @override
+  String get scanSelectOthersHint => '残す候補の写真をプレビューしてから、グループの他の写真をまとめて選択します。';
+
+  @override
+  String get scanNotChecked => '未確認';
+
+  @override
+  String scanPendingCheckCount(int count) {
+    return '未確認 $count 件';
+  }
+
+  @override
+  String get swipeGestureTitle => 'スワイプでかんたん整理';
+
+  @override
+  String get swipeGestureDelete => '左にスワイプして削除候補に';
+
+  @override
+  String get swipeGestureKeep => '右にスワイプして残す';
+
+  @override
+  String get swipeGestureSafety => '写真はまず削除候補リストに入ります。「完了」を押して確認した後にだけ削除されます。';
+
+  @override
+  String get swipeGestureHelp => 'スワイプ整理の使い方';
+
+  @override
+  String get homeSwipeDescription => '写真を1枚ずつ左右にスワイプ。サムネイルをタップするより素早く整理できます。';
 }

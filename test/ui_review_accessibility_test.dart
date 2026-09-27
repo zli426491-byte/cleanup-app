@@ -208,7 +208,8 @@ void main() {
     );
     await tester.pumpWidget(const SizedBox());
     await _mount(tester, const HomeView());
-    expect(find.text('Done ✓'), findsNWidgets(4));
+    // Photos have not been measured, so large files must remain pending.
+    expect(find.text('Done ✓'), findsNWidgets(3));
     await tester.pumpWidget(const SizedBox());
   });
 

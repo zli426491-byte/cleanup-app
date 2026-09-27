@@ -1104,4 +1104,73 @@ class AppLocalizationsAr extends AppLocalizations {
   String serviceQualitySummary(String reasons) {
     return '$reasons؛ إرشاد مقترح فقط';
   }
+
+  @override
+  String get scanSwipeIntro =>
+      'اسحب لليسار لتحديد الحذف، ولليمين للاحتفاظ. لا تُحذف الصور إلا بعد التأكيد.';
+
+  @override
+  String get scanSwipeStart => 'ابدأ التنظيم بالسحب';
+
+  @override
+  String get scanDetails => 'تفاصيل الفحص';
+
+  @override
+  String get scanVerificationNeeded => 'لم تُفحص الملفات الأصلية بعد';
+
+  @override
+  String scanVerificationProgress(int verified, int total) {
+    return 'تم فحص $verified / $total عنصر';
+  }
+
+  @override
+  String get scanVerificationExplanation =>
+      'افحص محتوى الملفات وأحجامها أولًا للعثور على التطابق التام والملفات الكبيرة. يمكن تأجيل عناصر السحابة.';
+
+  @override
+  String get scanVerifyNow => 'افحص الصور المتطابقة والملفات الكبيرة';
+
+  @override
+  String get scanBrowsePhotos => 'نظّم الصور أولًا';
+
+  @override
+  String get scanSelectAll => 'حدّد الكل في هذه الفئة';
+
+  @override
+  String get scanClearSelection => 'امسح التحديد';
+
+  @override
+  String get scanKeepOneSelectOthers => 'احتفظ بهذه الصورة وحدّد البقية';
+
+  @override
+  String get scanSelectOthersHint =>
+      'عاين الصورة المقترحة للاحتفاظ، ثم حدّد بقية المجموعة دفعة واحدة.';
+
+  @override
+  String get scanNotChecked => 'بانتظار الفحص';
+
+  @override
+  String scanPendingCheckCount(int count) {
+    return '$count عنصر بانتظار الفحص';
+  }
+
+  @override
+  String get swipeGestureTitle => 'تنظيم سريع بالسحب';
+
+  @override
+  String get swipeGestureDelete => 'اسحب لليسار لتحديد الحذف';
+
+  @override
+  String get swipeGestureKeep => 'اسحب لليمين للاحتفاظ';
+
+  @override
+  String get swipeGestureSafety =>
+      'تُضاف الصور إلى قائمة الحذف أولًا. لا تُحذف إلا بعد الضغط على تم والتأكيد.';
+
+  @override
+  String get swipeGestureHelp => 'كيفية التنظيم بالسحب';
+
+  @override
+  String get homeSwipeDescription =>
+      'اسحب الصور واحدة تلو الأخرى لتنظيمها أسرع من النقر على الصور المصغّرة.';
 }

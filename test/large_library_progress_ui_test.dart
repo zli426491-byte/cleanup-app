@@ -174,10 +174,13 @@ void main() {
         scanner,
         const SmartCleanView(initialCategory: 'screenshots'),
       );
+      await tester.tap(find.byKey(const ValueKey('scan-details-3')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('已讀取 42683 / 42683 個項目'), findsOneWidget);
       expect(find.text('照片畫面已處理 0 / 42682 張'), findsOneWidget);
-      expect(find.text('視覺分析成功 0 個'), findsOneWidget);
-      expect(find.text('原始素材已驗證 0 個'), findsOneWidget);
+      expect(find.text('視覺分析成功 0 個'), findsNWidgets(2));
+      expect(find.text('原始素材已驗證 0 個'), findsNWidgets(2));
       expect(find.text('待下載 7 個'), findsOneWidget);
       expect(find.textContaining('已等待 15 秒'), findsOneWidget);
       expect(find.text('45%'), findsNothing);
@@ -285,9 +288,13 @@ void main() {
         scanner,
         const SmartCleanView(initialCategory: 'duplicates'),
       );
+      await tester.ensureVisible(find.byKey(const ValueKey('scan-details-1')));
+      await tester.tap(find.byKey(const ValueKey('scan-details-1')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('原始素材已處理 20 / 42683 個項目'), findsOneWidget);
-      expect(find.text('原始素材已驗證 0 個'), findsOneWidget);
-      expect(find.textContaining('目前不能判定是否有真重複'), findsOneWidget);
+      expect(find.text('原始素材已驗證 0 個'), findsNWidgets(2));
+      expect(find.textContaining('才能顯示真重複和大檔'), findsOneWidget);
       final progress = tester.widget<LinearProgressIndicator>(
         find.byType(LinearProgressIndicator).first,
       );

@@ -1101,4 +1101,74 @@ class AppLocalizationsIt extends AppLocalizations {
   String serviceQualitySummary(String reasons) {
     return '$reasons; indicazioni solo orientative';
   }
+
+  @override
+  String get scanSwipeIntro =>
+      'Scorri a sinistra per segnare da eliminare, a destra per conservare. Si elimina solo dopo la conferma.';
+
+  @override
+  String get scanSwipeStart => 'Inizia a ordinare scorrendo';
+
+  @override
+  String get scanDetails => 'Dettagli della scansione';
+
+  @override
+  String get scanVerificationNeeded => 'File originali non ancora verificati';
+
+  @override
+  String scanVerificationProgress(int verified, int total) {
+    return '$verified / $total elementi verificati';
+  }
+
+  @override
+  String get scanVerificationExplanation =>
+      'Verifica prima contenuto e dimensioni dei file per trovare duplicati esatti e file grandi. Gli elementi nel cloud possono aspettare.';
+
+  @override
+  String get scanVerifyNow => 'Verifica duplicati e file grandi';
+
+  @override
+  String get scanBrowsePhotos => 'Ordina prima le foto';
+
+  @override
+  String get scanSelectAll => 'Seleziona tutto in questa categoria';
+
+  @override
+  String get scanClearSelection => 'Annulla la selezione';
+
+  @override
+  String get scanKeepOneSelectOthers =>
+      'Conserva questa foto, seleziona le altre';
+
+  @override
+  String get scanSelectOthersHint =>
+      'Visualizza la foto consigliata da conservare, poi seleziona le altre del gruppo in una volta.';
+
+  @override
+  String get scanNotChecked => 'Da verificare';
+
+  @override
+  String scanPendingCheckCount(int count) {
+    return '$count elementi da verificare';
+  }
+
+  @override
+  String get swipeGestureTitle => 'Ordina rapidamente scorrendo';
+
+  @override
+  String get swipeGestureDelete => 'Scorri a sinistra per segnare da eliminare';
+
+  @override
+  String get swipeGestureKeep => 'Scorri a destra per conservare';
+
+  @override
+  String get swipeGestureSafety =>
+      'Le foto entrano prima in un elenco da eliminare. Vengono eliminate solo dopo aver toccato Fine e confermato.';
+
+  @override
+  String get swipeGestureHelp => 'Come ordinare scorrendo';
+
+  @override
+  String get homeSwipeDescription =>
+      'Scorri le foto una alla volta per ordinarle più velocemente che toccando le miniature.';
 }

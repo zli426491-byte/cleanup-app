@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Design System — 清新薄荷風格
 class AppTheme {
@@ -139,6 +140,7 @@ class AppTheme {
       backgroundColor: Colors.transparent,
       foregroundColor: textTitle,
       titleTextStyle: heading2,
+      systemOverlayStyle: SystemUiOverlayStyle.dark,
     ),
     cardTheme: CardThemeData(
       elevation: 0,

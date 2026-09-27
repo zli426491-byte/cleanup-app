@@ -1086,4 +1086,73 @@ class AppLocalizationsHe extends AppLocalizations {
   String serviceQualitySummary(String reasons) {
     return '$reasons; הנחיה מומלצת בלבד';
   }
+
+  @override
+  String get scanSwipeIntro =>
+      'החלק שמאלה לסימון למחיקה, ימינה לשמירה. המחיקה מתבצעת רק לאחר אישור.';
+
+  @override
+  String get scanSwipeStart => 'התחל לסדר בהחלקה';
+
+  @override
+  String get scanDetails => 'פרטי הסריקה';
+
+  @override
+  String get scanVerificationNeeded => 'הקבצים המקוריים טרם נבדקו';
+
+  @override
+  String scanVerificationProgress(int verified, int total) {
+    return 'נבדקו $verified / $total פריטים';
+  }
+
+  @override
+  String get scanVerificationExplanation =>
+      'בדוק תחילה את תוכן הקבצים ואת גודלם כדי למצוא כפילויות זהות וקבצים גדולים. פריטים בענן יכולים לחכות.';
+
+  @override
+  String get scanVerifyNow => 'בדוק כפילויות וקבצים גדולים';
+
+  @override
+  String get scanBrowsePhotos => 'סדר קודם את התמונות';
+
+  @override
+  String get scanSelectAll => 'בחר הכול בקטגוריה זו';
+
+  @override
+  String get scanClearSelection => 'נקה בחירה';
+
+  @override
+  String get scanKeepOneSelectOthers => 'שמור תמונה זו ובחר את האחרות';
+
+  @override
+  String get scanSelectOthersHint =>
+      'צפה בתמונה המומלצת לשמירה ואז בחר את שאר הקבוצה בבת אחת.';
+
+  @override
+  String get scanNotChecked => 'ממתין לבדיקה';
+
+  @override
+  String scanPendingCheckCount(int count) {
+    return '$count פריטים ממתינים לבדיקה';
+  }
+
+  @override
+  String get swipeGestureTitle => 'סידור מהיר בהחלקה';
+
+  @override
+  String get swipeGestureDelete => 'החלק שמאלה לסימון למחיקה';
+
+  @override
+  String get swipeGestureKeep => 'החלק ימינה לשמירה';
+
+  @override
+  String get swipeGestureSafety =>
+      'התמונות מתווספות תחילה לרשימת מחיקה. הן נמחקות רק לאחר לחיצה על סיום ואישור.';
+
+  @override
+  String get swipeGestureHelp => 'איך מסדרים בהחלקה';
+
+  @override
+  String get homeSwipeDescription =>
+      'החלק תמונה אחר תמונה לסידור מהיר יותר מהקשה על תמונות ממוזערות.';
 }

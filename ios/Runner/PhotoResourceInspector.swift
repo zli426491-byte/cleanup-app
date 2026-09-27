@@ -2,6 +2,7 @@ import Flutter
 import Photos
 import CryptoKit
 import UIKit
+import AVFoundation
 
 protocol NativePhotoJob: AnyObject {
   func start()
@@ -91,6 +92,20 @@ struct PhotosResourceIO: NativeResourceIO {
     manager.requestData(for: resource, options: options, dataReceivedHandler: data, completionHandler: completion)
   }
   func cancel(_ identifier: PHAssetResourceDataRequestID) { manager.cancelDataRequest(identifier) }
+}
+
+protocol NativeOriginalVideoIO {
+  func request(_ asset: PHAsset, options: PHVideoRequestOptions,
+    completion: @escaping (AVAsset?, [AnyHashable: Any]?) -> Void) -> PHImageRequestID
+  func cancel(_ identifier: PHImageRequestID)
+}
+struct PhotosOriginalVideoIO: NativeOriginalVideoIO {
+  private let manager = PHImageManager.default()
+  func request(_ asset: PHAsset, options: PHVideoRequestOptions,
+    completion: @escaping (AVAsset?, [AnyHashable: Any]?) -> Void) -> PHImageRequestID {
+    manager.requestAVAsset(forVideo: asset, options: options) { video, _, info in completion(video, info) }
+  }
+  func cancel(_ identifier: PHImageRequestID) { manager.cancelImageRequest(identifier) }
 }
 private final class NativeInspectionResponse {
   private let lock = NSLock()
@@ -279,8 +294,8 @@ final class PhotoPreviewBatch: NativePhotoJob {
   func cancel() { gate.finish(response(missing: "unavailable")) }
 }
 
-/// Only complete, unchanged ALL-resource reads produce a verified SHA/size.
-/// Oversize or slow originals stay pending, including video/Live resources.
+/// Complete, unchanged ALL-resource reads verify SHA/size. A single original
+/// video resource can also verify size from its local file without reading it.
 final class PhotoResourceInspection: NativePhotoJob {
   private let assetId: String
   private let includeHash: Bool
@@ -288,6 +303,7 @@ final class PhotoResourceInspection: NativePhotoJob {
   private let timeoutSeconds: Double
   private let maximumBytes: Int64
   private let io: NativeResourceIO
+  private let videoIO: NativeOriginalVideoIO
   private let gate: NativeInspectionCompletion
   private let verified = NativeInspectionResponse()
   private let queue = DispatchQueue(label: "cleanup.resource-state", qos: .utility)
@@ -298,14 +314,27 @@ final class PhotoResourceInspection: NativePhotoJob {
   private var descriptors: [String] = []
   init(assetId: String, includeHash: Bool, includeThumbnail: Bool,
     timeoutSeconds: Double = 4, maximumBytes: Int64 = 64 * 1024 * 1024,
-    io: NativeResourceIO = PhotosResourceIO(), completion: @escaping ([String: Any]) -> Void) {
+    io: NativeResourceIO = PhotosResourceIO(), videoIO: NativeOriginalVideoIO = PhotosOriginalVideoIO(),
+    completion: @escaping ([String: Any]) -> Void) {
     self.assetId = assetId; self.includeHash = includeHash; self.includeThumbnail = includeThumbnail
     self.timeoutSeconds = timeoutSeconds; self.maximumBytes = maximumBytes; self.io = io
+    self.videoIO = videoIO
     gate = NativeInspectionCompletion(completion: completion)
   }
   private static let knownResourceTypes: Set<Int> = Set(1...12)
   private static func pending(_ reason: String) -> [String: Any] {
-    ["sizeKnown": false, "size": 0, "complete": false, "pendingReason": reason]
+    ["sizeKnown": false, "sizeComplete": false, "hashComplete": false,
+      "size": 0, "complete": false, "pendingReason": reason]
+  }
+  static func canReadOriginalVideoFileSize(mediaType: PHAssetMediaType,
+    resourceTypes: [PHAssetResourceType], includeHash: Bool) -> Bool {
+    !includeHash && mediaType == .video && resourceTypes.count == 1 && resourceTypes.first == .video
+  }
+  static func localRegularFileSize(at url: URL) -> Int64? {
+    guard url.isFileURL, url.host == nil || url.host == "" || url.host == "localhost",
+      let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
+      values.isRegularFile == true, let bytes = values.fileSize, bytes > 0 else { return nil }
+    return Int64(bytes)
   }
   func start() {
     gate.armDeadline(seconds: timeoutSeconds) { [verified] in verified.get() ?? Self.pending("resource_time_budget") }
@@ -338,11 +367,36 @@ final class PhotoResourceInspection: NativePhotoJob {
           self.fail("edited_live_pair_missing"); return
         }
       }
-      self.readNextResource()
+      guard !self.gate.isFinished else { return }
+      if Self.canReadOriginalVideoFileSize(mediaType: asset.mediaType,
+        resourceTypes: self.resources.map { $0.type }, includeHash: self.includeHash) {
+        self.readOriginalVideoFileSize(asset)
+      } else { self.readNextResource() }
     }
   }
   func cancel() { gate.finish(Self.pending("cancelled")) }
   private func fail(_ reason: String) { gate.finish(Self.pending(reason)) }
+  private func readOriginalVideoFileSize(_ asset: PHAsset) {
+    guard !gate.isFinished else { return }
+    let key = "original-video-size"
+    let options = PHVideoRequestOptions(); options.version = .original; options.isNetworkAccessAllowed = false
+    let request = videoIO.request(asset, options: options) { [weak self] video, info in
+      guard let self = self else { return }
+      self.queue.async {
+        guard !self.gate.isFinished else { return }
+        self.gate.untrack(key)
+        // Compositions, cloud-only videos and inaccessible files use the
+        // existing bounded resource stream; no export or download is started.
+        guard info?[PHImageErrorKey] == nil, (info?[PHImageCancelledKey] as? Bool) != true,
+          let original = video as? AVURLAsset,
+          let bytes = Self.localRegularFileSize(at: original.url) else {
+          self.readNextResource(); return
+        }
+        self.totalBytes = bytes; self.succeed()
+      }
+    }
+    gate.track(key) { [videoIO] in videoIO.cancel(request) }
+  }
   private func readNextResource() {
     guard !gate.isFinished else { return }
     if resourceIndex == resources.count { succeed(); return }
@@ -377,11 +431,16 @@ final class PhotoResourceInspection: NativePhotoJob {
     guard let original = asset,
       let current = PHAsset.fetchAssets(withLocalIdentifiers: [assetId], options: nil).firstObject,
       current.modificationDate == original.modificationDate && current.mediaType == original.mediaType,
-      current.pixelWidth == original.pixelWidth && current.pixelHeight == original.pixelHeight else {
+      current.pixelWidth == original.pixelWidth && current.pixelHeight == original.pixelHeight,
+      current.mediaSubtypes == original.mediaSubtypes,
+      PHAssetResource.assetResources(for: current).map({ $0.type.rawValue }).sorted() ==
+        resources.map({ $0.type.rawValue }).sorted() else {
       fail("asset_changed_during_analysis"); return
     }
-    var response: [String: Any] = ["sizeKnown": true, "size": totalBytes, "complete": true]
-    if includeHash {
+    let hashComplete = includeHash && descriptors.count == resources.count
+    var response: [String: Any] = ["sizeKnown": true, "sizeComplete": true,
+      "hashComplete": hashComplete, "size": totalBytes, "complete": true]
+    if hashComplete {
       let compound = "photos-resources-v1\n" + descriptors.sorted().joined(separator: "\n") + "\n"
       response["hash"] = SHA256.hash(data: Data(compound.utf8)).map { String(format: "%02x", $0) }.joined()
     }

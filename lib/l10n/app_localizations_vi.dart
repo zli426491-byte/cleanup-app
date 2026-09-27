@@ -1093,4 +1093,73 @@ class AppLocalizationsVi extends AppLocalizations {
   String serviceQualitySummary(String reasons) {
     return '$reasons; đề xuất chỉ để tham khảo';
   }
+
+  @override
+  String get scanSwipeIntro =>
+      'Vuốt trái để đánh dấu xóa, vuốt phải để giữ. Chỉ xóa sau khi xác nhận.';
+
+  @override
+  String get scanSwipeStart => 'Bắt đầu sắp xếp bằng vuốt';
+
+  @override
+  String get scanDetails => 'Chi tiết quét';
+
+  @override
+  String get scanVerificationNeeded => 'Chưa kiểm tra tệp gốc';
+
+  @override
+  String scanVerificationProgress(int verified, int total) {
+    return 'Đã kiểm tra $verified / $total mục';
+  }
+
+  @override
+  String get scanVerificationExplanation =>
+      'Kiểm tra nội dung và dung lượng tệp trước để tìm bản trùng hoàn toàn và tệp lớn. Các mục trên đám mây có thể xử lý sau.';
+
+  @override
+  String get scanVerifyNow => 'Kiểm tra bản trùng và tệp lớn';
+
+  @override
+  String get scanBrowsePhotos => 'Sắp xếp ảnh trước';
+
+  @override
+  String get scanSelectAll => 'Chọn tất cả trong danh mục này';
+
+  @override
+  String get scanClearSelection => 'Bỏ chọn tất cả';
+
+  @override
+  String get scanKeepOneSelectOthers => 'Giữ ảnh này, chọn các ảnh khác';
+
+  @override
+  String get scanSelectOthersHint =>
+      'Xem trước ảnh được đề xuất giữ, rồi chọn các ảnh còn lại trong nhóm cùng lúc.';
+
+  @override
+  String get scanNotChecked => 'Chờ kiểm tra';
+
+  @override
+  String scanPendingCheckCount(int count) {
+    return '$count mục chờ kiểm tra';
+  }
+
+  @override
+  String get swipeGestureTitle => 'Sắp xếp nhanh bằng vuốt';
+
+  @override
+  String get swipeGestureDelete => 'Vuốt trái để đánh dấu xóa';
+
+  @override
+  String get swipeGestureKeep => 'Vuốt phải để giữ';
+
+  @override
+  String get swipeGestureSafety =>
+      'Ảnh được đưa vào danh sách chờ xóa trước. Chỉ xóa sau khi bạn nhấn Xong và xác nhận.';
+
+  @override
+  String get swipeGestureHelp => 'Cách sắp xếp bằng vuốt';
+
+  @override
+  String get homeSwipeDescription =>
+      'Vuốt từng ảnh để sắp xếp nhanh hơn so với chạm vào ảnh thu nhỏ.';
 }

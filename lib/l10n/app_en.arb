@@ -706,5 +706,44 @@
         "type": "String"
       }
     }
+  },
+  "scanSwipeIntro": "Swipe left to mark for deletion, right to keep. Delete only after confirming.",
+  "scanSwipeStart": "Start swipe cleanup",
+  "scanDetails": "Scan details",
+  "scanVerificationNeeded": "Original files not checked yet",
+  "scanVerificationProgress": "Checked {verified} / {total} items",
+  "scanVerificationExplanation": "Check file contents and sizes first to find exact duplicates and large files. Cloud items can wait.",
+  "scanVerifyNow": "Check duplicates and large files",
+  "scanBrowsePhotos": "Organize photos first",
+  "scanSelectAll": "Select all in this category",
+  "scanClearSelection": "Clear selection",
+  "scanKeepOneSelectOthers": "Keep this photo, select the others",
+  "scanSelectOthersHint": "Preview the suggested photo to keep, then select the rest of this group in one go.",
+  "scanNotChecked": "To check",
+  "scanPendingCheckCount": "{count} items to check",
+  "swipeGestureTitle": "Quick swipe cleanup",
+  "swipeGestureDelete": "Swipe left to mark for deletion",
+  "swipeGestureKeep": "Swipe right to keep",
+  "swipeGestureSafety": "Photos go to a deletion list first. They are deleted only after you tap Done and confirm.",
+  "swipeGestureHelp": "How to swipe",
+  "homeSwipeDescription": "Swipe through photos one by one for faster cleanup than tapping thumbnails.",
+  "@scanVerificationProgress": {
+    "description": "Number of original resources checked out of the total indexed items.",
+    "placeholders": {
+      "verified": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "@scanPendingCheckCount": {
+    "description": "Number of original resources waiting to be checked.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }
