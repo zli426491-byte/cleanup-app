@@ -41,11 +41,27 @@ private final class ControlledResourceIO: NativeResourceIO {
 /// Persistent, owned Photos fixtures for the two real Flutter integration
 /// workloads. Selected explicitly by the CI harness, never during app startup.
 /// No Photos deletion occurs here: both stages use the same disposable simulator.
+private func requireNativeFixtureModeMarker() throws {
+  #if targetEnvironment(simulator)
+  let marker = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    .appendingPathComponent("cleanup-native-fixture-mode")
+  let exists = FileManager.default.fileExists(atPath: marker.path)
+  print("Native Documents fixture-only marker: exists=\(exists), path=\(marker.path)")
+  guard exists else {
+    XCTFail("The isolated native test host must suppress Dart scans before native fixtures are ready.")
+    throw NSError(domain: "CleanupNativeTests", code: 25)
+  }
+  #endif
+}
+
 final class PhotoLibrarySeedTests: XCTestCase {
   private let owner = "cleanup-native-photos-integration-v1"
   private let manifestName = "cleanup-scan-fixtures.json"
 
-  override func setUpWithError() throws { continueAfterFailure = false }
+  override func setUpWithError() throws {
+    continueAfterFailure = false
+    try requireNativeFixtureModeMarker()
+  }
 
   private var manifestURL: URL {
     FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -110,17 +126,30 @@ final class PhotoLibrarySeedTests: XCTestCase {
   }
 
   private func importPhotos(_ photos: [SeedPhoto]) throws -> [String] {
+    // addResource(data:) may normalize JPEG metadata on import (the real CI
+    // observed +62 bytes on the first similar photo). Use actual source files
+    // for every JPEG, retaining independent input Data SHA/byte expectations.
+    var ownedFiles: [URL] = []
+    defer { for file in ownedFiles { try? FileManager.default.removeItem(at: file) } }
+    let files = try photos.map { photo -> URL in
+      if let file = photo.fileURL { return file }
+      let file = FileManager.default.temporaryDirectory
+        .appendingPathComponent("cleanup-source-jpeg-\(UUID().uuidString).jpg")
+      ownedFiles.append(file)
+      try photo.data.write(to: file)
+      return file
+    }
     let saved = expectation(description: "Import \(photos.count) real JPEG Photos assets")
     let lock = NSLock(); var ids: [String] = []; var saveError: Error?
     PHPhotoLibrary.shared().performChanges({
       var created: [String] = []
-      for photo in photos {
+      for (index, photo) in photos.enumerated() {
         let request = PHAssetCreationRequest.forAsset()
         request.creationDate = photo.date
         let options = PHAssetResourceCreationOptions()
         options.originalFilename = photo.fileURL?.lastPathComponent ?? "cleanup-fixture-\(photo.index).jpg"
-        if let file = photo.fileURL { request.addResource(with: .photo, fileURL: file, options: options) }
-        else { request.addResource(with: .photo, data: photo.data, options: options) }
+        options.shouldMoveFile = false
+        request.addResource(with: .photo, fileURL: files[index], options: options)
         if let id = request.placeholderForCreatedAsset?.localIdentifier { created.append(id) }
       }
       lock.lock(); ids = created; lock.unlock()
@@ -324,6 +353,9 @@ final class PhotoLibrarySeedTests: XCTestCase {
     }
     job.start(); wait(for: [replied], timeout: 6)
     let result = try XCTUnwrap(response)
+    let diagnostic = try JSONSerialization.data(withJSONObject: ["id": identifier,
+      "includeHash": hash, "result": result], options: [.sortedKeys])
+    print("REAL_PHOTOS_INSPECTION_RESULT \(String(decoding: diagnostic, as: UTF8.self))")
     XCTAssertEqual(result["complete"] as? Bool, true, "\(result)")
     XCTAssertEqual(result["sizeKnown"] as? Bool, true)
     XCTAssertEqual(result["sizeComplete"] as? Bool, true)
@@ -471,10 +503,37 @@ final class PhotoLibrarySeedTests: XCTestCase {
     XCTAssertGreaterThan(resolutionCounts["3024x4032", default: 0], 0)
     XCTAssertEqual(duplicateIds.count, 2); XCTAssertEqual(differentIds.count, 6); XCTAssertEqual(videoIds.count, 2)
     var nativeResults: [String: [String: Any]] = [:]
+    // Save provenance before fail-fast assertions, so a real I/O mismatch still
+    // has its own asset/role/source identity in machine-readable artifacts. It
+    // remains explicitly pending and cannot pass the Flutter/harness guard.
+    var pendingManifest: [String: Any] = ["schemaVersion": 1, "owner": owner,
+      "stage": target, "workloadCount": target, "actualFixtureCount": actual.count,
+      "status": "native_validation_pending", "allFixtureIds": allIds,
+      "photoFixtureIds": photoIds, "duplicateIds": duplicateIds,
+      "differentPhotoIds": differentIds, "largeVideoIds": videoIds,
+      "shortVideoIds": shortVideoIds, "videoFixtureIds": allVideoIds,
+      "sourceByteCounts": sourceByteCounts, "sourceSHA256": sourceHashes,
+      "nativeResultsById": nativeResults]
+    try JSONSerialization.data(withJSONObject: pendingManifest, options: [.prettyPrinted, .sortedKeys])
+      .write(to: manifestURL, options: .atomic)
     for id in duplicateIds + differentIds + videoIds {
       let isPhoto = !videoIds.contains(id)
       let result = try inspect(id, hash: isPhoto)
       let measuredBytes = try XCTUnwrap((result["size"] as? NSNumber)?.int64Value)
+      nativeResults[id] = result
+      pendingManifest["nativeResultsById"] = nativeResults
+      try JSONSerialization.data(withJSONObject: pendingManifest, options: [.prettyPrinted, .sortedKeys])
+        .write(to: manifestURL, options: .atomic)
+      var diagnostic: [String: Any] = ["id": id,
+        "role": duplicateIds.contains(id) ? "duplicate" : differentIds.contains(id) ? "similar" : "large_video",
+        "sourceBytes": try XCTUnwrap(sourceByteCounts[id]), "measuredBytes": measuredBytes,
+        "nativeResult": result]
+      if let source = sourceHashes[id], let bytes = sourceByteCounts[id] {
+        diagnostic["sourceSHA256"] = source
+        diagnostic["expectedCompoundSHA256"] = digest(Data("photos-resources-v1\n1:\(bytes):\(source)\n".utf8))
+      }
+      let diagnosticData = try JSONSerialization.data(withJSONObject: diagnostic, options: [.sortedKeys])
+      print("REAL_PHOTOS_MARKER_RESULT \(String(decoding: diagnosticData, as: UTF8.self))")
       XCTAssertEqual(measuredBytes, sourceByteCounts[id])
       assetBytes[id] = measuredBytes
       if isPhoto {
@@ -482,7 +541,6 @@ final class PhotoLibrarySeedTests: XCTestCase {
         let expected = digest(Data("photos-resources-v1\n1:\(bytes):\(source)\n".utf8))
         XCTAssertEqual(result["hash"] as? String, expected)
       }
-      nativeResults[id] = result
     }
     XCTAssertEqual(nativeResults[duplicateIds[0]]?["hash"] as? String, nativeResults[duplicateIds[1]]?["hash"] as? String)
     let distinctHashes = differentIds.compactMap { nativeResults[$0]?["hash"] as? String }
@@ -542,6 +600,11 @@ final class RunnerTests: XCTestCase {
   private static var preparedFixtureIdentifier: String?
   private static var authorizationRequested = false
   private static var videoFixtureIdentifier: String?
+
+  override func setUpWithError() throws {
+    continueAfterFailure = false
+    try requireNativeFixtureModeMarker()
+  }
 
   private func temporaryFile(bytes: UInt64) throws -> URL {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("cleanup_native_\(UUID().uuidString)")

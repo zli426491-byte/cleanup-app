@@ -19,9 +19,19 @@ import 'package:provider/provider.dart';
 void main() {
   // Native XCTest and the real Photos authorization bootstrap share this exact
   // compiled app. They must not start Flutter scan tests before seeding Photos.
-  if (Platform.environment['CLEANUP_NATIVE_FIXTURE_ONLY'] == '1') {
+  // Dart's iOS runtime returns an empty Platform.environment. The CI harness
+  // writes this marker into the app's persistent Documents directory before
+  // native tests, then removes it before the normal prebuilt driver launch.
+  // iOS's native TMPDIR identifies the adjacent tmp directory in this container.
+  if (Platform.isIOS &&
+      File(
+        '${Directory.systemTemp.parent.path}/Documents/cleanup-native-fixture-mode',
+      ).existsSync()) {
     WidgetsFlutterBinding.ensureInitialized();
     runApp(const MaterialApp(home: SizedBox.shrink()));
+    debugPrint(
+      'CLEANUP_NATIVE_FIXTURE_MODE active tmp=${Directory.systemTemp.path}',
+    );
     return;
   }
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();

@@ -150,6 +150,10 @@ print(json.dumps({'app': str(app), 'bundle_id': info['CFBundleIdentifier'],
     'xctestrun': str(run), 'test_paths': paths}, indent=2))
 PY
 xcrun simctl install "$SIMULATOR_ID" "$TEST_APP"
+APP_DATA="$(xcrun simctl get_app_container "$SIMULATOR_ID" com.cleanupapp.cleaner data)"
+mkdir -p "$APP_DATA/Documents"
+printf 'cleanup-native-fixture-mode-v1\n' > "$APP_DATA/Documents/cleanup-native-fixture-mode"
+printf '%s\n' "$APP_DATA/Documents/cleanup-native-fixture-mode" | tee "$RUN_DIRECTORY/fixture-mode-marker-path.txt"
 # Reset only the disposable CI simulator. The UI test must respond to the real
 # modern full-access prompt; simctl's legacy grant is deliberately not used.
 xcrun simctl privacy "$SIMULATOR_ID" reset photos-add com.cleanupapp.cleaner
@@ -208,6 +212,18 @@ if [[ "$TEST_EXIT" == "0" ]]; then
     -only-testing:RunnerTests/RunnerTests \
     -resultBundlePath "$RUN_DIRECTORY/Runner.xcresult" \
     2>&1 | tee "$RUN_DIRECTORY/xcodebuild.log" || TEST_EXIT=$?
+  if [[ "$TEST_EXIT" == "0" ]]; then
+    python3 - "$RUN_DIRECTORY/xcodebuild.log" <<'PY' || TEST_EXIT=$?
+from pathlib import Path
+import sys
+log = Path(sys.argv[1]).read_text(errors='replace')
+if 'real large Photos library finds exact copies and large movies' in log:
+    raise SystemExit('Native XCTest unexpectedly ran the Dart Photos scan before its seeded integration stage.')
+if 'CLEANUP_NATIVE_FIXTURE_MODE active' not in log:
+    raise SystemExit('Native XCTest did not confirm the Dart fixture-only marker branch.')
+print('Native XCTest host confirmed fixture-only Dart startup; no premature Flutter scan.')
+PY
+  fi
 else
   echo "Photos authorization UI test failed; native fixture tests were not run."
 fi

@@ -20,6 +20,9 @@ printf '%s\n' "$SIMULATOR_ID" > "$RESULT_DIRECTORY/simulator-id.txt"
 # Bulk fixtures are separate real XCTest cases. Neither stage can silently skip
 # or pass without actual Photos creation and production resource inspections.
 TEST_EXIT=0
+APP_DATA="$(xcrun simctl get_app_container "$SIMULATOR_ID" com.cleanupapp.cleaner data)"
+mkdir -p "$APP_DATA/Documents"
+printf 'cleanup-native-fixture-mode-v1\n' > "$APP_DATA/Documents/cleanup-native-fixture-mode"
 # The preceding drive intentionally leaves the exact app installed/running.
 # Stop its old Dart isolate before XCTest launches the same host in fixture mode.
 xcrun simctl terminate "$SIMULATOR_ID" com.cleanupapp.cleaner 2>/dev/null || true
@@ -41,6 +44,16 @@ if [[ "$TEST_EXIT" != "0" ]]; then
   echo "Real Photos seed failed; Flutter integration was not run."
   exit "$TEST_EXIT"
 fi
+python3 - "$RESULT_DIRECTORY/xcodebuild-seed.log" <<'PY'
+from pathlib import Path
+import sys
+log = Path(sys.argv[1]).read_text(errors='replace')
+if 'real large Photos library finds exact copies and large movies' in log:
+    raise SystemExit('Native Photos seed unexpectedly started the Dart scan before seed completion.')
+if 'CLEANUP_NATIVE_FIXTURE_MODE active' not in log:
+    raise SystemExit('Native Photos seed did not confirm the Dart fixture-only marker branch.')
+print('Native Photos seed confirmed fixture-only Dart startup; no premature Flutter scan.')
+PY
 test -f "$RESULT_DIRECTORY/seed-manifest.json"
 
 # Keep independently checked roles in a compact artifact. The real Dart host
@@ -107,6 +120,9 @@ python3 - "$APP_DATA/Documents" "$WORKLOAD" "$RESULT_DIRECTORY" <<'PY'
 from pathlib import Path
 import shutil, sys
 documents, workload, results = Path(sys.argv[1]), sys.argv[2], Path(sys.argv[3])
+marker = documents / 'cleanup-native-fixture-mode'
+marker.unlink()
+assert not marker.exists(), 'Real Flutter drive must not inherit native fixture-only mode'
 for name in (f'cleanup-library-test-{workload}.json', f'photos-{workload}-exact.png', f'photos-{workload}-large.png'):
     previous = documents / name
     if previous.exists():
