@@ -30,6 +30,7 @@ void main() {
   Completer<int>? permissionResponse;
   Completer<Map<String, Object>>? originalResponse;
   var originalsUnavailable = false;
+  var previewsUnavailable = false;
 
   Map<String, Object> asset(String id, {int type = 1}) => {
     'id': id,
@@ -49,6 +50,7 @@ void main() {
     permissionResponse = null;
     originalResponse = null;
     originalsUnavailable = false;
+    previewsUnavailable = false;
     messenger.setMockMethodCallHandler(photos, (call) async {
       switch (call.method) {
         case 'requestPermissionExtend':
@@ -87,7 +89,11 @@ void main() {
         return {
           'assets': [
             for (final id in args['assetIds'] as List)
-              {'assetId': id, 'status': 'local', 'thumbnail': png},
+              {
+                'assetId': id,
+                'status': previewsUnavailable ? 'not_local' : 'local',
+                if (!previewsUnavailable) 'thumbnail': png,
+              },
           ],
         };
       }
@@ -388,6 +394,58 @@ void main() {
         ),
         findsOneWidget,
       );
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  testWidgets(
+    'continuing preview analysis restores the selected chip and confirmed capacities',
+    (tester) async {
+      useNarrowPhone(tester);
+      library = [
+        ...List.generate(100, (index) => asset('photo-$index')),
+        ...List.generate(20, (index) => asset('video-$index', type: 2)),
+      ];
+      previewsUnavailable = true;
+      await tester.runAsync(scanner.startFullScan);
+      expect(scanner.pendingAnalysisCount, 100);
+      await mount(tester, 'largeFiles');
+      await finish(
+        tester,
+        () => !scanner.isScanning && scanner.knownSizeAssetCount == 120,
+      );
+      expectLargeChipVisible(tester);
+      final verifiedSizes = {
+        for (final photo in scanner.scanResult.allAssets) photo.id: photo.size,
+      };
+      final originalCalls = inspections.length;
+      previewsUnavailable = false;
+      permissionResponse = Completer<int>();
+      final strings = AppLocalizations.of(
+        tester.element(find.byType(SmartCleanView)),
+      );
+      final resume = find.text(strings.scanResumePending);
+      expect(resume, findsOneWidget);
+      await tester.ensureVisible(resume);
+      await tester.pump();
+      await tester.tap(resume);
+      await tester.pump(const Duration(milliseconds: 20));
+      await tester.pump(const Duration(milliseconds: 20));
+      expect(scanner.isScanning, isTrue);
+      expect(scanner.isVerifyingOriginals, isFalse);
+      expect(scanner.scanResult.allAssets, isEmpty);
+      permissionResponse!.complete(PermissionState.authorized.index);
+      await finish(
+        tester,
+        () => !scanner.isScanning && scanner.pendingAnalysisCount == 0,
+      );
+      // Check the complete production chip without scrolling it into view.
+      expectLargeChipVisible(tester);
+      expect(inspections, hasLength(originalCalls));
+      expect(scanner.knownSizeAssetCount, 120);
+      expect({
+        for (final photo in scanner.scanResult.allAssets) photo.id: photo.size,
+      }, verifiedSizes);
+      expect(scanner.scanResult.largeFiles, hasLength(120));
       await tester.pumpWidget(const SizedBox());
     },
   );

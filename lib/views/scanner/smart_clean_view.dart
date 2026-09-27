@@ -91,11 +91,19 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   Future<void> _verifyOriginals(
     PhotoScannerService scanner, {
     OriginalVerificationTarget? target,
-  }) async {
-    final category = _selectedCategory;
+  }) {
     final capturedTarget = target ?? _verificationTarget;
+    return _runKeepingCategoryVisible(
+      () => scanner.verifyOriginals(target: capturedTarget),
+    );
+  }
+
+  Future<void> _runKeepingCategoryVisible(
+    Future<void> Function() action,
+  ) async {
+    final category = _selectedCategory;
     try {
-      await scanner.verifyOriginals(target: capturedTarget);
+      await action();
     } finally {
       // Re-indexing temporarily removes the category counts and clamps the
       // horizontal offset. Reveal it after the restored snapshot is laid out,
@@ -427,9 +435,11 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                   borderRadius: BorderRadius.circular(50),
                   onTap: scanner.isDeleting
                       ? null
-                      : scanner.wasCancelled
-                      ? scanner.resumeScan
-                      : scanner.startFullScan,
+                      : () => _runKeepingCategoryVisible(
+                          scanner.wasCancelled
+                              ? scanner.resumeScan
+                              : scanner.startFullScan,
+                        ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 28,
@@ -496,7 +506,9 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                       TextButton.icon(
                         onPressed: scanner.isDeleting || _isDeleting
                             ? null
-                            : scanner.resumeScan,
+                            : () => _runKeepingCategoryVisible(
+                                scanner.resumeScan,
+                              ),
                         icon: const Icon(Icons.play_arrow_rounded),
                         label: Text(context.l10n.scanResumePending),
                       ),

@@ -175,6 +175,40 @@ void main() {
       await tester.pump(const Duration(milliseconds: 600));
       await _revealAsset(tester, movieIds.last);
       _expectActiveCategoryVisible(tester, labels.scanCategoryLarge);
+
+      // Large libraries retain pending previews after their bounded first pass.
+      // Use the real continuation action and ensure it preserves the already
+      // verified originals and the selected category after re-indexing again.
+      var previewContinuationChecked = false;
+      if (scanner.pendingAnalysisCount > 0) {
+        final knownBeforePreview = scanner.knownSizeAssetCount;
+        watch.reset();
+        await _tapVisible(tester, find.text(labels.scanResumePending));
+        await _waitUntil(
+          tester,
+          () => scanner.isScanning,
+          'preview resume start',
+        );
+        await _waitUntil(
+          tester,
+          () => !scanner.isScanning,
+          'preview resume end',
+        );
+        _expectMovies(scanner, movieIds, expectedBytes);
+        _expectExactPair(scanner, duplicateIds, differentIds);
+        expect(
+          scanner.knownSizeAssetCount,
+          greaterThanOrEqualTo(knownBeforePreview),
+        );
+        stages['previewResumeMs'] = watch.elapsedMilliseconds;
+        stages['previewResumeAnalyzedCount'] = scanner.analyzedAssetCount;
+        stages['previewResumePendingCount'] = scanner.pendingAnalysisCount;
+        stages['previewResumeKnownSizeCount'] = scanner.knownSizeAssetCount;
+        previewContinuationChecked = true;
+        await tester.pump(const Duration(milliseconds: 600));
+        await _revealAsset(tester, movieIds.last);
+        _expectActiveCategoryVisible(tester, labels.scanCategoryLarge);
+      }
       await _capture(binding, 'photos-$workload-large');
 
       // A separate fresh scanner really cancels its first native-resource pass;
@@ -230,6 +264,9 @@ void main() {
         'largeMovieAbove64MiBDetectedWithExactBytes': true,
         'categoryEntryAutomaticallyVerified': true,
         'sizeOnlyPreservedHashes': true,
+        'previewContinuationChecked': previewContinuationChecked,
+        'previewContinuationPreservedOriginalResults':
+            previewContinuationChecked,
         'cancelAndResumeRecoveredMovies': true,
         'screenshotFiles': [
           'photos-$workload-exact.png',
