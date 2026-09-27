@@ -745,5 +745,13 @@
         "type": "int"
       }
     }
+  },
+  "scanCheckExactPhotos": "Check exact duplicates",
+  "scanCheckFileSizes": "Check large-file sizes",
+  "@scanCheckExactPhotos": {
+    "description": "Action to verify complete original hashes of photos only."
+  },
+  "@scanCheckFileSizes": {
+    "description": "Action to check exact resource sizes without computing photo hashes."
   }
 }

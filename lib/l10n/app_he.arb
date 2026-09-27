@@ -306,5 +306,7 @@
   "swipeGestureKeep": "החלק ימינה לשמירה",
   "swipeGestureSafety": "התמונות מתווספות תחילה לרשימת מחיקה. הן נמחקות רק לאחר לחיצה על סיום ואישור.",
   "swipeGestureHelp": "איך מסדרים בהחלקה",
-  "homeSwipeDescription": "החלק תמונה אחר תמונה לסידור מהיר יותר מהקשה על תמונות ממוזערות."
+  "homeSwipeDescription": "החלק תמונה אחר תמונה לסידור מהיר יותר מהקשה על תמונות ממוזערות.",
+  "scanCheckExactPhotos": "בדיקת תמונות זהות",
+  "scanCheckFileSizes": "בדיקת גודל קבצים גדולים"
 }

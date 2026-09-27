@@ -95,6 +95,8 @@ if len(paths) != 1:
 print(paths[0])
 PY
 )"
+printf '%s\n' "$SIMULATOR_ID" > build/native-tests/simulator-id.txt
+printf '%s\n' "$XCTESTRUN_PATH" > build/native-tests/xctestrun-path.txt
 python3 - "$TEST_APP" "$XCTESTRUN_PATH" <<'PY' | tee "$RUN_DIRECTORY/test-host.json"
 import hashlib, json, plistlib, sys
 from pathlib import Path
@@ -181,7 +183,7 @@ if [[ "$TEST_EXIT" == "0" ]]; then
     -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
     -destination-timeout 120 \
     -parallel-testing-enabled NO \
-    -only-testing:RunnerTests \
+    -only-testing:RunnerTests/RunnerTests \
     -resultBundlePath "$RUN_DIRECTORY/Runner.xcresult" \
     2>&1 | tee "$RUN_DIRECTORY/xcodebuild.log" || TEST_EXIT=$?
 else

@@ -1043,6 +1043,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homeSwipeDescription => '逐張左右滑動，比點選縮圖更快。';
+
+  @override
+  String get scanCheckExactPhotos => '檢查真重複';
+
+  @override
+  String get scanCheckFileSizes => '檢查大檔容量';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -2121,6 +2127,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get homeSwipeDescription => '逐张左右滑动，比点选缩略图更快。';
+
+  @override
+  String get scanCheckExactPhotos => '检查真正重复照片';
+
+  @override
+  String get scanCheckFileSizes => '检查大文件容量';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -3162,4 +3174,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get homeSwipeDescription => '逐張左右滑動，比點選縮圖更快。';
+
+  @override
+  String get scanCheckExactPhotos => '檢查真重複';
+
+  @override
+  String get scanCheckFileSizes => '檢查大檔容量';
 }

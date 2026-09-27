@@ -25,6 +25,8 @@ enum ScanPhase {
   done,
 }
 
+enum OriginalVerificationTarget { all, exactPhotos, fileSizes }
+
 class PhotoAsset {
   final String id;
   final String? title;
@@ -271,6 +273,12 @@ class PhotoScannerService extends ChangeNotifier {
   final Map<String, AssetEntity> _checkpointEntities = {};
   final Map<String, PhotoAsset> _checkpointAssets = {};
   final Map<String, ContentSignature> _checkpointSignatures = {};
+  // Hash and capacity attempts are independent: a size-only pass must not make
+  // an untried photo hash look attempted. Sequence numbers rotate failed work
+  // across bounded rounds, including an item cancelled while native is waiting.
+  final Map<String, int> _hashAttempts = {};
+  final Map<String, int> _sizeAttempts = {};
+  int _resourceAttemptSequence = 0;
   List<String>? _orderedIds;
   List<DuplicateGroup> _duplicateGroups = [];
   List<SimilarGroup> _similarGroups = [];
@@ -303,6 +311,7 @@ class PhotoScannerService extends ChangeNotifier {
   int get pendingHashAssetCount => totalPhotoCount - _verifiedHashCount;
   int get totalPhotoCount => _analyzedCount + _pendingCount;
   bool get isVerifyingOriginals => _isVerifyingOriginals;
+  bool get nativeOriginalAnalysisAvailable => _nativeAvailable;
   String? get currentOperation => _currentOperation;
   int get currentWaitSeconds => _currentWaitSeconds;
   String? get scanNotice {
@@ -327,7 +336,9 @@ class PhotoScannerService extends ChangeNotifier {
 
   /// An explicit, bounded local-resource pass; never runs as part of a preview scan.
   /// Re-index first so revoked access or same-ID edits cannot reuse old hashes.
-  Future<void> verifyOriginals() => _scan(resume: true, originals: true);
+  Future<void> verifyOriginals({
+    OriginalVerificationTarget target = OriginalVerificationTarget.all,
+  }) => _scan(resume: true, originals: true, target: target);
 
   void cancelScan() {
     if (!_isScanning || _disposed) return;
@@ -344,7 +355,11 @@ class PhotoScannerService extends ChangeNotifier {
     _cancelNative(prefix);
   }
 
-  Future<void> _scan({required bool resume, bool originals = false}) async {
+  Future<void> _scan({
+    required bool resume,
+    bool originals = false,
+    OriginalVerificationTarget target = OriginalVerificationTarget.all,
+  }) async {
     if (_disposed || _isScanning || _isDeleting) return;
     final runId = ++_scanRunId;
 
@@ -364,10 +379,17 @@ class PhotoScannerService extends ChangeNotifier {
     final priorSignatures = resume
         ? Map<String, ContentSignature>.from(_checkpointSignatures)
         : <String, ContentSignature>{};
+    final originalCandidates = <String>{
+      for (final group in _similarGroups)
+        for (final asset in group.assets) asset.id,
+    };
     if (!resume) {
       _checkpointAssets.clear();
       _checkpointEntities.clear();
       _checkpointSignatures.clear();
+      _hashAttempts.clear();
+      _sizeAttempts.clear();
+      _resourceAttemptSequence = 0;
     }
     _orderedIds = null;
     // Re-index on resume: the accessible set and edits may change without the
@@ -397,6 +419,8 @@ class PhotoScannerService extends ChangeNotifier {
         _checkpointAssets.clear();
         _checkpointEntities.clear();
         _checkpointSignatures.clear();
+        _hashAttempts.clear();
+        _sizeAttempts.clear();
         _assets.clear();
         _entities.clear();
         _signatures.clear();
@@ -424,6 +448,8 @@ class PhotoScannerService extends ChangeNotifier {
           _checkpointAssets.clear();
           _checkpointEntities.clear();
           _checkpointSignatures.clear();
+          _hashAttempts.clear();
+          _sizeAttempts.clear();
           _availableAssetCount = 0;
           await _finish(runId, refresh: false);
           return;
@@ -467,6 +493,8 @@ class PhotoScannerService extends ChangeNotifier {
           }
           if (!_assets.containsKey(entity.id)) {
             _checkpointSignatures.remove(entity.id);
+            _hashAttempts.remove(entity.id);
+            _sizeAttempts.remove(entity.id);
             _setAsset(
               PhotoAsset(
                 id: entity.id,
@@ -498,12 +526,14 @@ class PhotoScannerService extends ChangeNotifier {
       _checkpointSignatures.removeWhere(
         (id, _) => !_signatures.containsKey(id),
       );
+      _hashAttempts.removeWhere((id, _) => !_assets.containsKey(id));
+      _sizeAttempts.removeWhere((id, _) => !_assets.containsKey(id));
       final ordered = _assets.values.toList()
         ..sort((a, b) => b.createDate.compareTo(a.createDate));
       _orderedIds = ordered.map((a) => a.id).toList();
       _currentPhase = ScanPhase.computingHashes;
       if (originals) {
-        await _verifyLocalResources(runId);
+        await _verifyLocalResources(runId, target, originalCandidates);
       } else {
         await _analyzeLocalPreviews(runId);
       }
@@ -720,34 +750,107 @@ class PhotoScannerService extends ChangeNotifier {
     }
   }
 
-  Future<void> _verifyLocalResources(int runId) async {
-    if (!_nativeAvailable) return;
-    final pending = _assets.values
-        .where((a) => a.resourceAnalysisPending)
-        .toList();
-    final ids = [
-      // A local single-resource movie has a cheap exact file-size path. Do not
-      // spend the entire round on photo hashes before users see large videos.
-      for (final attempted in [false, true]) ...[
-        for (final type in [AssetType.video, AssetType.image])
-          ...pending
-              .where(
-                (a) =>
-                    a.resourceAnalysisAttempted == attempted && a.type == type,
-              )
-              .map((a) => a.id),
+  List<String> _verificationQueue(
+    OriginalVerificationTarget target,
+    Set<String> candidates,
+  ) {
+    final pending = _assets.values.where((asset) {
+      return switch (target) {
+        OriginalVerificationTarget.all => asset.resourceAnalysisPending,
+        OriginalVerificationTarget.exactPhotos =>
+          asset.type == AssetType.image && asset.hash == null,
+        OriginalVerificationTarget.fileSizes => !asset.sizeKnown,
+      };
+    }).toList();
+    int? lastAttempt(PhotoAsset asset) =>
+        target != OriginalVerificationTarget.fileSizes &&
+            asset.type == AssetType.image
+        ? _hashAttempts[asset.id]
+        : _sizeAttempts[asset.id];
+    var untouched = pending.where((a) => lastAttempt(a) == null).toList();
+    final retries = pending.where((a) => lastAttempt(a) != null).toList()
+      ..sort((a, b) => lastAttempt(a)!.compareTo(lastAttempt(b)!));
+    if (target == OriginalVerificationTarget.exactPhotos) {
+      // Metadata is only a scheduling hint; only complete original-resource SHA
+      // results may form duplicate groups. Candidate retries do not take over
+      // the fresh queue when their originals remain cloud-only.
+      String metadataKey(PhotoAsset a) =>
+          '${a.width}:${a.height}:${a.createDate.microsecondsSinceEpoch}';
+      final metadataCounts = <String, int>{};
+      for (final asset in _assets.values.where(
+        (a) => a.type == AssetType.image,
+      )) {
+        metadataCounts.update(
+          metadataKey(asset),
+          (n) => n + 1,
+          ifAbsent: () => 1,
+        );
+      }
+      final likely = untouched
+          .where(
+            (a) =>
+                candidates.contains(a.id) ||
+                metadataCounts[metadataKey(a)]! > 1,
+          )
+          .map((a) => a.id)
+          .toSet();
+      untouched = [
+        ...untouched.where((a) => likely.contains(a.id)),
+        ...untouched.where((a) => !likely.contains(a.id)),
+      ];
+    }
+    List<String> typeQueue(AssetType type) {
+      final fresh = untouched.where((a) => a.type == type).toList();
+      final old = retries.where((a) => a.type == type).toList();
+      final queue = <String>[];
+      var nextFresh = 0;
+      var nextOld = 0;
+      while (nextFresh < fresh.length || nextOld < old.length) {
+        for (var i = 0; i < 3 && nextFresh < fresh.length; i++) {
+          queue.add(fresh[nextFresh++].id);
+        }
+        if (nextOld < old.length) queue.add(old[nextOld++].id);
+      }
+      return queue;
+    }
+
+    // Each type has its own fair queue. A cancelled video can be retried even
+    // when ten thousand photographs are still untouched. Within a type, three
+    // fresh items alternate with the oldest retry so neither can starve.
+    final videos = typeQueue(AssetType.video);
+    final photos = typeQueue(AssetType.image);
+    return [
+      for (var i = 0; i < math.max(videos.length, photos.length); i++) ...[
+        if (i < videos.length) videos[i],
+        if (i < photos.length) photos[i],
       ],
     ];
+  }
+
+  Future<void> _verifyLocalResources(
+    int runId,
+    OriginalVerificationTarget target,
+    Set<String> candidates,
+  ) async {
+    if (!_nativeAvailable) return;
+    final ids = _verificationQueue(target, candidates);
     _startBudget(_resourceRoundBudget);
     var processed = 0;
     for (final id in ids) {
       _checkRun(runId);
       final previous = _assets[id]!;
+      final includeHash =
+          target != OriginalVerificationTarget.fileSizes &&
+          previous.type == AssetType.image;
+      final sequence = ++_resourceAttemptSequence;
+      if (includeHash) _hashAttempts[id] = sequence;
+      if (!includeHash || !previous.sizeKnown) _sizeAttempts[id] = sequence;
       // Persist attempts before awaiting native work. A round deadline or a
       // cancellation must not cause the next round to retry the same slow head.
       _setAsset(previous.copyWith(resourceAnalysisAttempted: true));
       _setOperation('驗證本機原始素材');
       notifyListeners();
+      _checkRun(runId);
       final token = '$_instanceId:$runId:original:$id';
       Map<dynamic, dynamic>? data;
       try {
@@ -755,7 +858,7 @@ class PhotoScannerService extends ChangeNotifier {
           _resourceChannel.invokeMapMethod<String, dynamic>('inspectAsset', {
             'assetId': id,
             'token': token,
-            'includeHash': _assets[id]!.type == AssetType.image,
+            'includeHash': includeHash,
             'includeThumbnail': false,
             'resourceTimeoutMs': 4000,
             'maxBytes': 64 * 1024 * 1024,
@@ -795,7 +898,8 @@ class PhotoScannerService extends ChangeNotifier {
           size is int &&
           size > 0;
       final verifiedHash =
-          known &&
+          includeHash &&
+              known &&
               data?['complete'] == true &&
               data?['hashComplete'] != false &&
               hash is String &&
@@ -803,15 +907,18 @@ class PhotoScannerService extends ChangeNotifier {
           ? hash
           : null;
       final hasKnownSize = known || (previous.sizeKnown && !invalidated);
+      final retainedHash = !includeHash && !invalidated
+          ? previous.hash
+          : verifiedHash;
       final needsHash =
-          previous.type == AssetType.image && verifiedHash == null;
+          previous.type == AssetType.image && retainedHash == null;
       final resourcePending = !hasKnownSize || needsHash;
       _setAsset(
         _assets[id]!.copyWith(
           size: known ? size : (hasKnownSize ? previous.size : 0),
           sizeKnown: hasKnownSize,
-          hash: verifiedHash,
-          clearHash: verifiedHash == null,
+          hash: retainedHash,
+          clearHash: retainedHash == null,
           resourceAnalysisAttempted: true,
           resourcePendingReason:
               reason ??
@@ -967,12 +1074,7 @@ class PhotoScannerService extends ChangeNotifier {
         return resolution != 0 ? resolution : a.id.compareTo(b.id);
       });
 
-  Future<void> _refreshGroups(int runId) async {
-    _checkRun(runId);
-    final assets = _assets.values.toList();
-    var duplicateGroups = <DuplicateGroup>[];
-    var similarGroups = <SimilarGroup>[];
-
+  List<DuplicateGroup> _exactGroups(Iterable<PhotoAsset> assets) {
     final buckets = <String, List<PhotoAsset>>{};
     for (final asset in assets) {
       if (asset.type == AssetType.image &&
@@ -981,18 +1083,24 @@ class PhotoScannerService extends ChangeNotifier {
         buckets.putIfAbsent(asset.hash!, () => []).add(asset);
       }
     }
-    duplicateGroups = buckets.entries
-        .where((entry) => entry.value.length > 1)
-        .map((entry) {
-          final ordered = _recommended(entry.value);
-          return DuplicateGroup(
-            hash: entry.key,
-            assets: ordered,
-            bestAssetId: ordered.first.id,
-            bestReason: _bestReason(ordered.first, exact: true),
-          );
-        })
-        .toList();
+    return buckets.entries.where((entry) => entry.value.length > 1).map((
+      entry,
+    ) {
+      final ordered = _recommended(entry.value);
+      return DuplicateGroup(
+        hash: entry.key,
+        assets: ordered,
+        bestAssetId: ordered.first.id,
+        bestReason: _bestReason(ordered.first, exact: true),
+      );
+    }).toList();
+  }
+
+  Future<void> _refreshGroups(int runId) async {
+    _checkRun(runId);
+    final assets = _assets.values.toList();
+    final duplicateGroups = _exactGroups(assets);
+    var similarGroups = <SimilarGroup>[];
     final exactIds = duplicateGroups
         .expand((group) => group.assets)
         .map((asset) => asset.id)
@@ -1058,32 +1166,19 @@ class PhotoScannerService extends ChangeNotifier {
     var duplicateGroups = _duplicateGroups;
     var similarGroups = _similarGroups;
     if (groups) {
-      // Cancellation and deletion only filter the last published groups. Full
-      // visual grouping is a separate, guarded background-isolate operation.
-      duplicateGroups = duplicateGroups
-          .map((group) {
-            final remaining = group.assets
-                .map((a) => _assets[a.id])
-                .whereType<PhotoAsset>()
-                .toList();
-            if (remaining.length < 2) return null;
-            final keep = remaining.any((a) => a.id == group.bestAssetId)
-                ? group.bestAssetId
-                : remaining.first.id;
-            return DuplicateGroup(
-              hash: group.hash,
-              assets: remaining,
-              bestAssetId: keep,
-              bestReason: group.bestReason,
-            );
-          })
-          .whereType<DuplicateGroup>()
-          .toList();
+      // A deadline/cancel may occur between throttled group refreshes. Publish
+      // every completed SHA pair without starting an uncancellable visual job.
+      duplicateGroups = _exactGroups(assets);
+      final exactIds = duplicateGroups
+          .expand((group) => group.assets)
+          .map((a) => a.id)
+          .toSet();
       similarGroups = similarGroups
           .map((group) {
             final remaining = group.assets
                 .map((a) => _assets[a.id])
                 .whereType<PhotoAsset>()
+                .where((a) => !exactIds.contains(a.id))
                 .toList();
             if (remaining.length < 2) return null;
             final eligible = remaining
@@ -1144,6 +1239,8 @@ class PhotoScannerService extends ChangeNotifier {
         _checkpointAssets.remove(id);
         _checkpointEntities.remove(id);
         _checkpointSignatures.remove(id);
+        _hashAttempts.remove(id);
+        _sizeAttempts.remove(id);
       }
       _nextAssetOffset = math.max(0, _nextAssetOffset - indexedDeleted);
       if (_availableAssetCount != null) {
@@ -1186,6 +1283,8 @@ class PhotoScannerService extends ChangeNotifier {
     _checkpointAssets.clear();
     _checkpointEntities.clear();
     _checkpointSignatures.clear();
+    _hashAttempts.clear();
+    _sizeAttempts.clear();
     _duplicateGroups = [];
     _similarGroups = [];
     _orderedIds = null;

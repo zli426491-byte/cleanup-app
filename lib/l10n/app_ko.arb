@@ -306,5 +306,7 @@
   "swipeGestureKeep": "오른쪽으로 밀어 보관",
   "swipeGestureSafety": "사진은 먼저 삭제 후보 목록에 추가됩니다. 완료를 누르고 확인한 후에만 삭제됩니다.",
   "swipeGestureHelp": "밀어서 정리하는 방법",
-  "homeSwipeDescription": "사진을 한 장씩 좌우로 밀면 썸네일을 누르는 것보다 빠르게 정리할 수 있습니다."
+  "homeSwipeDescription": "사진을 한 장씩 좌우로 밀면 썸네일을 누르는 것보다 빠르게 정리할 수 있습니다.",
+  "scanCheckExactPhotos": "완전히 동일한 사진 확인",
+  "scanCheckFileSizes": "대용량 파일 크기 확인"
 }

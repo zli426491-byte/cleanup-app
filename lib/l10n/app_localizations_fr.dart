@@ -1177,4 +1177,10 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get homeSwipeDescription =>
       'Glissez d’une photo à l’autre pour trier plus vite qu’en touchant les vignettes.';
+
+  @override
+  String get scanCheckExactPhotos => 'Vérifier les doublons exacts';
+
+  @override
+  String get scanCheckFileSizes => 'Vérifier la taille des gros fichiers';
 }

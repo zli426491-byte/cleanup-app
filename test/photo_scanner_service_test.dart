@@ -1149,6 +1149,248 @@ void main() {
   );
 
   testWidgets(
+    'slow cloud videos do not monopolize all-target photo hash verification',
+    (tester) async {
+      library = [
+        ...List.generate(100, (i) => photo('cloud-video-$i', type: 2)),
+        photo('local-photo'),
+      ];
+      final slowVideo = Completer<Map<String, Object>>();
+      resourceHandler = (id) async =>
+          id == 'local-photo' ? inspected('photo-content') : slowVideo.future;
+      final verification = scanner.verifyOriginals();
+      for (var i = 0; i < 40 && resourceRequests.isEmpty; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      expect(resourceRequests.single, 'cloud-video-0');
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pump(const Duration(milliseconds: 10));
+      final secondRequest = resourceRequests[1];
+      scanner.cancelScan();
+      await verification;
+      slowVideo.complete({'complete': false, 'sizeKnown': false});
+      await tester.pump();
+      expect(secondRequest, 'local-photo');
+    },
+  );
+
+  testWidgets('already attempted original retries rotate after cancellation', (
+    tester,
+  ) async {
+    library = List.generate(3, (i) => photo('cloud-video-$i', type: 2));
+    final initial = scanner.verifyOriginals();
+    for (var i = 0; i < 40 && scanner.isScanning; i++) {
+      await tester.pump(const Duration(milliseconds: 10));
+    }
+    await initial;
+    expect(resourceRequests, [
+      'cloud-video-0',
+      'cloud-video-1',
+      'cloud-video-2',
+    ]);
+    resourceRequests.clear();
+    final oldResponse = Completer<Map<String, Object>>();
+    resourceResponse = oldResponse;
+    final retry = scanner.verifyOriginals();
+    for (var i = 0; i < 30 && resourceRequests.isEmpty; i++) {
+      await tester.pump(const Duration(milliseconds: 10));
+    }
+    expect(resourceRequests.single, 'cloud-video-0');
+    scanner.cancelScan();
+    await retry;
+    resourceResponse = Completer<Map<String, Object>>();
+    final resumed = scanner.verifyOriginals();
+    for (var i = 0; i < 30 && resourceRequests.length < 2; i++) {
+      await tester.pump(const Duration(milliseconds: 10));
+    }
+    final nextRequest = resourceRequests.last;
+    scanner.cancelScan();
+    await resumed;
+    oldResponse.complete(inspected('obsolete-video', size: 9000000));
+    resourceResponse!.complete(inspected('late-video', size: 9000000));
+    await tester.pump();
+    expect(nextRequest, 'cloud-video-1');
+    expect(scanner.knownSizeAssetCount, 0);
+  });
+
+  testWidgets(
+    'exact-photo target bypasses 2006 cloud videos and verifies actual photo content',
+    (tester) async {
+      library = [
+        ...List.generate(2006, (i) => photo('cloud-video-$i', type: 2)),
+        photo('pair-a'),
+        photo('pair-b'),
+      ];
+      nativeResults = {
+        'pair-a': inspected('same-originals'),
+        'pair-b': inspected('same-originals'),
+      };
+      final verification = scanner.verifyOriginals(
+        target: OriginalVerificationTarget.exactPhotos,
+      );
+      for (var i = 0; i < 100 && scanner.isScanning; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      await verification;
+      expect(resourceRequests, ['pair-a', 'pair-b']);
+      expect(resourceArguments.every((a) => a['includeHash'] == true), isTrue);
+      expect(scanner.verifiedHashAssetCount, 2);
+      expect(scanner.pendingHashAssetCount, 0);
+      expect(scanner.pendingSizeAssetCount, 2006);
+      expect(scanner.pendingResourceCount, 2006);
+      expect(scanner.scanResult.duplicateGroups.single.assets.length, 2);
+    },
+  );
+
+  test(
+    'size-only target never accepts a SHA and leaves photo hashes pending for exact verification',
+    () async {
+      library = [photo('photo'), photo('video', type: 2)];
+      nativeResults = {
+        'photo': inspected('not-requested-hash', size: 12000000),
+        'video': inspected('video', size: 3000000000),
+      };
+      await scanner.verifyOriginals(
+        target: OriginalVerificationTarget.fileSizes,
+      );
+      expect(resourceRequests, ['video', 'photo']);
+      expect(resourceArguments.every((a) => a['includeHash'] == false), isTrue);
+      expect(scanner.knownSizeAssetCount, 2);
+      expect(scanner.pendingSizeAssetCount, 0);
+      expect(scanner.verifiedHashAssetCount, 0);
+      expect(scanner.pendingHashAssetCount, 1);
+      expect(scanner.pendingResourceCount, 1);
+      expect(scanner.scanResult.allAssets.every((a) => a.hash == null), isTrue);
+      expect(scanner.scanResult.largeFiles.length, 2);
+      resourceRequests.clear();
+      resourceArguments.clear();
+      await scanner.verifyOriginals(
+        target: OriginalVerificationTarget.exactPhotos,
+      );
+      expect(resourceRequests, ['photo']);
+      expect(resourceArguments.single['includeHash'], isTrue);
+      expect(scanner.verifiedHashAssetCount, 1);
+      expect(scanner.pendingResourceCount, 0);
+      resourceRequests.clear();
+      await scanner.verifyOriginals(
+        target: OriginalVerificationTarget.fileSizes,
+      );
+      expect(resourceRequests, isEmpty);
+      expect(scanner.verifiedHashAssetCount, 1);
+    },
+  );
+
+  test(
+    'exact metadata candidates are prioritized but different full content is never grouped',
+    () async {
+      library = [
+        photo('unique-head', created: 1600000000),
+        photo('candidate-a', created: 1700000000),
+        photo('candidate-b', created: 1700000000),
+      ];
+      nativeResults = {
+        'unique-head': inspected('unique'),
+        'candidate-a': inspected('original-A'),
+        'candidate-b': inspected('original-B'),
+      };
+      await scanner.verifyOriginals(
+        target: OriginalVerificationTarget.exactPhotos,
+      );
+      expect(resourceRequests, ['candidate-a', 'candidate-b', 'unique-head']);
+      expect(scanner.verifiedHashAssetCount, 3);
+      expect(scanner.scanResult.duplicateGroups, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'cancelled video retries are not blocked by ten thousand untouched size-only photos',
+    (tester) async {
+      library = [
+        ...List.generate(10000, (i) => photo('photo-$i')),
+        photo('cancelled-video', type: 2),
+        photo('untouched-video', type: 2),
+      ];
+      var cancelled = false;
+      scanner.addListener(() {
+        if (!cancelled && scanner.attemptedResourceCount == 1) {
+          cancelled = true;
+          scanner.cancelScan();
+        }
+      });
+      final first = scanner.verifyOriginals(
+        target: OriginalVerificationTarget.fileSizes,
+      );
+      for (var i = 0; i < 300 && scanner.isScanning; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      await first;
+      expect(scanner.wasCancelled, isTrue);
+      expect(scanner.attemptedResourceCount, 1);
+      expect(
+        resourceRequests,
+        isEmpty,
+        reason: 'Cancel listeners prevent a new native request.',
+      );
+      final slow = Completer<Map<String, Object>>();
+      resourceHandler = (id) async {
+        if (id.endsWith('video')) {
+          return {'complete': true, 'sizeKnown': true, 'size': 3000000000};
+        }
+        if (id == 'photo-0') return {'complete': false, 'sizeKnown': false};
+        return slow.future;
+      };
+      final resumed = scanner.verifyOriginals(
+        target: OriginalVerificationTarget.fileSizes,
+      );
+      for (var i = 0; i < 300 && resourceRequests.length < 4; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      expect(resourceRequests.take(3), [
+        'untouched-video',
+        'photo-0',
+        'cancelled-video',
+      ]);
+      expect(scanner.knownSizeAssetCount, 2);
+      scanner.cancelScan();
+      await resumed;
+      slow.complete(inspected('late', size: 9000000));
+      await tester.pump();
+      expect(scanner.knownSizeAssetCount, 2);
+      expect(scanner.verifiedHashAssetCount, 0);
+      expect(
+        scanner.scanResult.largeFiles.map((a) => a.id),
+        containsAll(['cancelled-video', 'untouched-video']),
+      );
+    },
+  );
+
+  testWidgets(
+    'cancelled exact pass publishes the fast verified pair before a slow third item completes',
+    (tester) async {
+      library = [photo('pair-a'), photo('pair-b'), photo('slow-third')];
+      final slow = Completer<Map<String, Object>>();
+      resourceHandler = (id) async =>
+          id == 'slow-third' ? slow.future : inspected('same-originals');
+      final verification = scanner.verifyOriginals(
+        target: OriginalVerificationTarget.exactPhotos,
+      );
+      for (var i = 0; i < 40 && resourceRequests.length < 3; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      expect(scanner.verifiedHashAssetCount, 2);
+      scanner.cancelScan();
+      await verification;
+      slow.complete(inspected('obsolete-third'));
+      await tester.pump();
+      expect(scanner.verifiedHashAssetCount, 2);
+      expect(
+        scanner.scanResult.duplicateGroups.single.assets.map((a) => a.id),
+        containsAll(['pair-a', 'pair-b']),
+      );
+    },
+  );
+
+  testWidgets(
     'cancelling a slow original checkpoints its attempt and resumes untouched work',
     (tester) async {
       library = [photo('slow-first'), photo('untouched-second')];

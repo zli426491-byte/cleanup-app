@@ -306,5 +306,7 @@
   "swipeGestureKeep": "Scorri a destra per conservare",
   "swipeGestureSafety": "Le foto entrano prima in un elenco da eliminare. Vengono eliminate solo dopo aver toccato Fine e confermato.",
   "swipeGestureHelp": "Come ordinare scorrendo",
-  "homeSwipeDescription": "Scorri le foto una alla volta per ordinarle più velocemente che toccando le miniature."
+  "homeSwipeDescription": "Scorri le foto una alla volta per ordinarle più velocemente che toccando le miniature.",
+  "scanCheckExactPhotos": "Verifica duplicati identici",
+  "scanCheckFileSizes": "Verifica le dimensioni dei file grandi"
 }

@@ -1162,4 +1162,10 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get homeSwipeDescription =>
       'Vuốt từng ảnh để sắp xếp nhanh hơn so với chạm vào ảnh thu nhỏ.';
+
+  @override
+  String get scanCheckExactPhotos => 'Kiểm tra ảnh trùng khớp hoàn toàn';
+
+  @override
+  String get scanCheckFileSizes => 'Kiểm tra dung lượng tệp lớn';
 }

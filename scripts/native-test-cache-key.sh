@@ -39,7 +39,7 @@ flags = {
 }
 paths = set(path for path in root.glob("pubspec*") if path.is_file())
 inputs = (
-    "lib", "assets", "ios/Runner", "ios/RunnerTests", "ios/RunnerUITests",
+    "lib", "assets", "integration_test", "test_driver", "ios/Runner", "ios/RunnerTests", "ios/RunnerUITests",
     "ios/Runner.xcodeproj", "ios/Runner.xcworkspace", "ios/Flutter",
     "ios/Podfile", "ios/Podfile.lock",
 )

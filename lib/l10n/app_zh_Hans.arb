@@ -306,5 +306,7 @@
   "swipeGestureKeep": "右滑保留",
   "swipeGestureSafety": "照片会先加入待删列表；点击完成并确认后才删除。",
   "swipeGestureHelp": "如何滑动整理",
-  "homeSwipeDescription": "逐张左右滑动，比点选缩略图更快。"
+  "homeSwipeDescription": "逐张左右滑动，比点选缩略图更快。",
+  "scanCheckExactPhotos": "检查真正重复照片",
+  "scanCheckFileSizes": "检查大文件容量"
 }

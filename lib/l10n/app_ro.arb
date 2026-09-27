@@ -306,5 +306,7 @@
   "swipeGestureKeep": "Glisează la dreapta pentru a păstra",
   "swipeGestureSafety": "Fotografiile intră mai întâi într-o listă de ștergere. Sunt șterse doar după ce apeși Gata și confirmi.",
   "swipeGestureHelp": "Cum sortezi prin glisare",
-  "homeSwipeDescription": "Glisează fotografiile pe rând pentru a le sorta mai repede decât atingând miniaturile."
+  "homeSwipeDescription": "Glisează fotografiile pe rând pentru a le sorta mai repede decât atingând miniaturile.",
+  "scanCheckExactPhotos": "Verifică duplicatele identice",
+  "scanCheckFileSizes": "Verifică dimensiunile fișierelor mari"
 }

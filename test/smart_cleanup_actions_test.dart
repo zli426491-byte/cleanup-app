@@ -28,6 +28,7 @@ class _Scanner extends PhotoScannerService {
   _Scanner({
     this.pendingHash = 0,
     this.pendingSize = 0,
+    this.nativeReady = false,
     bool groups = false,
     bool screenshots = true,
   }) {
@@ -59,8 +60,20 @@ class _Scanner extends PhotoScannerService {
   late final ScanResult result;
   final int pendingHash;
   final int pendingSize;
+  final bool nativeReady;
+  final List<OriginalVerificationTarget> verifyTargets = [];
+  @override
+  bool get nativeOriginalAnalysisAvailable => nativeReady;
   int verifyCalls = 0;
+  int cancelCalls = 0;
   bool checking = false;
+  @override
+  void cancelScan() {
+    cancelCalls++;
+    checking = false;
+    notifyListeners();
+  }
+
   @override
   ScanResult get scanResult => result;
   @override
@@ -86,7 +99,10 @@ class _Scanner extends PhotoScannerService {
   @override
   String? get scanNotice => '已暫停，已讀取與分析的結果已保留，可繼續掃描。';
   @override
-  Future<void> verifyOriginals() async {
+  Future<void> verifyOriginals({
+    OriginalVerificationTarget target = OriginalVerificationTarget.all,
+  }) async {
+    verifyTargets.add(target);
     verifyCalls++;
     checking = true;
     notifyListeners();
@@ -99,6 +115,7 @@ Future<void> _mount(
   String category, {
   double textScale = 1,
   Locale locale = const Locale('en'),
+  bool settle = true,
 }) async {
   final subscription = SubscriptionManager();
   addTearDown(scanner.dispose);
@@ -123,7 +140,8 @@ Future<void> _mount(
       ),
     ),
   );
-  await tester.pumpAndSettle();
+  await tester.pump();
+  if (settle) await tester.pumpAndSettle();
 }
 
 Future<void> _tapKey(WidgetTester tester, String key) async {
@@ -483,6 +501,93 @@ void main() {
         expect(find.text('Selected items: 1'), findsOneWidget);
         await tester.pumpWidget(const SizedBox());
       }
+    },
+  );
+  testWidgets(
+    'empty exact category automatically starts once and manual retry stays targeted',
+    (tester) async {
+      final scanner = _Scanner(pendingHash: 3, nativeReady: true);
+      await _mount(tester, scanner, 'duplicates', settle: false);
+      await tester.pump();
+      expect(scanner.verifyTargets, [OriginalVerificationTarget.exactPhotos]);
+      scanner.checking = false;
+      scanner.notifyListeners();
+      await tester.pumpAndSettle();
+      expect(scanner.verifyCalls, 1);
+      await _tapKey(tester, 'verify-originals-cta');
+      expect(scanner.verifyTargets, [
+        OriginalVerificationTarget.exactPhotos,
+        OriginalVerificationTarget.exactPhotos,
+      ]);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets('auto verification waits for busy preview then starts once', (
+    tester,
+  ) async {
+    final scanner = _Scanner(pendingHash: 3, nativeReady: true)
+      ..checking = true;
+    await _mount(tester, scanner, 'duplicates', settle: false);
+    expect(scanner.verifyCalls, 0);
+    scanner.checking = false;
+    scanner.notifyListeners();
+    await tester.pump();
+    await tester.pump();
+    expect(scanner.verifyTargets, [OriginalVerificationTarget.exactPhotos]);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets(
+    'existing results and unavailable native work do not auto erase the library',
+    (tester) async {
+      for (final scanner in [
+        _Scanner(groups: true, pendingHash: 2, nativeReady: true),
+        _Scanner(pendingHash: 2),
+      ]) {
+        await _mount(tester, scanner, 'duplicates');
+        expect(scanner.verifyCalls, 0);
+        await tester.pumpWidget(const SizedBox());
+      }
+      final large = _Scanner(pendingSize: 1, nativeReady: true);
+      await _mount(tester, large, 'largeFiles');
+      expect(large.verifyCalls, 0);
+      expect(
+        find.byKey(const ValueKey('select-current-category')),
+        findsOneWidget,
+      );
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  testWidgets('cancelled automatic category work does not restart itself', (
+    tester,
+  ) async {
+    final scanner = _Scanner(pendingHash: 3, nativeReady: true);
+    await _mount(tester, scanner, 'duplicates', settle: false);
+    await tester.pump();
+    final strings = AppLocalizations.of(
+      tester.element(find.byType(SmartCleanView)),
+    );
+    await tester.tap(find.byTooltip(strings.scanCancelKeepProgress));
+    await tester.pumpAndSettle();
+    expect(scanner.cancelCalls, 1);
+    expect(scanner.verifyCalls, 1);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets(
+    'switching to photos while busy prevents deferred category verification',
+    (tester) async {
+      final scanner = _Scanner(pendingHash: 3, nativeReady: true)
+        ..checking = true;
+      await _mount(tester, scanner, 'duplicates', settle: false);
+      await tester.tap(find.text('Photos').first);
+      await tester.pump();
+      scanner.checking = false;
+      scanner.notifyListeners();
+      await tester.pumpAndSettle();
+      expect(scanner.verifyCalls, 0);
+      await tester.pumpWidget(const SizedBox());
     },
   );
 }

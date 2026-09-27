@@ -1184,4 +1184,10 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get homeSwipeDescription =>
       'Przesuwaj zdjęcia jedno po drugim, aby porządkować je szybciej niż stukając miniatury.';
+
+  @override
+  String get scanCheckExactPhotos => 'Sprawdź identyczne duplikaty';
+
+  @override
+  String get scanCheckFileSizes => 'Sprawdź rozmiary dużych plików';
 }

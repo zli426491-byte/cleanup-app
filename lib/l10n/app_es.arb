@@ -306,5 +306,7 @@
   "swipeGestureKeep": "Deslizar a la derecha para conservar",
   "swipeGestureSafety": "Las fotos van primero a una lista para borrar. Solo se borran después de pulsar Listo y confirmar.",
   "swipeGestureHelp": "Cómo organizar deslizando",
-  "homeSwipeDescription": "Desliza las fotos una a una para organizarlas más rápido que tocando las miniaturas."
+  "homeSwipeDescription": "Desliza las fotos una a una para organizarlas más rápido que tocando las miniaturas.",
+  "scanCheckExactPhotos": "Comprobar duplicados idénticos",
+  "scanCheckFileSizes": "Comprobar el tamaño de archivos grandes"
 }

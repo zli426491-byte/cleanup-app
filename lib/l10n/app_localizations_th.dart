@@ -1152,4 +1152,10 @@ class AppLocalizationsTh extends AppLocalizations {
   @override
   String get homeSwipeDescription =>
       'ปัดดูรูปทีละรูป จัดได้เร็วกว่าการแตะรูปย่อ';
+
+  @override
+  String get scanCheckExactPhotos => 'ตรวจสอบรูปที่ซ้ำกันทุกประการ';
+
+  @override
+  String get scanCheckFileSizes => 'ตรวจสอบขนาดไฟล์ใหญ่';
 }

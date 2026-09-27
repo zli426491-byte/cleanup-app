@@ -4,6 +4,7 @@ import UIKit
 import XCTest
 import AVFoundation
 import CoreVideo
+import CryptoKit
 @testable import Runner
 
 /// Real Swift queue/cancellation tests plus real Photos reads on the CI
@@ -35,6 +36,351 @@ private final class ControlledResourceIO: NativeResourceIO {
   func settle() {
     lock.lock(); let callback = completed; lock.unlock(); callback?(nil)
   }
+}
+
+/// Persistent, owned Photos fixtures for the two real Flutter integration
+/// workloads. Selected explicitly by the CI harness, never during app startup.
+/// No Photos deletion occurs here: both stages use the same disposable simulator.
+final class PhotoLibrarySeedTests: XCTestCase {
+  private let owner = "cleanup-native-photos-integration-v1"
+  private let manifestName = "cleanup-scan-fixtures.json"
+
+  override func setUpWithError() throws { continueAfterFailure = false }
+
+  private var manifestURL: URL {
+    FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+      .appendingPathComponent(manifestName)
+  }
+
+  private func digest(_ data: Data) -> String {
+    SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+  }
+
+  private func requireSimulatorAuthorization() throws {
+    #if targetEnvironment(simulator)
+    let status: PHAuthorizationStatus
+    if #available(iOS 14, *) { status = PHPhotoLibrary.authorizationStatus(for: .readWrite) }
+    else { status = PHPhotoLibrary.authorizationStatus() }
+    guard status == .authorized else {
+      XCTFail("Real modern full Photos permission is required for the seed workloads, status=\(status.rawValue).")
+      throw NSError(domain: owner, code: 10)
+    }
+    #else
+    throw XCTSkip("Bulk Photos fixtures are restricted to an isolated simulator.")
+    #endif
+  }
+
+  private func jpeg(index: Int, variant: Int = 0, width: Int = 320, height: Int = 240) throws -> Data {
+    let format = UIGraphicsImageRendererFormat(); format.scale = 1; format.opaque = true
+    let size = CGSize(width: CGFloat(width), height: CGFloat(height))
+    let image = UIGraphicsImageRenderer(size: size, format: format).image { context in
+      let canvas = CGRect(origin: .zero, size: size)
+      let hue = CGFloat((index * 37) % 360) / 360
+      UIColor(hue: hue, saturation: 0.55, brightness: 0.82, alpha: 1).setFill()
+      context.fill(canvas)
+      let scaleX = CGFloat(width) / 320, scaleY = CGFloat(height) / 240
+      context.cgContext.scaleBy(x: scaleX, y: scaleY)
+      for shape in 0..<6 {
+        UIColor(hue: CGFloat((index * 17 + shape * 53) % 360) / 360,
+          saturation: 0.7, brightness: 0.95, alpha: 1).setFill()
+        let x = CGFloat((index * 23 + shape * 47) % 250) + CGFloat(variant)
+        let y = CGFloat((index * 11 + shape * 31) % 175)
+        let box = CGRect(x: x, y: y, width: CGFloat(35 + (shape * 9)), height: CGFloat(25 + (shape * 7)))
+        if (index + shape) % 2 == 0 { context.cgContext.fillEllipse(in: box) }
+        else { context.cgContext.fill(box) }
+      }
+      // Distinct visible content, not thousands of identical files with fake IDs.
+      let label = "Cleanup fixture \(index)" as NSString
+      label.draw(at: CGPoint(x: 8, y: 212), withAttributes: [
+        .font: UIFont.systemFont(ofSize: 14, weight: .bold), .foregroundColor: UIColor.white])
+      if variant > 0 {
+        UIColor.white.setFill()
+        context.cgContext.fill(CGRect(x: 300 - variant, y: 8, width: 3, height: 3))
+      }
+    }
+    return try XCTUnwrap(image.jpegData(compressionQuality: 0.9))
+  }
+
+  private struct SeedPhoto {
+    let data: Data
+    let fileURL: URL?
+    let role: String
+    let index: Int
+    let date: Date
+  }
+
+  private func importPhotos(_ photos: [SeedPhoto]) throws -> [String] {
+    let saved = expectation(description: "Import \(photos.count) real JPEG Photos assets")
+    let lock = NSLock(); var ids: [String] = []; var saveError: Error?
+    PHPhotoLibrary.shared().performChanges({
+      var created: [String] = []
+      for photo in photos {
+        let request = PHAssetCreationRequest.forAsset()
+        request.creationDate = photo.date
+        let options = PHAssetResourceCreationOptions()
+        options.originalFilename = photo.fileURL?.lastPathComponent ?? "cleanup-fixture-\(photo.index).jpg"
+        if let file = photo.fileURL { request.addResource(with: .photo, fileURL: file, options: options) }
+        else { request.addResource(with: .photo, data: photo.data, options: options) }
+        if let id = request.placeholderForCreatedAsset?.localIdentifier { created.append(id) }
+      }
+      lock.lock(); ids = created; lock.unlock()
+    }, completionHandler: { success, error in
+      lock.lock(); saveError = success ? nil : error ?? NSError(domain: self.owner, code: 11); lock.unlock()
+      saved.fulfill()
+    })
+    wait(for: [saved], timeout: 60)
+    lock.lock(); let result = ids; let error = saveError; lock.unlock()
+    if let error = error { throw error }
+    guard result.count == photos.count else {
+      XCTFail("A real creation placeholder is required for every JPEG: \(result.count)/\(photos.count).")
+      throw NSError(domain: owner, code: 12)
+    }
+    return result
+  }
+
+  private func makeEncodedVideo(minimumBytes: Int64) throws -> URL {
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("cleanup-real-video-\(UUID().uuidString).mov")
+    let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
+    let width = 1280, height = 720, frameRate: Int32 = 24
+    let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
+      AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: width, AVVideoHeightKey: height,
+      AVVideoCompressionPropertiesKey: [AVVideoAverageBitRateKey: 160_000_000,
+        AVVideoMaxKeyFrameIntervalKey: 1, AVVideoAllowFrameReorderingKey: false,
+        AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel]])
+    let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input,
+      sourcePixelBufferAttributes: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+        kCVPixelBufferWidthKey as String: width, kCVPixelBufferHeightKey as String: height])
+    guard writer.canAdd(input) else { throw NSError(domain: owner, code: 13) }
+    writer.add(input)
+    guard writer.startWriting() else { throw writer.error ?? NSError(domain: owner, code: 14) }
+    writer.startSession(atSourceTime: .zero)
+    let written = expectation(description: "Encode an actual H264 video larger than \(minimumBytes) bytes")
+    let queue = DispatchQueue(label: "cleanup.seed-real-video")
+    var frameCount = 0; var finishing = false
+    input.requestMediaDataWhenReady(on: queue) {
+      guard !finishing else { return }
+      while input.isReadyForMoreMediaData && !finishing {
+        var buffer: CVPixelBuffer?
+        let status = CVPixelBufferCreate(kCFAllocatorDefault, width, height, kCVPixelFormatType_32BGRA,
+          nil, &buffer)
+        guard status == kCVReturnSuccess, let frame = buffer else {
+          finishing = true; writer.cancelWriting(); written.fulfill(); return
+        }
+        CVPixelBufferLockBaseAddress(frame, [])
+        if let base = CVPixelBufferGetBaseAddress(frame) {
+          let byteCount = CVPixelBufferGetBytesPerRow(frame) * height
+          arc4random_buf(base, byteCount)
+          let pixels = base.assumingMemoryBound(to: UInt32.self)
+          for index in 0..<(byteCount / 4) { pixels[index] |= 0xFF000000 }
+        }
+        CVPixelBufferUnlockBaseAddress(frame, [])
+        guard adaptor.append(frame, withPresentationTime: CMTime(value: Int64(frameCount), timescale: frameRate)) else {
+          finishing = true; writer.cancelWriting(); written.fulfill(); return
+        }
+        frameCount += 1
+        let attributes = try? FileManager.default.attributesOfItem(atPath: url.path)
+        let bytes = (attributes?[.size] as? NSNumber)?.int64Value ?? 0
+        if (frameCount >= 24 && bytes > minimumBytes + 2 * 1024 * 1024) || frameCount >= 480 {
+          finishing = true; input.markAsFinished()
+          writer.endSession(atSourceTime: CMTime(value: Int64(frameCount), timescale: frameRate))
+          writer.finishWriting { written.fulfill() }
+        }
+      }
+    }
+    wait(for: [written], timeout: 180)
+    guard writer.status == .completed else {
+      writer.cancelWriting(); try? FileManager.default.removeItem(at: url)
+      throw writer.error ?? NSError(domain: owner, code: 15)
+    }
+    let bytes = try XCTUnwrap(PhotoResourceInspection.localRegularFileSize(at: url))
+    let video = AVURLAsset(url: url)
+    guard bytes > minimumBytes, !video.tracks(withMediaType: .video).isEmpty,
+      video.duration.isValid, CMTimeGetSeconds(video.duration) > 0 else {
+      try? FileManager.default.removeItem(at: url)
+      XCTFail("The fixture must contain real encoded video frames and actual file bytes above the threshold.")
+      throw NSError(domain: owner, code: 16)
+    }
+    print("Real H264 seed encoded: frames=\(frameCount), bytes=\(bytes), seconds=\(CMTimeGetSeconds(video.duration))")
+    return url
+  }
+
+  private func importVideo(_ url: URL) throws -> String {
+    let saved = expectation(description: "Save the actual large video to Photos")
+    let lock = NSLock(); var identifier: String?; var saveError: Error?
+    PHPhotoLibrary.shared().performChanges({
+      let request = PHAssetCreationRequest.forAsset()
+      request.creationDate = Date()
+      request.addResource(with: .video, fileURL: url, options: nil)
+      lock.lock(); identifier = request.placeholderForCreatedAsset?.localIdentifier; lock.unlock()
+    }, completionHandler: { success, error in
+      lock.lock(); saveError = success ? nil : error ?? NSError(domain: self.owner, code: 17); lock.unlock()
+      saved.fulfill()
+    })
+    wait(for: [saved], timeout: 60)
+    lock.lock(); let result = identifier; let error = saveError; lock.unlock()
+    if let error = error { throw error }
+    return try XCTUnwrap(result)
+  }
+
+  private func inspect(_ identifier: String, hash: Bool) throws -> [String: Any] {
+    let asset = try XCTUnwrap(PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil).firstObject)
+    let resources = PHAssetResource.assetResources(for: asset)
+    XCTAssertEqual(resources.count, 1)
+    XCTAssertEqual(resources.first?.type, hash ? .photo : .video)
+    let replied = expectation(description: "Run production Photos inspection for \(identifier)")
+    var response: [String: Any]?
+    // These are the actual production reader, video IO, completeness guards and
+    // unchanged-asset checks, with the production 4s / 64MiB limits.
+    let job = PhotoResourceInspection(assetId: identifier, includeHash: hash,
+      includeThumbnail: false, timeoutSeconds: 4, maximumBytes: 64 * 1024 * 1024) {
+      response = $0; replied.fulfill()
+    }
+    job.start(); wait(for: [replied], timeout: 6)
+    let result = try XCTUnwrap(response)
+    XCTAssertEqual(result["complete"] as? Bool, true, "\(result)")
+    XCTAssertEqual(result["sizeKnown"] as? Bool, true)
+    XCTAssertEqual(result["sizeComplete"] as? Bool, true)
+    XCTAssertEqual(result["hashComplete"] as? Bool, hash)
+    if hash { XCTAssertEqual((result["hash"] as? String)?.count, 64) }
+    else { XCTAssertNil(result["hash"]) }
+    return result
+  }
+
+  private func seed(photoCount target: Int) throws {
+    try requireSimulatorAuthorization()
+    var manifest: [String: Any] = [:]
+    if FileManager.default.fileExists(atPath: manifestURL.path) {
+      manifest = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: manifestURL)) as? [String: Any])
+      guard manifest["owner"] as? String == owner else { throw NSError(domain: owner, code: 18) }
+    }
+    var photoIds = manifest["photoFixtureIds"] as? [String] ?? []
+    var allIds = manifest["allFixtureIds"] as? [String] ?? []
+    var duplicateIds = manifest["duplicateIds"] as? [String] ?? []
+    var differentIds = manifest["differentPhotoIds"] as? [String] ?? []
+    var videoIds = manifest["largeVideoIds"] as? [String] ?? []
+    var assetBytes = manifest["assetBytes"] as? [String: Int64] ?? [:]
+    var sourceByteCounts = manifest["sourceByteCounts"] as? [String: Int64] ?? [:]
+    var sourceHashes = manifest["sourceSHA256"] as? [String: String] ?? [:]
+    var sourceHashesSeen = Set(sourceHashes.values)
+    guard photoIds.count <= target, target == 1000 || (target == 10000 && photoIds.count == 1000),
+      allIds.count == Set(allIds).count,
+      PHAsset.fetchAssets(withLocalIdentifiers: allIds, options: nil).count == allIds.count else {
+      XCTFail("Only this simulator's own intact 1000-item workload may be extended to 10000.")
+      throw NSError(domain: owner, code: 19)
+    }
+    let duplicateFile = FileManager.default.temporaryDirectory.appendingPathComponent("cleanup-identical-\(UUID().uuidString).jpg")
+    defer { try? FileManager.default.removeItem(at: duplicateFile) }
+    if photoIds.isEmpty {
+      let sameJPEG = try jpeg(index: 800001)
+      try sameJPEG.write(to: duplicateFile)
+      var marked: [SeedPhoto] = []
+      for index in 0..<8 {
+        let data: Data
+        if index < 2 { data = sameJPEG }
+        else { data = try jpeg(index: 810000 + ((index - 2) / 3), variant: (index - 2) % 3) }
+        marked.append(SeedPhoto(data: data, fileURL: index < 2 ? duplicateFile : nil,
+          role: index < 2 ? "duplicate" : "similar", index: index,
+          date: Date().addingTimeInterval(Double(index - 20))))
+      }
+      let created = try importPhotos(marked)
+      for (offset, id) in created.enumerated() {
+        photoIds.append(id); allIds.append(id)
+        sourceByteCounts[id] = Int64(marked[offset].data.count); sourceHashes[id] = digest(marked[offset].data)
+        sourceHashesSeen.insert(sourceHashes[id]!)
+        if offset < 2 { duplicateIds.append(id) } else { differentIds.append(id) }
+      }
+      for threshold in [Int64(5 * 1024 * 1024), Int64(64 * 1024 * 1024)] {
+        let file = try makeEncodedVideo(minimumBytes: threshold)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let bytes = try XCTUnwrap(PhotoResourceInspection.localRegularFileSize(at: file))
+        let id = try importVideo(file)
+        videoIds.append(id); allIds.append(id); sourceByteCounts[id] = bytes
+      }
+    }
+    while photoIds.count < target {
+      let start = photoIds.count, end = min(target, start + 250)
+      var batch: [SeedPhoto] = []
+      for index in start..<end {
+        let highResolution = index % 100 == 0
+        let landscapeWidth = highResolution ? 4032 : index % 3 == 0 ? 1280 : 640
+        let landscapeHeight = highResolution ? 3024 : index % 3 == 0 ? 960 : 480
+        let portrait = highResolution ? (index / 100) % 2 == 1 : index % 2 == 1
+        let width = portrait ? landscapeHeight : landscapeWidth
+        let height = portrait ? landscapeWidth : landscapeHeight
+        let data = try autoreleasepool {
+          try jpeg(index: index, width: width, height: height)
+        }
+        let hash = digest(data)
+        guard sourceHashesSeen.insert(hash).inserted else {
+          XCTFail("Unique synthetic photos must contain distinct encoded JPEG content.")
+          throw NSError(domain: owner, code: 20)
+        }
+        let past = Date(timeIntervalSince1970: 1262304000 + Double((index * 179) % 4800) * 86400)
+        batch.append(SeedPhoto(data: data, fileURL: nil, role: "unique", index: index, date: past))
+      }
+      let created = try importPhotos(batch)
+      for (offset, id) in created.enumerated() {
+        photoIds.append(id); allIds.append(id)
+        sourceByteCounts[id] = Int64(batch[offset].data.count); sourceHashes[id] = digest(batch[offset].data)
+      }
+      print("Real Photos seed progress: \(photoIds.count)/\(target) photos plus \(videoIds.count) videos")
+    }
+    let actual = PHAsset.fetchAssets(withLocalIdentifiers: allIds, options: nil)
+    XCTAssertEqual(actual.count, target + 2)
+    XCTAssertEqual(PHAsset.fetchAssets(withLocalIdentifiers: photoIds, options: nil).count, target)
+    var actualPhotos = 0, actualVideos = 0
+    var resolutionCounts: [String: Int] = [:]
+    actual.enumerateObjects { asset, _, _ in
+      if asset.mediaType == .image {
+        actualPhotos += 1
+        let resolution = "\(asset.pixelWidth)x\(asset.pixelHeight)"
+        resolutionCounts[resolution, default: 0] += 1
+      } else if asset.mediaType == .video { actualVideos += 1 }
+    }
+    XCTAssertEqual(actualPhotos, target); XCTAssertEqual(actualVideos, 2)
+    XCTAssertEqual(resolutionCounts.values.reduce(0, +), target)
+    XCTAssertGreaterThan(resolutionCounts["4032x3024", default: 0], 0)
+    XCTAssertGreaterThan(resolutionCounts["3024x4032", default: 0], 0)
+    XCTAssertEqual(duplicateIds.count, 2); XCTAssertEqual(differentIds.count, 6); XCTAssertEqual(videoIds.count, 2)
+    var nativeResults: [String: [String: Any]] = [:]
+    for id in duplicateIds + differentIds + videoIds {
+      let isPhoto = !videoIds.contains(id)
+      let result = try inspect(id, hash: isPhoto)
+      let measuredBytes = try XCTUnwrap((result["size"] as? NSNumber)?.int64Value)
+      XCTAssertEqual(measuredBytes, sourceByteCounts[id])
+      assetBytes[id] = measuredBytes
+      if isPhoto {
+        let source = try XCTUnwrap(sourceHashes[id]), bytes = try XCTUnwrap(assetBytes[id])
+        let expected = digest(Data("photos-resources-v1\n1:\(bytes):\(source)\n".utf8))
+        XCTAssertEqual(result["hash"] as? String, expected)
+      }
+      nativeResults[id] = result
+    }
+    XCTAssertEqual(nativeResults[duplicateIds[0]]?["hash"] as? String, nativeResults[duplicateIds[1]]?["hash"] as? String)
+    let distinctHashes = differentIds.compactMap { nativeResults[$0]?["hash"] as? String }
+    XCTAssertEqual(Set(distinctHashes).count, differentIds.count)
+    XCTAssertFalse(distinctHashes.contains(nativeResults[duplicateIds[0]]?["hash"] as? String ?? ""))
+    XCTAssertGreaterThan(try XCTUnwrap(assetBytes[videoIds[0]]), Int64(5 * 1024 * 1024))
+    XCTAssertGreaterThan(try XCTUnwrap(assetBytes[videoIds[1]]), Int64(64 * 1024 * 1024))
+    manifest = ["schemaVersion": 1, "owner": owner, "stage": target, "workloadCount": target,
+      "actualFixtureCount": actual.count, "allFixtureIds": allIds, "photoFixtureIds": photoIds,
+      "duplicateIds": duplicateIds, "differentPhotoIds": differentIds, "largeVideoIds": videoIds,
+      "assetBytes": assetBytes, "sourceByteCounts": sourceByteCounts, "sourceSHA256": sourceHashes,
+      "nativeResultsById": nativeResults, "resolutionCounts": resolutionCounts,
+      "sourcePhotoBytes": photoIds.reduce(Int64(0)) { $0 + (sourceByteCounts[$1] ?? 0) },
+      "fixtureRoleCounts": ["duplicatePhotos": 2, "similarPhotos": 6, "uniquePhotos": target - 8,
+        "normalVideos": 1, "largeVideos": 1], "status": "native_verified",
+      "createdAt": ISO8601DateFormatter().string(from: Date()),
+      "limitations": "Synthetic local JPEG/H264 Photos assets; no iCloud, Live Photo or edited-resource acceptance."]
+    try FileManager.default.createDirectory(at: manifestURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys]).write(to: manifestURL, options: .atomic)
+    let attachment = XCTAttachment(data: try JSONSerialization.data(withJSONObject: manifest), uniformTypeIdentifier: "public.json")
+    attachment.name = "cleanup-real-photos-\(target)-manifest"; attachment.lifetime = .keepAlways; add(attachment)
+    print("REAL_PHOTOS_SEED_VERIFIED stage=\(target) photos=\(photoIds.count) assets=\(actual.count) manifest=\(manifestURL.path)")
+  }
+
+  func testSeed1000RealPhotoLibrary() throws { try seed(photoCount: 1000) }
+  func testSeed10000RealPhotoLibrary() throws { try seed(photoCount: 10000) }
 }
 
 private final class ControlledOriginalVideoIO: NativeOriginalVideoIO {

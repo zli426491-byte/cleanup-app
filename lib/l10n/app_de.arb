@@ -306,5 +306,7 @@
   "swipeGestureKeep": "Nach rechts zum Behalten wischen",
   "swipeGestureSafety": "Fotos kommen zuerst auf eine Löschliste. Erst nach „Fertig“ und deiner Bestätigung werden sie gelöscht.",
   "swipeGestureHelp": "So sortierst du per Wischen",
-  "homeSwipeDescription": "Wische Foto für Foto nach links oder rechts – schneller als das Antippen von Vorschaubildern."
+  "homeSwipeDescription": "Wische Foto für Foto nach links oder rechts – schneller als das Antippen von Vorschaubildern.",
+  "scanCheckExactPhotos": "Exakte Duplikate prüfen",
+  "scanCheckFileSizes": "Größe großer Dateien prüfen"
 }

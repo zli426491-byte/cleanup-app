@@ -306,5 +306,7 @@
   "swipeGestureKeep": "Glisser à droite pour garder",
   "swipeGestureSafety": "Les photos vont d’abord dans une liste de suppression. Elles ne sont supprimées qu’après avoir appuyé sur Terminer et confirmé.",
   "swipeGestureHelp": "Comment trier en glissant",
-  "homeSwipeDescription": "Glissez d’une photo à l’autre pour trier plus vite qu’en touchant les vignettes."
+  "homeSwipeDescription": "Glissez d’une photo à l’autre pour trier plus vite qu’en touchant les vignettes.",
+  "scanCheckExactPhotos": "Vérifier les doublons exacts",
+  "scanCheckFileSizes": "Vérifier la taille des gros fichiers"
 }

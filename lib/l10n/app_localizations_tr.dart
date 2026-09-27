@@ -1173,4 +1173,10 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get homeSwipeDescription =>
       'Fotoğrafları tek tek kaydırmak, küçük resimlere dokunmaktan daha hızlıdır.';
+
+  @override
+  String get scanCheckExactPhotos => 'Tam kopyaları kontrol et';
+
+  @override
+  String get scanCheckFileSizes => 'Büyük dosya boyutlarını kontrol et';
 }

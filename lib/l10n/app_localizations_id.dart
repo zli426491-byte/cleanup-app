@@ -1169,4 +1169,10 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get homeSwipeDescription =>
       'Geser foto satu per satu agar lebih cepat daripada mengetuk gambar mini.';
+
+  @override
+  String get scanCheckExactPhotos => 'Periksa duplikat identik';
+
+  @override
+  String get scanCheckFileSizes => 'Periksa ukuran file besar';
 }

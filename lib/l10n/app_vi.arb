@@ -306,5 +306,7 @@
   "swipeGestureKeep": "Vuốt phải để giữ",
   "swipeGestureSafety": "Ảnh được đưa vào danh sách chờ xóa trước. Chỉ xóa sau khi bạn nhấn Xong và xác nhận.",
   "swipeGestureHelp": "Cách sắp xếp bằng vuốt",
-  "homeSwipeDescription": "Vuốt từng ảnh để sắp xếp nhanh hơn so với chạm vào ảnh thu nhỏ."
+  "homeSwipeDescription": "Vuốt từng ảnh để sắp xếp nhanh hơn so với chạm vào ảnh thu nhỏ.",
+  "scanCheckExactPhotos": "Kiểm tra ảnh trùng khớp hoàn toàn",
+  "scanCheckFileSizes": "Kiểm tra dung lượng tệp lớn"
 }

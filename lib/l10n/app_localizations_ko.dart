@@ -1121,4 +1121,10 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get homeSwipeDescription =>
       '사진을 한 장씩 좌우로 밀면 썸네일을 누르는 것보다 빠르게 정리할 수 있습니다.';
+
+  @override
+  String get scanCheckExactPhotos => '완전히 동일한 사진 확인';
+
+  @override
+  String get scanCheckFileSizes => '대용량 파일 크기 확인';
 }

@@ -1178,4 +1178,10 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get homeSwipeDescription =>
       'Wische Foto für Foto nach links oder rechts – schneller als das Antippen von Vorschaubildern.';
+
+  @override
+  String get scanCheckExactPhotos => 'Exakte Duplikate prüfen';
+
+  @override
+  String get scanCheckFileSizes => 'Größe großer Dateien prüfen';
 }

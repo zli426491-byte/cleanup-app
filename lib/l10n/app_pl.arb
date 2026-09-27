@@ -306,5 +306,7 @@
   "swipeGestureKeep": "Przesuń w prawo, by zachować",
   "swipeGestureSafety": "Zdjęcia najpierw trafiają na listę do usunięcia. Zostaną usunięte dopiero po naciśnięciu Gotowe i potwierdzeniu.",
   "swipeGestureHelp": "Jak porządkować przesuwaniem",
-  "homeSwipeDescription": "Przesuwaj zdjęcia jedno po drugim, aby porządkować je szybciej niż stukając miniatury."
+  "homeSwipeDescription": "Przesuwaj zdjęcia jedno po drugim, aby porządkować je szybciej niż stukając miniatury.",
+  "scanCheckExactPhotos": "Sprawdź identyczne duplikaty",
+  "scanCheckFileSizes": "Sprawdź rozmiary dużych plików"
 }

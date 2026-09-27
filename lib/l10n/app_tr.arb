@@ -306,5 +306,7 @@
   "swipeGestureKeep": "Saklamak için sağa kaydır",
   "swipeGestureSafety": "Fotoğraflar önce silinecekler listesine eklenir. Yalnızca Bitti’ye dokunup onayladıktan sonra silinir.",
   "swipeGestureHelp": "Kaydırarak nasıl düzenlenir?",
-  "homeSwipeDescription": "Fotoğrafları tek tek kaydırmak, küçük resimlere dokunmaktan daha hızlıdır."
+  "homeSwipeDescription": "Fotoğrafları tek tek kaydırmak, küçük resimlere dokunmaktan daha hızlıdır.",
+  "scanCheckExactPhotos": "Tam kopyaları kontrol et",
+  "scanCheckFileSizes": "Büyük dosya boyutlarını kontrol et"
 }

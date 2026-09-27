@@ -1107,4 +1107,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get homeSwipeDescription => '写真を1枚ずつ左右にスワイプ。サムネイルをタップするより素早く整理できます。';
+
+  @override
+  String get scanCheckExactPhotos => '完全に同じ写真を確認';
+
+  @override
+  String get scanCheckFileSizes => '大きなファイルの容量を確認';
 }

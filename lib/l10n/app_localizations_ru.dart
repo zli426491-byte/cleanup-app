@@ -1186,4 +1186,10 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get homeSwipeDescription =>
       'Смахивайте фото по одному — это быстрее, чем нажимать на миниатюры.';
+
+  @override
+  String get scanCheckExactPhotos => 'Проверить точные дубликаты';
+
+  @override
+  String get scanCheckFileSizes => 'Проверить размеры больших файлов';
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cleanup_app/l10n/l10n.dart';
@@ -29,6 +30,8 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   final _categoryKeys = List.generate(6, (_) => GlobalKey());
   final Set<String> _selectedIds = {};
   final Set<String> _dismissedSuggestions = {};
+  final Set<int> _autoVerificationAttempted = {};
+  final Set<int> _autoVerificationScheduled = {};
   bool _isDeleting = false;
   String? _focusedAssetId;
   Set<String>? _selectionUndo;
@@ -79,6 +82,66 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     }
   }
 
+  OriginalVerificationTarget get _verificationTarget => _selectedCategory == 1
+      ? OriginalVerificationTarget.exactPhotos
+      : _selectedCategory == 5
+      ? OriginalVerificationTarget.fileSizes
+      : OriginalVerificationTarget.all;
+
+  bool _shouldAutoVerify(PhotoScannerService scanner) {
+    if (!_isResourceCategory ||
+        _autoVerificationAttempted.contains(_selectedCategory) ||
+        !scanner.nativeOriginalAnalysisAvailable ||
+        scanner.isScanning ||
+        scanner.isDeleting ||
+        _isDeleting) {
+      return false;
+    }
+    // Preserve existing comparisons/selections. Continuing a partial category
+    // with results is an explicit action because verification re-indexes access.
+    if (_selectedCategory == 1 &&
+            scanner.scanResult.duplicateGroups.isNotEmpty ||
+        _selectedCategory == 5 && scanner.scanResult.largeFiles.isNotEmpty) {
+      return false;
+    }
+    final indexComplete =
+        scanner.availableAssetCount != null &&
+        scanner.scannedAssetCount >= scanner.availableAssetCount!;
+    if (indexComplete && _pendingChecks(scanner) == 0) {
+      return false;
+    }
+    return !(scanner.hasCompletedScan && scanner.availableAssetCount == 0);
+  }
+
+  void _scheduleCategoryVerification(PhotoScannerService scanner) {
+    if (_isResourceCategory &&
+        (_selectedCategory == 1 &&
+                scanner.scanResult.duplicateGroups.isNotEmpty ||
+            _selectedCategory == 5 &&
+                scanner.scanResult.largeFiles.isNotEmpty)) {
+      // This entry already offers results. Later deletion or another scan must
+      // not turn a passive rebuild into an unexpected automatic re-index.
+      _autoVerificationAttempted.add(_selectedCategory);
+      return;
+    }
+    if (!_shouldAutoVerify(scanner)) return;
+    final category = _selectedCategory;
+    if (!_autoVerificationScheduled.add(category)) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _autoVerificationScheduled.remove(category);
+      if (!mounted ||
+          category != _selectedCategory ||
+          !identical(scanner, context.read<PhotoScannerService>()) ||
+          !_shouldAutoVerify(scanner)) {
+        return;
+      }
+      // Record before starting: timeout/cancel/unavailable completion cannot
+      // automatically retry the same category and erase partial results.
+      _autoVerificationAttempted.add(category);
+      unawaited(scanner.verifyOriginals(target: _verificationTarget));
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     context.select<PhotoScannerService, Object>(
@@ -86,6 +149,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     );
     final scanner = context.read<PhotoScannerService>();
     _updateSnapshot(scanner);
+    _scheduleCategoryVerification(scanner);
     final sub = context.watch<SubscriptionManager>();
 
     return PopScope(
@@ -648,9 +712,19 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                   onPressed:
                       scanner.isScanning || scanner.isDeleting || _isDeleting
                       ? null
-                      : scanner.verifyOriginals,
+                      : () => scanner.verifyOriginals(
+                          target: _verificationTarget,
+                        ),
                   icon: const Icon(Icons.fact_check_outlined),
-                  label: Text(context.l10n.scanVerifyNow),
+                  label: Text(
+                    _verificationTarget ==
+                            OriginalVerificationTarget.exactPhotos
+                        ? context.l10n.scanCheckExactPhotos
+                        : _verificationTarget ==
+                              OriginalVerificationTarget.fileSizes
+                        ? context.l10n.scanCheckFileSizes
+                        : context.l10n.scanVerifyNow,
+                  ),
                 ),
                 TextButton(
                   onPressed: scanner.isDeleting || _isDeleting

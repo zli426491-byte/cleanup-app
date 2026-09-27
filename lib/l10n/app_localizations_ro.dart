@@ -1188,4 +1188,10 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get homeSwipeDescription =>
       'Glisează fotografiile pe rând pentru a le sorta mai repede decât atingând miniaturile.';
+
+  @override
+  String get scanCheckExactPhotos => 'Verifică duplicatele identice';
+
+  @override
+  String get scanCheckFileSizes => 'Verifică dimensiunile fișierelor mari';
 }

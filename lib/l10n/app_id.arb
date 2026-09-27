@@ -306,5 +306,7 @@
   "swipeGestureKeep": "Geser ke kanan untuk menyimpan",
   "swipeGestureSafety": "Foto masuk ke daftar hapus dahulu. Foto hanya dihapus setelah mengetuk Selesai dan mengonfirmasi.",
   "swipeGestureHelp": "Cara merapikan dengan geser",
-  "homeSwipeDescription": "Geser foto satu per satu agar lebih cepat daripada mengetuk gambar mini."
+  "homeSwipeDescription": "Geser foto satu per satu agar lebih cepat daripada mengetuk gambar mini.",
+  "scanCheckExactPhotos": "Periksa duplikat identik",
+  "scanCheckFileSizes": "Periksa ukuran file besar"
 }

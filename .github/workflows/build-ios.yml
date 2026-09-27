@@ -92,7 +92,7 @@ jobs:
     permissions:
       contents: read
     runs-on: macos-26
-    timeout-minutes: 40
+    timeout-minutes: 90
 
     # Simulator-only: no Apple account credentials, IPA export, or publication.
     steps:
@@ -136,7 +136,7 @@ jobs:
 
       - name: Test native Photos inspection on iOS Simulator
         id: native-tests
-        timeout-minutes: 20
+        timeout-minutes: 30
         env:
           NATIVE_TEST_PRODUCTS_CACHE_HIT: ${{ steps.native-products-cache.outputs.cache-hit }}
         run: bash scripts/test-ios-native.sh
@@ -154,4 +154,20 @@ jobs:
         with:
           name: ios-native-tests
           path: build/native-tests
+          if-no-files-found: ignore
+
+      - name: Scan 1000 real Photos fixtures with Flutter
+        timeout-minutes: 30
+        run: bash scripts/test-ios-photo-library.sh 1000
+
+      - name: Scan 10000 real Photos fixtures with Flutter
+        timeout-minutes: 40
+        run: bash scripts/test-ios-photo-library.sh 10000
+
+      - name: Upload real Photos integration evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-photo-library-tests
+          path: build/photo-library-tests
           if-no-files-found: ignore

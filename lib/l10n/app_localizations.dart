@@ -1973,6 +1973,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Swipe through photos one by one for faster cleanup than tapping thumbnails.'**
   String get homeSwipeDescription;
+
+  /// Action to verify complete original hashes of photos only.
+  ///
+  /// In en, this message translates to:
+  /// **'Check exact duplicates'**
+  String get scanCheckExactPhotos;
+
+  /// Action to check exact resource sizes without computing photo hashes.
+  ///
+  /// In en, this message translates to:
+  /// **'Check large-file sizes'**
+  String get scanCheckFileSizes;
 }
 
 class _AppLocalizationsDelegate

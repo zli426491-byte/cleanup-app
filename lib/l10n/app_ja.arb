@@ -306,5 +306,7 @@
   "swipeGestureKeep": "右にスワイプして残す",
   "swipeGestureSafety": "写真はまず削除候補リストに入ります。「完了」を押して確認した後にだけ削除されます。",
   "swipeGestureHelp": "スワイプ整理の使い方",
-  "homeSwipeDescription": "写真を1枚ずつ左右にスワイプ。サムネイルをタップするより素早く整理できます。"
+  "homeSwipeDescription": "写真を1枚ずつ左右にスワイプ。サムネイルをタップするより素早く整理できます。",
+  "scanCheckExactPhotos": "完全に同じ写真を確認",
+  "scanCheckFileSizes": "大きなファイルの容量を確認"
 }

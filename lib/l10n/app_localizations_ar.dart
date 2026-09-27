@@ -1173,4 +1173,10 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get homeSwipeDescription =>
       'اسحب الصور واحدة تلو الأخرى لتنظيمها أسرع من النقر على الصور المصغّرة.';
+
+  @override
+  String get scanCheckExactPhotos => 'فحص الصور المتطابقة';
+
+  @override
+  String get scanCheckFileSizes => 'فحص أحجام الملفات الكبيرة';
 }

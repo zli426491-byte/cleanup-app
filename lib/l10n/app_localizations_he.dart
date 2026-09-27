@@ -1155,4 +1155,10 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get homeSwipeDescription =>
       'החלק תמונה אחר תמונה לסידור מהיר יותר מהקשה על תמונות ממוזערות.';
+
+  @override
+  String get scanCheckExactPhotos => 'בדיקת תמונות זהות';
+
+  @override
+  String get scanCheckFileSizes => 'בדיקת גודל קבצים גדולים';
 }
