@@ -29,6 +29,8 @@ flags = {
     "sdk": "iphonesimulator",
     "scheme": "Runner",
     "test_targets": ["RunnerTests", "RunnerUITests"],
+    "FLUTTER_TARGET": "integration_test/photo_library_scan_test.dart",
+    "dart_defines": {"INTEGRATION_TEST_SHOULD_REPORT_RESULTS_TO_NATIVE": "false"},
     "ARCHS": toolchain["host_architecture"],
     "ONLY_ACTIVE_ARCH": "YES",
     "CODE_SIGNING_ALLOWED": "YES",
@@ -68,14 +70,14 @@ sources = {
     for path in sorted(paths) if source_input(path)
 }
 manifest = {
-    "cache_version": "v2-adhoc-active-ui",
+    "cache_version": "v3-adhoc-active-ui-integration-host",
     "toolchain": toolchain,
     "compile_flags": flags,
     "sources": sources,
     "absent_inputs": sorted(missing),
 }
 encoded = json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode()
-key = "native-products-v2-adhoc-active-ui-" + hashlib.sha256(encoded).hexdigest()
+key = "native-products-v3-adhoc-active-ui-integration-host-" + hashlib.sha256(encoded).hexdigest()
 manifest["key"] = key
 output = root / "build/native-tests/cache-inputs.json"
 output.parent.mkdir(parents=True, exist_ok=True)

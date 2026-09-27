@@ -11,6 +11,7 @@ final class PhotosFixtureAuthorizationTests: XCTestCase {
     #if targetEnvironment(simulator)
     let app = XCUIApplication(bundleIdentifier: "com.cleanupapp.cleaner")
     app.launchArguments = ["--cleanup-native-photos-authorization-fixture"]
+    app.launchEnvironment["CLEANUP_NATIVE_FIXTURE_ONLY"] = "1"
     app.launch()
 
     let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")

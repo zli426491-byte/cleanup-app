@@ -438,6 +438,9 @@ class PhotoScannerService extends ChangeNotifier {
             filterOption: FilterOptionGroup(
               imageOption: const FilterOption(needTitle: false),
               videoOption: const FilterOption(needTitle: false),
+              orders: const [
+                OrderOption(type: OrderOptionType.createDate, asc: false),
+              ],
             ),
           ),
           runId,
@@ -770,6 +773,22 @@ class PhotoScannerService extends ChangeNotifier {
     var untouched = pending.where((a) => lastAttempt(a) == null).toList();
     final retries = pending.where((a) => lastAttempt(a) != null).toList()
       ..sort((a, b) => lastAttempt(a)!.compareTo(lastAttempt(b)!));
+    List<PhotoAsset> boundedPriority(
+      List<PhotoAsset> preferred,
+      List<PhotoAsset> other,
+    ) {
+      final queue = <PhotoAsset>[];
+      var nextPreferred = 0;
+      var nextOther = 0;
+      while (nextPreferred < preferred.length || nextOther < other.length) {
+        for (var i = 0; i < 3 && nextPreferred < preferred.length; i++) {
+          queue.add(preferred[nextPreferred++]);
+        }
+        if (nextOther < other.length) queue.add(other[nextOther++]);
+      }
+      return queue;
+    }
+
     if (target == OriginalVerificationTarget.exactPhotos) {
       // Metadata is only a scheduling hint; only complete original-resource SHA
       // results may form duplicate groups. Candidate retries do not take over
@@ -786,32 +805,30 @@ class PhotoScannerService extends ChangeNotifier {
           ifAbsent: () => 1,
         );
       }
-      final likely = untouched
-          .where(
-            (a) =>
-                candidates.contains(a.id) ||
-                metadataCounts[metadataKey(a)]! > 1,
-          )
+      final metadataHints = untouched
+          .where((a) => metadataCounts[metadataKey(a)]! > 1)
           .map((a) => a.id)
           .toSet();
-      untouched = [
-        ...untouched.where((a) => likely.contains(a.id)),
-        ...untouched.where((a) => !likely.contains(a.id)),
-      ];
+      final visual = untouched.where((a) => candidates.contains(a.id)).toList();
+      final hints = untouched
+          .where(
+            (a) => !candidates.contains(a.id) && metadataHints.contains(a.id),
+          )
+          .toList();
+      final ordinary = untouched
+          .where(
+            (a) => !candidates.contains(a.id) && !metadataHints.contains(a.id),
+          )
+          .toList();
+      // Visual evidence outranks coincidental metadata, but even a very large
+      // candidate tier must yield to ordinary fresh photographs. Neither tier
+      // is proof of duplication; the complete original SHA remains mandatory.
+      untouched = boundedPriority([...visual, ...hints], ordinary);
     }
     List<String> typeQueue(AssetType type) {
       final fresh = untouched.where((a) => a.type == type).toList();
       final old = retries.where((a) => a.type == type).toList();
-      final queue = <String>[];
-      var nextFresh = 0;
-      var nextOld = 0;
-      while (nextFresh < fresh.length || nextOld < old.length) {
-        for (var i = 0; i < 3 && nextFresh < fresh.length; i++) {
-          queue.add(fresh[nextFresh++].id);
-        }
-        if (nextOld < old.length) queue.add(old[nextOld++].id);
-      }
-      return queue;
+      return boundedPriority(fresh, old).map((a) => a.id).toList();
     }
 
     // Each type has its own fair queue. A cancelled video can be retried even

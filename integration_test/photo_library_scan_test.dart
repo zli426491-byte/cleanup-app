@@ -17,25 +17,36 @@ import 'package:provider/provider.dart';
 /// Actual Photos/MethodChannel/Flutter integration on the disposable CI
 /// simulator. No mock channels, fabricated sizes, deletion or StoreKit calls.
 void main() {
+  // Native XCTest and the real Photos authorization bootstrap share this exact
+  // compiled app. They must not start Flutter scan tests before seeding Photos.
+  if (Platform.environment['CLEANUP_NATIVE_FIXTURE_ONLY'] == '1') {
+    WidgetsFlutterBinding.ensureInitialized();
+    runApp(const MaterialApp(home: SizedBox.shrink()));
+    return;
+  }
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
 
   testWidgets(
     'real large Photos library finds exact copies and large movies',
     (tester) async {
-      const encoded = String.fromEnvironment('CLEANUP_FIXTURE_MANIFEST_B64');
       expect(
         Platform.isIOS,
         isTrue,
         reason: 'Requires the isolated iOS simulator.',
       );
+      final documents = await getApplicationDocumentsDirectory();
+      final seedFile = File('${documents.path}/cleanup-scan-fixtures.json');
       expect(
-        encoded,
-        isNotEmpty,
-        reason: 'A native verified seed is mandatory.',
+        seedFile.existsSync(),
+        isTrue,
+        reason: 'A real native-verified Photos seed is mandatory.',
       );
-      final manifest = jsonDecode(utf8.decode(base64Decode(encoded))) as Map;
+      final manifest = jsonDecode(await seedFile.readAsString()) as Map;
+      expect(manifest['owner'], 'cleanup-native-photos-integration-v1');
+      expect(manifest['status'], 'native_verified');
       final workload = manifest['workloadCount'] as int;
+      expect(manifest['stage'], workload);
       final actualCount = manifest['actualFixtureCount'] as int;
       expect(workload, anyOf(1000, 10000));
       final shortVideoCount = workload ~/ 20;
@@ -212,7 +223,6 @@ void main() {
         ],
         'stages': stages,
       };
-      final documents = await getApplicationDocumentsDirectory();
       await File(
         '${documents.path}/cleanup-library-test-$workload.json',
       ).writeAsString(const JsonEncoder.withIndent('  ').convert(report));

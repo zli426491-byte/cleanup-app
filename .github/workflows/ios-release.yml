@@ -38,7 +38,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/native-tests
-          flutter build ios --simulator --debug --no-codesign --config-only 2>&1 | tee build/native-tests/cache-configuration.log
+          flutter build ios --simulator --debug --no-codesign --config-only --target integration_test/photo_library_scan_test.dart --dart-define=INTEGRATION_TEST_SHOULD_REPORT_RESULTS_TO_NATIVE=false 2>&1 | tee build/native-tests/cache-configuration.log
           NATIVE_PRODUCTS_KEY="$(bash scripts/native-test-cache-key.sh)"
           echo "key=$NATIVE_PRODUCTS_KEY" >> "$GITHUB_OUTPUT"
 
@@ -136,6 +136,7 @@ jobs:
           test -s "$HOME/export_options.plist"
           flutter build ipa \
             --release \
+            --target lib/main.dart \
             --build-number="$IOS_BUILD_NUMBER" \
             --dart-define=REVENUECAT_IOS_API_KEY=${{ secrets.REVENUECAT_IOS_API_KEY }} \
             --export-options-plist="$HOME/export_options.plist"

@@ -32,6 +32,9 @@ void main() {
   Completer<Map<String, Object>>? previewResponse;
   Future<Map<String, Object>> Function(List<String>)? previewHandler;
   late List<Map> nativeCancellations;
+  late List<Map> albumFilters;
+  late List<Map> rangeFilters;
+  var honorRequestedOrder = false;
 
   Map<String, Object> photo(
     String id, {
@@ -97,6 +100,9 @@ void main() {
     previewResponse = null;
     previewHandler = null;
     nativeCancellations = [];
+    albumFilters = [];
+    rangeFilters = [];
+    honorRequestedOrder = false;
     messenger.setMockMethodCallHandler(resources, (call) async {
       final args = call.arguments as Map;
       if (call.method == 'cancelInspections') {
@@ -150,6 +156,8 @@ void main() {
               ? permission.index
               : permissionResponse!.future;
         case 'getAssetPathList':
+          final option = (call.arguments as Map)['option'] as Map;
+          albumFilters.add(Map.of(option['child'] as Map));
           return {
             'data': [
               {
@@ -164,11 +172,22 @@ void main() {
           return library.length;
         case 'getAssetListRange':
           final args = call.arguments as Map;
+          final filter = Map.of((args['option'] as Map)['child'] as Map);
+          rangeFilters.add(filter);
           final start = args['start'] as int;
           final end = args['end'] as int;
           rangeEnds.add(end);
+          final ordered = List<Map<String, Object>>.of(library);
+          if (honorRequestedOrder &&
+              (filter['orders'] as List).any(
+                (order) => order['type'] == 0 && order['asc'] == false,
+              )) {
+            ordered.sort(
+              (a, b) => (b['createDt'] as int).compareTo(a['createDt'] as int),
+            );
+          }
           return pageResponse == null
-              ? {'data': library.sublist(start, end)}
+              ? {'data': ordered.sublist(start, end)}
               : pageResponse!.future;
         case 'deleteWithIds':
           deletionRequests.add(
@@ -1387,6 +1406,99 @@ void main() {
         scanner.scanResult.duplicateGroups.single.assets.map((a) => a.id),
         containsAll(['pair-a', 'pair-b']),
       );
+    },
+  );
+
+  testWidgets(
+    'explicit newest-first native indexing drives previews rather than display-only sorting',
+    (tester) async {
+      honorRequestedOrder = true;
+      library = [
+        photo('oldest', created: 1500000000),
+        photo('newest', created: 1800000000),
+        photo('middle', created: 1700000000),
+      ];
+      previewResponse = Completer<Map<String, Object>>();
+      final scan = scanner.startFullScan();
+      for (var i = 0; i < 30 && previewRequests.isEmpty; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      final actualOrder = List<String>.of(previewRequests.single);
+      scanner.cancelScan();
+      await scan;
+      previewResponse!.complete({'assets': <Object>[]});
+      await tester.pump();
+      expect(albumFilters.single['orders'], [
+        {'type': 0, 'asc': false},
+      ]);
+      expect(rangeFilters.single['orders'], [
+        {'type': 0, 'asc': false},
+      ]);
+      expect(actualOrder, ['newest', 'middle', 'oldest']);
+    },
+  );
+
+  test('visual content candidates precede older metadata-only hints', () async {
+    library = [
+      photo('metadata-a', created: 1600000000),
+      photo('metadata-b', created: 1600000000),
+      photo('ordinary', created: 1550000000),
+      photo('visual-a', created: 1700000000),
+      photo('visual-b', created: 1800000000),
+    ];
+    nativeResults = {
+      'visual-a': inspected('actual-shared-content'),
+      'visual-b': inspected('actual-shared-content'),
+    };
+    await scanner.startFullScan();
+    expect(scanner.scanResult.similarGroups.single.assets.length, 2);
+    await scanner.verifyOriginals(
+      target: OriginalVerificationTarget.exactPhotos,
+    );
+    expect(resourceRequests.take(2), ['visual-a', 'visual-b']);
+    expect(resourceRequests.take(4), [
+      'visual-a',
+      'visual-b',
+      'metadata-a',
+      'ordinary',
+    ]);
+    expect(scanner.scanResult.duplicateGroups.single.assets.length, 2);
+  });
+
+  testWidgets(
+    'a thousand slow metadata hints cannot hide an ordinary exact pair beyond the round budget',
+    (tester) async {
+      library = [
+        photo('ordinary-a', created: 1700000000),
+        photo('ordinary-b', created: 1800000000),
+        ...List.generate(1000, (i) => photo('hint-$i', created: 1600000000)),
+      ];
+      resourceHandler = (id) async {
+        if (id.startsWith('ordinary')) {
+          return inspected('actual-identical-content');
+        }
+        await Future<void>.delayed(const Duration(seconds: 4));
+        return {'complete': false, 'sizeKnown': false};
+      };
+      final verification = scanner.verifyOriginals(
+        target: OriginalVerificationTarget.exactPhotos,
+      );
+      for (var i = 0; i < 30 && resourceRequests.isEmpty; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      for (var i = 0; i < 75 && scanner.isScanning; i++) {
+        await tester.pump(const Duration(seconds: 1));
+      }
+      await verification;
+      expect(scanner.lastError, contains('60 秒'));
+      expect(resourceRequests.indexOf('ordinary-a'), 3);
+      expect(resourceRequests.indexOf('ordinary-b'), 7);
+      expect(scanner.verifiedHashAssetCount, 2);
+      expect(
+        scanner.scanResult.duplicateGroups.single.assets.map((a) => a.id),
+        containsAll(['ordinary-a', 'ordinary-b']),
+      );
+      expect(scanner.pendingHashAssetCount, 1000);
     },
   );
 

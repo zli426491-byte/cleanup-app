@@ -7,9 +7,12 @@ WORKLOAD="${1:?Specify the real photo workload: 1000 or 10000}"
 case "$WORKLOAD" in 1000|10000) ;; *) echo "Unsupported Photos workload" >&2; exit 2 ;; esac
 SIMULATOR_ID="$(cat build/native-tests/simulator-id.txt)"
 XCTESTRUN_PATH="$(cat build/native-tests/xctestrun-path.txt)"
+INTEGRATION_APP="$(cat build/native-tests/integration-app-path.txt)"
 test -n "$SIMULATOR_ID"
 test -f "$XCTESTRUN_PATH"
+test -d "$INTEGRATION_APP"
 test -f integration_test/photo_library_scan_test.dart
+test -f test_driver/photo_library_scan_driver.dart
 RESULT_DIRECTORY="$PWD/build/photo-library-tests/$WORKLOAD"
 mkdir -p "$RESULT_DIRECTORY"
 printf '%s\n' "$SIMULATOR_ID" > "$RESULT_DIRECTORY/simulator-id.txt"
@@ -17,6 +20,9 @@ printf '%s\n' "$SIMULATOR_ID" > "$RESULT_DIRECTORY/simulator-id.txt"
 # Bulk fixtures are separate real XCTest cases. Neither stage can silently skip
 # or pass without actual Photos creation and production resource inspections.
 TEST_EXIT=0
+# The preceding drive intentionally leaves the exact app installed/running.
+# Stop its old Dart isolate before XCTest launches the same host in fixture mode.
+xcrun simctl terminate "$SIMULATOR_ID" com.cleanupapp.cleaner 2>/dev/null || true
 xcodebuild test-without-building \
   -xctestrun "$XCTESTRUN_PATH" \
   -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
@@ -37,10 +43,11 @@ if [[ "$TEST_EXIT" != "0" ]]; then
 fi
 test -f "$RESULT_DIRECTORY/seed-manifest.json"
 
-# A 10k-ID JSON exceeds macOS's per-process argument budget after base64. Keep
-# the full manifest in artifacts and pass only the independently checked roles.
-MANIFEST_BASE64="$(python3 - "$RESULT_DIRECTORY/seed-manifest.json" "$WORKLOAD" "$RESULT_DIRECTORY/compact-manifest.json" <<'PY'
-import base64, json, sys
+# Keep independently checked roles in a compact artifact. The real Dart host
+# reads its full native-verified Documents manifest at runtime; no 10k-ID JSON
+# is passed through command arguments and no stage-specific rebuild is needed.
+python3 - "$RESULT_DIRECTORY/seed-manifest.json" "$WORKLOAD" "$RESULT_DIRECTORY/compact-manifest.json" <<'PY'
+import json, sys
 from pathlib import Path
 manifest = json.loads(Path(sys.argv[1]).read_text())
 workload = int(sys.argv[2])
@@ -86,22 +93,34 @@ compact = {key: manifest[key] for key in keys}
 compact['assetBytes'] = {asset: manifest['assetBytes'][asset] for asset in marked}
 encoded = json.dumps(compact, separators=(',', ':')).encode()
 Path(sys.argv[3]).write_bytes(encoded)
-argument = base64.b64encode(encoded).decode()
-assert len(argument) < 100000
-print(argument)
+assert len(encoded) < 100000
 PY
-)"
 
-# Match the native test host's ad-hoc signing identity on reinstall. These are
-# simulator-only build flags and require no Apple account or signing credentials.
-FLUTTER_XCODE_CODE_SIGNING_ALLOWED=YES \
-FLUTTER_XCODE_CODE_SIGNING_REQUIRED=YES \
-FLUTTER_XCODE_CODE_SIGNING_IDENTITY=- \
-FLUTTER_XCODE_CODE_SIGN_STYLE=Manual \
-FLUTTER_XCODE_DEVELOPMENT_TEAM= \
-flutter test integration_test/photo_library_scan_test.dart \
+# flutter test integration_test unconditionally uninstalls its app on exit,
+# destroying Documents and the stage-1000 manifest. drive's keep-app-running
+# bypasses stop/uninstall; --use-application-binary installs this same signed
+# native/UI/seed host and does not rebuild its Dart assets/signature.
+codesign --verify --strict "$INTEGRATION_APP"
+codesign -dvvv "$INTEGRATION_APP" 2>&1 | tee "$RESULT_DIRECTORY/integration-product-signature.txt"
+xcrun simctl terminate "$SIMULATOR_ID" com.cleanupapp.cleaner 2>/dev/null || true
+python3 - "$APP_DATA/Documents" "$WORKLOAD" "$RESULT_DIRECTORY" <<'PY'
+from pathlib import Path
+import shutil, sys
+documents, workload, results = Path(sys.argv[1]), sys.argv[2], Path(sys.argv[3])
+for name in (f'cleanup-library-test-{workload}.json', f'photos-{workload}-exact.png', f'photos-{workload}-large.png'):
+    previous = documents / name
+    if previous.exists():
+        shutil.move(str(previous), str(results / ('preexisting-' + name)))
+PY
+env -u CLEANUP_NATIVE_FIXTURE_ONLY -u SIMCTL_CHILD_CLEANUP_NATIVE_FIXTURE_ONLY \
+  CLEANUP_LIBRARY_RESULT_DIRECTORY="$RESULT_DIRECTORY" \
+  CLEANUP_LIBRARY_WORKLOAD="$WORKLOAD" \
+flutter drive \
+  --driver test_driver/photo_library_scan_driver.dart \
+  --target integration_test/photo_library_scan_test.dart \
+  --use-application-binary="$INTEGRATION_APP" \
+  --keep-app-running \
   -d "$SIMULATOR_ID" \
-  --dart-define="CLEANUP_FIXTURE_MANIFEST_B64=$MANIFEST_BASE64" \
   2>&1 | tee "$RESULT_DIRECTORY/flutter-integration.log" || TEST_EXIT=$?
 
 # Flutter integration_test owns these machine-readable assertions/screenshots.
@@ -114,6 +133,7 @@ for SOURCE in \
   if [[ -f "$SOURCE" ]]; then cp "$SOURCE" "$RESULT_DIRECTORY/" || true; fi
 done
 if [[ "$TEST_EXIT" == "0" ]]; then
+  test -s "$RESULT_DIRECTORY/driver-response.json"
   test -s "$RESULT_DIRECTORY/cleanup-library-test-$WORKLOAD.json"
   test -s "$RESULT_DIRECTORY/photos-$WORKLOAD-exact.png"
   test -s "$RESULT_DIRECTORY/photos-$WORKLOAD-large.png"

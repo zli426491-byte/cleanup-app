@@ -7,6 +7,8 @@ mkdir -p build/native-tests
 RUN_DIRECTORY="$(mktemp -d build/native-tests/run.XXXXXX)"
 DERIVED_DATA="$PWD/build/native-test-derived-data"
 flutter build ios --simulator --debug --no-codesign --config-only \
+  --target integration_test/photo_library_scan_test.dart \
+  --dart-define=INTEGRATION_TEST_SHOULD_REPORT_RESULTS_TO_NATIVE=false \
   2>&1 | tee "$RUN_DIRECTORY/flutter-config.log"
 
 SIMULATOR_ID="$(xcrun simctl list devices available --json | python3 -c '
@@ -97,6 +99,7 @@ PY
 )"
 printf '%s\n' "$SIMULATOR_ID" > build/native-tests/simulator-id.txt
 printf '%s\n' "$XCTESTRUN_PATH" > build/native-tests/xctestrun-path.txt
+printf '%s\n' "$TEST_APP" > build/native-tests/integration-app-path.txt
 python3 - "$TEST_APP" "$XCTESTRUN_PATH" <<'PY' | tee "$RUN_DIRECTORY/test-host.json"
 import hashlib, json, plistlib, sys
 from pathlib import Path
@@ -123,6 +126,25 @@ bundles = [row.get('TestBundlePath', '') for row in paths]
 assert any(path.endswith('/RunnerTests.xctest') for path in bundles), 'Unit test bundle is missing from xctestrun'
 assert any(path.endswith('/RunnerUITests.xctest') for path in bundles), 'UI authorization test bundle is missing from xctestrun'
 assert any(row.get('UITargetAppPath', '').endswith('/Runner.app') for row in paths), 'UI test target app is missing from xctestrun'
+# The one compiled host contains the real integration entrypoint. XCTest must
+# suppress its Dart scan while native fixtures/authorization run; flutter drive
+# subsequently launches the same signed binary without this process environment.
+def fixture_environment(value):
+    if isinstance(value, dict):
+        if 'TestBundlePath' in value:
+            value.setdefault('EnvironmentVariables', {})['CLEANUP_NATIVE_FIXTURE_ONLY'] = '1'
+            if value.get('IsUITestBundle') or 'UITargetAppPath' in value:
+                value.setdefault('UITargetAppEnvironmentVariables', {})['CLEANUP_NATIVE_FIXTURE_ONLY'] = '1'
+        for child in list(value.values()):
+            fixture_environment(child)
+    elif isinstance(value, list):
+        for child in value:
+            fixture_environment(child)
+fixture_environment(configuration)
+# Keep the xctestrun beside its original products: __TESTROOT__ paths are relative
+# to this file, so copying it into the log directory would point at the wrong host.
+with run.open('wb') as destination:
+    plistlib.dump(configuration, destination)
 print(json.dumps({'app': str(app), 'bundle_id': info['CFBundleIdentifier'],
     'executable_sha256': hashlib.sha256((app / info['CFBundleExecutable']).read_bytes()).hexdigest(),
     'xctestrun': str(run), 'test_paths': paths}, indent=2))
