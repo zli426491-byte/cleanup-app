@@ -142,7 +142,9 @@ void main() {
       await _capture(binding, 'photos-$workload-exact');
 
       watch.reset();
-      await tester.pageBack();
+      // pageBack() searches the English "Back" tooltip before Cupertino bars.
+      // Our real Material AppBar has a localized zh-TW tooltip on iOS.
+      await _tapVisible(tester, find.byType(BackButton));
       await tester.pump(const Duration(milliseconds: 400));
       await _tapVisible(tester, find.text(labels.homeLargeFiles));
       expect(find.byType(SmartCleanView), findsOneWidget);
