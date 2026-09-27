@@ -1,13 +1,41 @@
 # Restart acceptance — 2026-09-27
 
-This checklist describes the new full-library photo-review and video-compression
-candidate. The older PRELAUNCH_QA describes dormant tools and is not the release
-scope. Builds 38 and 39 are historical TestFlight baselines; Build 39 contains
-the reported 42,683-item scan stall. Repair candidate 1.1.3 build 40 at e682a3b
-passed Mac CI and upload, is VALID and IN_BETA_TESTING, and is included in the
-existing internal group. Native-device acceptance remains required below.
+This record covers accessible-library cleanup, multilingual review and video
+compression. The current automated candidate and its exact source are recorded
+below. Earlier build checks remain historical evidence; unchecked physical-device
+acceptance still applies to the current candidate.
 
-## Backend baseline and build history
+## Current verified automated candidate — 2026-09-27
+
+Version 1.1.3 build 43 was built from `006e67f0fce78324f88fe61bf4893450a01aff47` by
+[iOS Release run 36318918864](https://github.com/zli426491-byte/cleanup-app/actions/runs/36318918864).
+The entire gated run succeeded: 263 Flutter tests (52 scanner tests), zero
+analysis issues, 19 languages × 309 messages and native permission resources,
+18 native Photos cases with no skips, and the actual Full Access UI test.
+The same installed simulator app scanned 1,052 and 10,502 genuine Photos assets
+through Home navigation, automatically displayed the exact pair and both real
+large movies, and recovered movies after cancellation. The 10k flow also used
+the real preview continuation and retained verified originals and capacities.
+All four current screenshots show the complete selected category and results;
+independent source bytes/SHA, driver reports and harness outcomes agree.
+
+Current measured counts: 1,000: indexed 1,060, initial preview 1,007, initial pending 0, photo SHA 347, known sizes 1,060; 10,000: indexed 10,510, initial preview 992, initial pending 9,015, photo SHA 881, known sizes 1,371; after preview continuation: preview 1,848, pending 8,159, known sizes 1,371.
+Complete indexing is not complete original or preview analysis. Confirmed
+results remain usable while pending items are retained. Continuation is within
+the current app session, without forced iCloud download.
+
+The actual IPA declares device families 1/2 and all 19 languages; localized
+native resources match the source. IPA SHA-256: `9f611eb303fc398d19592a3c39556c63eacbad76b622e73f8eea663c5c3a0ea1`.
+Apple read-only verification at 2026-09-27T13:21:31Z confirms VALID,
+unexpired, IN_BETA_TESTING and membership in the existing internal group.
+No App Review submission, external beta or new tester invitations were made.
+
+Remaining acceptance: the reported 42,683-item physical iPhone/iPad library;
+iCloud, Live Photo, RAW and edited multi-resource media; StoreKit storefront,
+real compression quality/audio/orientation, VoiceOver and native-language review.
+Local generated JPEG/H.264 fixtures do not prove these hardware cases.
+
+## Historical backend baseline and build history
 
 Read-only checks at 2026-09-26T15:35:50Z established:
 
