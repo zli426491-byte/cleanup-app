@@ -139,6 +139,7 @@ void main() {
       };
       await tester.pump(const Duration(milliseconds: 600));
       await _revealAsset(tester, duplicateIds.first);
+      _expectActiveCategoryVisible(tester, labels.scanCategoryExact);
       await _capture(binding, 'photos-$workload-exact');
 
       watch.reset();
@@ -173,6 +174,7 @@ void main() {
           .reduce((a, b) => a > b ? a : b);
       await tester.pump(const Duration(milliseconds: 600));
       await _revealAsset(tester, movieIds.last);
+      _expectActiveCategoryVisible(tester, labels.scanCategoryLarge);
       await _capture(binding, 'photos-$workload-large');
 
       // A separate fresh scanner really cancels its first native-resource pass;
@@ -298,6 +300,23 @@ Future<void> _revealAsset(WidgetTester tester, String id) async {
     findsOneWidget,
     reason: 'The actual result must be visible in the viewport.',
   );
+}
+
+void _expectActiveCategoryVisible(WidgetTester tester, String label) {
+  final chip = find.byWidgetPredicate(
+    (widget) =>
+        widget is Semantics &&
+        widget.properties.selected == true &&
+        widget.properties.button == true,
+  );
+  expect(chip, findsOneWidget);
+  expect(find.descendant(of: chip, matching: find.text(label)), findsOneWidget);
+  final bounds = tester.getRect(chip);
+  final viewportWidth =
+      tester.view.physicalSize.width / tester.view.devicePixelRatio;
+  expect(bounds.left, greaterThanOrEqualTo(0));
+  expect(bounds.right, lessThanOrEqualTo(viewportWidth));
+  expect(chip.hitTestable(), findsOneWidget);
 }
 
 Future<void> _waitUntil(

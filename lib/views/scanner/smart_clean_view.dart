@@ -88,6 +88,24 @@ class _SmartCleanViewState extends State<SmartCleanView> {
       ? OriginalVerificationTarget.fileSizes
       : OriginalVerificationTarget.all;
 
+  Future<void> _verifyOriginals(
+    PhotoScannerService scanner, {
+    OriginalVerificationTarget? target,
+  }) async {
+    final category = _selectedCategory;
+    final capturedTarget = target ?? _verificationTarget;
+    try {
+      await scanner.verifyOriginals(target: capturedTarget);
+    } finally {
+      // Re-indexing temporarily removes the category counts and clamps the
+      // horizontal offset. Reveal it after the restored snapshot is laid out,
+      // without taking the user back from a different category.
+      if (mounted && category == _selectedCategory) {
+        _revealSelectedCategory();
+      }
+    }
+  }
+
   bool _shouldAutoVerify(PhotoScannerService scanner) {
     if (!_isResourceCategory ||
         _autoVerificationAttempted.contains(_selectedCategory) ||
@@ -138,7 +156,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
       // Record before starting: timeout/cancel/unavailable completion cannot
       // automatically retry the same category and erase partial results.
       _autoVerificationAttempted.add(category);
-      unawaited(scanner.verifyOriginals(target: _verificationTarget));
+      unawaited(_verifyOriginals(scanner));
     });
   }
 
@@ -488,7 +506,10 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                       TextButton.icon(
                         onPressed: scanner.isDeleting || _isDeleting
                             ? null
-                            : scanner.verifyOriginals,
+                            : () => _verifyOriginals(
+                                scanner,
+                                target: OriginalVerificationTarget.all,
+                              ),
                         icon: const Icon(Icons.verified_outlined),
                         label: Text(context.l10n.scanVerifyNow),
                       ),
@@ -712,9 +733,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                   onPressed:
                       scanner.isScanning || scanner.isDeleting || _isDeleting
                       ? null
-                      : () => scanner.verifyOriginals(
-                          target: _verificationTarget,
-                        ),
+                      : () => _verifyOriginals(scanner),
                   icon: const Icon(Icons.fact_check_outlined),
                   label: Text(
                     _verificationTarget ==
