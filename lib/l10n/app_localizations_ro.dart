@@ -106,7 +106,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get paywallPhotoFeature =>
-      'Grupează fotografiile identice și similare, apoi verifică fiecare element';
+      'Șterge fotografiile și videoclipurile selectate după confirmare';
 
   @override
   String get paywallVideoFeature =>
@@ -228,7 +228,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get homeStorageUnavailable =>
-      'Verifică stocarea dispozitivului în configurările iPhone. Aici poți organiza fotografiile și videoclipurile accesibile.';
+      'Verifică stocarea dispozitivului în Configurări. Aici poți organiza fotografiile și videoclipurile accesibile.';
 
   @override
   String get homeViewIndexedPhotos => 'Vezi fotografiile citite până acum';
@@ -434,7 +434,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String homeIndexedCountWithTotal(int count, int total) {
-    return 'S-au citit $count din $total elemente accesibile';
+    return 'Elemente accesibile citite: $count / $total';
   }
 
   @override
@@ -530,7 +530,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get scanStartAlbumDescription =>
-      'Scanează toate fotografiile și videoclipurile accesibile. Verificarea conținutului original și analiza vizuală te ajută să le verifici înainte de a decide.';
+      'Analizează mai întâi previzualizările pentru a compara fotografii similare. Duplicate exacte și fișiere mari se verifică separat când deschizi categoriile lor. Nimic nu se șterge automat.';
 
   @override
   String get scanContinue => 'Continuă scanarea';
@@ -682,8 +682,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get scanIndexingTitle => 'Indexarea bibliotecii foto';
 
   @override
-  String get scanVerifyingTitle =>
-      'Verificarea originalelor pentru duplicate exacte';
+  String get scanVerifyingTitle => 'Se verifică fișierele originale';
 
   @override
   String get scanAnalyzingTitle => 'Analiza previzualizărilor foto locale';
@@ -819,7 +818,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String swipeConfirmDeleteDescription(int count) {
-    return 'Șterge fotografiile verificate ($count). Asigură-te că ai selectat corect ce dorești să păstrezi.';
+    return 'Fotografii selectate pentru ștergere: $count. Scoate din listă fotografiile pe care vrei să le păstrezi.';
   }
 
   @override
@@ -870,7 +869,14 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String assetSizeBytes(int count) {
-    return '$count octeți';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de octeți',
+      few: '$count octeți',
+      one: '$count octet',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1165,7 +1171,14 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String scanPendingCheckCount(int count) {
-    return 'De verificat: $count';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de elemente de verificat',
+      few: '$count elemente de verificat',
+      one: '$count element de verificat',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1194,4 +1207,199 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get scanCheckFileSizes => 'Verifică dimensiunile fișierelor mari';
+
+  @override
+  String get reviewDeleteTitle => 'Verifică ștergerea';
+
+  @override
+  String get reviewRemove => 'Scoate din lista de ștergere';
+
+  @override
+  String get reviewUnavailable =>
+      'Previzualizare indisponibilă. Încearcă din nou sau scoate acest element.';
+
+  @override
+  String reviewUnseenCount(int count) {
+    return 'Elemente de previzualizat înainte de ștergere: $count';
+  }
+
+  @override
+  String get reviewAllVersions =>
+      'Sunt selectate toate versiunile dintr-un grup. Le ștergi pe toate?';
+
+  @override
+  String get reviewDeleteAllVersions => 'Șterge toate versiunile';
+
+  @override
+  String reviewConfirmCount(int count) {
+    return 'Confirmă ștergerea · $count';
+  }
+
+  @override
+  String swipeResumeReview(int count) {
+    return 'Continuă verificarea · $count verificate';
+  }
+
+  @override
+  String get swipeResetReview => 'Începe din nou';
+
+  @override
+  String swipeBatchSize(int count) {
+    return 'Elemente pe lot: $count';
+  }
+
+  @override
+  String get swipeAllMonths => 'Toate lunile';
+
+  @override
+  String get swipeReviewBatch => 'Alege luna sau lotul';
+
+  @override
+  String get assetVideoLoading => 'Se încarcă videoclipul original…';
+
+  @override
+  String get assetVideoUnavailable =>
+      'Videoclipul original nu este disponibil. Descarcă-l în Poze, apoi încearcă din nou.';
+
+  @override
+  String get homePermissionTitle => 'Este necesar accesul la fotografii';
+
+  @override
+  String get homePermissionDescription =>
+      'Permite accesul în Configurări pentru scanare și verificare. Nimic nu se șterge automat.';
+
+  @override
+  String get homeOpenSettings => 'Deschide Configurări';
+
+  @override
+  String get homeManagePhotoAccess => 'Gestionează accesul la fotografii';
+
+  @override
+  String get homeReviewReady => 'Verifică fotografiile disponibile';
+
+  @override
+  String get homeContinueAnalysis => 'Continuă analiza fotografiilor';
+
+  @override
+  String get homeScanDetails => 'Detaliile scanării';
+
+  @override
+  String get scanCheckingExactTitle => 'Se verifică fotografiile identice';
+
+  @override
+  String get scanCheckingSizesTitle => 'Se verifică dimensiunile fișierelor';
+
+  @override
+  String scanRoundProgress(int total, int completed) {
+    return 'Procesate $completed / $total';
+  }
+
+  @override
+  String get scanPauseReview => 'Întrerupe verificarea și vizualizează';
+
+  @override
+  String get scanSelectionHint =>
+      'Bifează elementele pentru ștergere. Atinge Previzualizare pentru a vedea conținutul.';
+
+  @override
+  String get scanPreviewNotReady =>
+      'Încarcă previzualizarea înainte de selectare';
+
+  @override
+  String scanUnreadableExcluded(int count) {
+    return 'Previzualizări neîncărcate, excluse din selecție: $count';
+  }
+
+  @override
+  String get scanKeepThis => 'Păstrează această fotografie';
+
+  @override
+  String get scanPreviewMore => 'Încarcă mai multe fotografii';
+
+  @override
+  String homeKnownLibrarySize(int count, String size) {
+    return 'Dimensiuni confirmate: $size · Verificate: $count';
+  }
+
+  @override
+  String homePendingSizes(int count) {
+    return 'Elemente cu dimensiune încă necunoscută: $count';
+  }
+
+  @override
+  String get scanReviewChanged =>
+      'Fotografiile sau permisiunile s-au schimbat. Verifică din nou lista de ștergere.';
+
+  @override
+  String get paywallFreePreviewNote =>
+      'Gruparea, previzualizarea și marcarea prin glisare sunt gratuite. Pro permite ștergerea confirmată și comprimarea video.';
+
+  @override
+  String paywallSubscribeWeekly(String price) {
+    return 'Abonare săptămânală · $price';
+  }
+
+  @override
+  String paywallSubscribeYearly(String price) {
+    return 'Abonare anuală · $price';
+  }
+
+  @override
+  String get paywallSubscribe => 'Abonează-te';
+
+  @override
+  String paywallWeeklyRenewal(String price) {
+    return 'Se reînnoiește automat la $price pe săptămână, dacă nu este anulat. Verifică termenii finali în App Store.';
+  }
+
+  @override
+  String paywallYearlyRenewal(String price) {
+    return 'Se reînnoiește automat la $price pe an, dacă nu este anulat. Verifică termenii finali în App Store.';
+  }
+
+  @override
+  String get paywallRenewalGeneric =>
+      'Se reînnoiește automat dacă nu este anulat. Verifică perioada și suma în App Store înainte de confirmare.';
+
+  @override
+  String get paywallLoadingPlans => 'Se încarcă abonamentele…';
+
+  @override
+  String get paywallWaitingForStore => 'Se așteaptă confirmarea App Store…';
+
+  @override
+  String get paywallRestoring => 'Se restaurează achizițiile…';
+
+  @override
+  String get settingsCheckingSubscription => 'Se verifică abonamentul…';
+
+  @override
+  String get settingsSubscriptionUnknown =>
+      'Starea abonamentului nu este disponibilă';
+
+  @override
+  String get settingsManageSubscription => 'Gestionează abonamentul';
+
+  @override
+  String get settingsManageUnavailable =>
+      'Nu s-a putut deschide gestionarea. Deschide abonamentele în configurările contului magazinului.';
+
+  @override
+  String get onboardingStartFree => 'Începe gratuit';
+
+  @override
+  String get swipeCheckpointSaveError =>
+      'Nu s-a putut salva progresul. Poți continua, dar este posibil să nu poți relua data viitoare.';
+
+  @override
+  String swipeCheckpointLimit(int count) {
+    return 'Alegeri recente păstrate pe acest dispozitiv: până la $count';
+  }
+
+  @override
+  String get scanSelectLoaded => 'Selectează previzualizările încărcate';
+
+  @override
+  String get homePhotoScopeChanged =>
+      'Este posibil ca accesul la fotografii să se fi schimbat. Scanează din nou pentru a actualiza fotografiile disponibile.';
 }

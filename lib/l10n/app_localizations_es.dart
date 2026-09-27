@@ -107,7 +107,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get paywallPhotoFeature =>
-      'Agrupa fotos duplicadas y similares y revisa cada elemento';
+      'Elimina las fotos y vídeos seleccionados tras confirmar';
 
   @override
   String get paywallVideoFeature =>
@@ -229,7 +229,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get homeStorageUnavailable =>
-      'Consulta el almacenamiento en los ajustes del iPhone. Aquí puedes organizar las fotos y vídeos accesibles.';
+      'Consulta el almacenamiento en Ajustes. Aquí puedes organizar las fotos y vídeos accesibles.';
 
   @override
   String get homeViewIndexedPhotos => 'Ver fotos ya leídas';
@@ -431,7 +431,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String homeIndexedCountWithTotal(int count, int total) {
-    return 'Leídos $count de $total elementos accesibles';
+    return 'Elementos accesibles leídos: $count / $total';
   }
 
   @override
@@ -521,7 +521,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get scanStartAlbumDescription =>
-      'Analiza todas las fotos y vídeos accesibles. La verificación de los originales y el análisis visual te ayudan a revisarlos antes de decidir.';
+      'Analiza primero las vistas previas para comparar fotos similares. Los duplicados exactos y los archivos grandes se comprueban por separado en sus categorías. Nada se elimina automáticamente.';
 
   @override
   String get scanContinue => 'Continuar análisis';
@@ -637,12 +637,24 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String scanExactGroupCount(int count) {
-    return 'Duplicados exactos: $count fotos';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fotos',
+      one: '$count foto',
+    );
+    return 'Duplicados exactos: $_temp0';
   }
 
   @override
   String scanSimilarGroupCount(int count) {
-    return 'Candidatos visuales: $count fotos';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fotos',
+      one: '$count foto',
+    );
+    return 'Candidatos visuales: $_temp0';
   }
 
   @override
@@ -657,12 +669,24 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String scanPreviewDeleteCount(int count) {
-    return 'Revisar y eliminar $count elementos';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count elementos',
+      one: '$count elemento',
+    );
+    return 'Revisar y eliminar $_temp0';
   }
 
   @override
   String scanConfirmDeleteDescription(int count) {
-    return '$count elementos seleccionados. Revisa la selección y las recomendaciones antes de eliminar. El sistema determina el espacio recuperado.';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count elementos seleccionados',
+      one: '$count elemento seleccionado',
+    );
+    return '$_temp0. Revisa la selección y las recomendaciones antes de eliminar. El sistema determina el espacio recuperado.';
   }
 
   @override
@@ -674,8 +698,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get scanIndexingTitle => 'Indexando la fototeca';
 
   @override
-  String get scanVerifyingTitle =>
-      'Verificando originales para duplicados exactos';
+  String get scanVerifyingTitle => 'Comprobando archivos originales';
 
   @override
   String get scanAnalyzingTitle => 'Analizando vistas previas locales';
@@ -801,32 +824,62 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String swipeReviewSummary(int deleteCount, int keepCount) {
-    return '$deleteCount fotos para eliminar · $keepCount fotos para conservar';
+    String _temp0 = intl.Intl.pluralLogic(
+      deleteCount,
+      locale: localeName,
+      other: '$deleteCount fotos',
+      one: '$deleteCount foto',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      keepCount,
+      locale: localeName,
+      other: '$keepCount fotos',
+      one: '$keepCount foto',
+    );
+    return '$_temp0 para eliminar · $_temp1 para conservar';
   }
 
   @override
   String swipeDeletePhotos(int count) {
-    return 'Eliminar $count fotos';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fotos',
+      one: '$count foto',
+    );
+    return 'Eliminar $_temp0';
   }
 
   @override
   String swipeConfirmDeleteDescription(int count) {
-    return 'Elimina $count fotos revisadas. Comprueba que has seleccionado correctamente los elementos que quieres conservar.';
+    return 'Fotos seleccionadas para eliminar: $count. Quita de la lista las fotos que quieras conservar.';
   }
 
   @override
   String swipePartialDeleted(int count) {
-    return '$count fotos eliminadas. Las fotos restantes no se han eliminado.';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fotos eliminadas',
+      one: '$count foto eliminada',
+    );
+    return '$_temp0. Las fotos restantes no se han eliminado.';
   }
 
   @override
   String swipeExitDescription(int count) {
-    return 'Has marcado $count fotos para eliminar. Salir no las eliminará.';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fotos',
+      one: '$count foto',
+    );
+    return 'Has marcado $_temp0 para eliminar. Salir no las eliminará.';
   }
 
   @override
   String swipeSkipRemainingDescription(int remaining, int deleteCount) {
-    return 'Quedan $remaining fotos sin revisar. ¿Terminar la revisión y confirmar las $deleteCount fotos ya marcadas para eliminar?';
+    return 'Fotos por revisar: $remaining. ¿Terminar la revisión y confirmar las fotos ya marcadas para eliminar ($deleteCount)?';
   }
 
   @override
@@ -862,7 +915,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String assetSizeBytes(int count) {
-    return '$count octetos';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count octetos',
+      one: '$count octeto',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1090,7 +1149,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String servicePhotosPending(int count) {
-    return '$count fotos necesitan análisis visual. Continúa para procesar primero las fotos aún no intentadas. Los originales en la nube no se descargan automáticamente.';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fotos necesitan',
+      one: '$count foto necesita',
+    );
+    return '$_temp0 análisis visual. Continúa para procesar primero las fotos aún no intentadas. Los originales en la nube no se descargan automáticamente.';
   }
 
   @override
@@ -1155,7 +1220,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String scanPendingCheckCount(int count) {
-    return '$count elementos por comprobar';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count elementos por comprobar',
+      one: '$count elemento por comprobar',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1184,4 +1255,199 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get scanCheckFileSizes => 'Comprobar el tamaño de archivos grandes';
+
+  @override
+  String get reviewDeleteTitle => 'Revisar eliminación';
+
+  @override
+  String get reviewRemove => 'Quitar de la lista de eliminación';
+
+  @override
+  String get reviewUnavailable =>
+      'Vista previa no disponible. Reinténtalo o quita este elemento.';
+
+  @override
+  String reviewUnseenCount(int count) {
+    return 'Elementos por revisar antes de eliminar: $count';
+  }
+
+  @override
+  String get reviewAllVersions =>
+      'Todas las versiones de un grupo están seleccionadas. ¿Eliminar todas?';
+
+  @override
+  String get reviewDeleteAllVersions => 'Eliminar todas las versiones';
+
+  @override
+  String reviewConfirmCount(int count) {
+    return 'Confirmar eliminación · $count';
+  }
+
+  @override
+  String swipeResumeReview(int count) {
+    return 'Continuar revisión · $count revisados';
+  }
+
+  @override
+  String get swipeResetReview => 'Empezar de nuevo';
+
+  @override
+  String swipeBatchSize(int count) {
+    return 'Elementos por lote: $count';
+  }
+
+  @override
+  String get swipeAllMonths => 'Todos los meses';
+
+  @override
+  String get swipeReviewBatch => 'Elegir un mes o lote';
+
+  @override
+  String get assetVideoLoading => 'Cargando vídeo original…';
+
+  @override
+  String get assetVideoUnavailable =>
+      'Vídeo original no disponible. Descárgalo en Fotos y vuelve a intentarlo.';
+
+  @override
+  String get homePermissionTitle => 'Se necesita acceso a las fotos';
+
+  @override
+  String get homePermissionDescription =>
+      'Permite el acceso en Ajustes para analizar y revisar. Nada se elimina automáticamente.';
+
+  @override
+  String get homeOpenSettings => 'Abrir Ajustes';
+
+  @override
+  String get homeManagePhotoAccess => 'Gestionar acceso a las fotos';
+
+  @override
+  String get homeReviewReady => 'Revisar fotos disponibles';
+
+  @override
+  String get homeContinueAnalysis => 'Continuar el análisis de fotos';
+
+  @override
+  String get homeScanDetails => 'Detalles del análisis';
+
+  @override
+  String get scanCheckingExactTitle => 'Comprobando fotos idénticas';
+
+  @override
+  String get scanCheckingSizesTitle => 'Comprobando tamaños de archivos';
+
+  @override
+  String scanRoundProgress(int total, int completed) {
+    return 'Procesados $completed / $total';
+  }
+
+  @override
+  String get scanPauseReview => 'Pausar y revisar';
+
+  @override
+  String get scanSelectionHint =>
+      'Marca los elementos para eliminar. Toca Vista previa para ver su contenido.';
+
+  @override
+  String get scanPreviewNotReady =>
+      'Carga la vista previa antes de seleccionar';
+
+  @override
+  String scanUnreadableExcluded(int count) {
+    return 'Vistas previas sin cargar, excluidas de la selección: $count';
+  }
+
+  @override
+  String get scanKeepThis => 'Conservar esta foto';
+
+  @override
+  String get scanPreviewMore => 'Cargar más fotos';
+
+  @override
+  String homeKnownLibrarySize(int count, String size) {
+    return 'Tamaños confirmados: $size · Comprobados: $count';
+  }
+
+  @override
+  String homePendingSizes(int count) {
+    return 'Elementos con tamaño aún desconocido: $count';
+  }
+
+  @override
+  String get scanReviewChanged =>
+      'Las fotos o los permisos han cambiado. Revisa la lista de eliminación de nuevo.';
+
+  @override
+  String get paywallFreePreviewNote =>
+      'Agrupar, previsualizar y marcar deslizando es gratis. Pro permite eliminar tras confirmar y comprimir vídeos.';
+
+  @override
+  String paywallSubscribeWeekly(String price) {
+    return 'Suscribirse por semana · $price';
+  }
+
+  @override
+  String paywallSubscribeYearly(String price) {
+    return 'Suscribirse por año · $price';
+  }
+
+  @override
+  String get paywallSubscribe => 'Suscribirse';
+
+  @override
+  String paywallWeeklyRenewal(String price) {
+    return 'Se renueva automáticamente por $price a la semana salvo cancelación. Revisa las condiciones finales en el App Store.';
+  }
+
+  @override
+  String paywallYearlyRenewal(String price) {
+    return 'Se renueva automáticamente por $price al año salvo cancelación. Revisa las condiciones finales en el App Store.';
+  }
+
+  @override
+  String get paywallRenewalGeneric =>
+      'Se renueva automáticamente salvo cancelación. Revisa el periodo y el importe en el App Store antes de confirmar.';
+
+  @override
+  String get paywallLoadingPlans => 'Cargando planes de suscripción…';
+
+  @override
+  String get paywallWaitingForStore => 'Esperando confirmación del App Store…';
+
+  @override
+  String get paywallRestoring => 'Restaurando compras…';
+
+  @override
+  String get settingsCheckingSubscription => 'Comprobando suscripción…';
+
+  @override
+  String get settingsSubscriptionUnknown =>
+      'Estado de suscripción no disponible';
+
+  @override
+  String get settingsManageSubscription => 'Gestionar suscripción';
+
+  @override
+  String get settingsManageUnavailable =>
+      'No se pudo abrir la gestión. Abre las suscripciones en los ajustes de tu cuenta de la tienda.';
+
+  @override
+  String get onboardingStartFree => 'Empezar gratis';
+
+  @override
+  String get swipeCheckpointSaveError =>
+      'No se pudo guardar el progreso. Puedes continuar, pero quizá no puedas retomarlo la próxima vez.';
+
+  @override
+  String swipeCheckpointLimit(int count) {
+    return 'Decisiones recientes guardadas en este dispositivo: hasta $count';
+  }
+
+  @override
+  String get scanSelectLoaded => 'Seleccionar vistas previas cargadas';
+
+  @override
+  String get homePhotoScopeChanged =>
+      'El acceso a las fotos puede haber cambiado. Analiza de nuevo para actualizar las fotos disponibles.';
 }

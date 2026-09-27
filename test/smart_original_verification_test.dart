@@ -121,7 +121,11 @@ void main() {
     messenger.setMockMethodCallHandler(resources, null);
   });
 
-  Future<void> mount(WidgetTester tester, String category) async {
+  Future<void> mount(
+    WidgetTester tester,
+    String category, {
+    bool active = true,
+  }) async {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
@@ -134,7 +138,7 @@ void main() {
           locale: const Locale('en'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: SmartCleanView(initialCategory: category),
+          home: SmartCleanView(initialCategory: category, isActive: active),
         ),
       ),
     );
@@ -398,7 +402,7 @@ void main() {
     },
   );
   testWidgets(
-    'continuing preview analysis restores the selected chip and confirmed capacities',
+    'loading more photos preserves confirmed capacities and allows returning to large files',
     (tester) async {
       useNarrowPhone(tester);
       library = [
@@ -423,7 +427,10 @@ void main() {
       final strings = AppLocalizations.of(
         tester.element(find.byType(SmartCleanView)),
       );
-      final resume = find.text(strings.scanResumePending);
+      await tester.ensureVisible(find.text('Photos').first);
+      await tester.tap(find.text('Photos').first);
+      await tester.pumpAndSettle();
+      final resume = find.text(strings.scanPreviewMore);
       expect(resume, findsOneWidget);
       await tester.ensureVisible(resume);
       await tester.pump();
@@ -438,7 +445,9 @@ void main() {
         tester,
         () => !scanner.isScanning && scanner.pendingAnalysisCount == 0,
       );
-      // Check the complete production chip without scrolling it into view.
+      await tester.ensureVisible(find.text('Large files').first);
+      await tester.tap(find.text('Large files').first);
+      await tester.pumpAndSettle();
       expectLargeChipVisible(tester);
       expect(inspections, hasLength(originalCalls));
       expect(scanner.knownSizeAssetCount, 120);
@@ -446,6 +455,23 @@ void main() {
         for (final photo in scanner.scanResult.allAssets) photo.id: photo.size,
       }, verifiedSizes);
       expect(scanner.scanResult.largeFiles, hasLength(120));
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  testWidgets(
+    'an inactive cleanup tab waits until opened before checking originals',
+    (tester) async {
+      await tester.runAsync(scanner.startFullScan);
+      await mount(tester, 'duplicates', active: false);
+      await tester.pumpAndSettle();
+      expect(inspections, isEmpty);
+      expect(scanner.isScanning, isFalse);
+      await mount(tester, 'duplicates');
+      await finish(
+        tester,
+        () => !scanner.isScanning && scanner.verifiedHashAssetCount == 2,
+      );
+      expect(inspections, hasLength(2));
       await tester.pumpWidget(const SizedBox());
     },
   );

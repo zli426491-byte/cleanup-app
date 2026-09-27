@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'package:cleanup_app/l10n/l10n.dart';
 
 import 'package:cleanup_app/services/photo_scanner_service.dart';
 import 'package:cleanup_app/services/subscription_manager.dart';
@@ -65,6 +66,9 @@ class _LargeScanner extends PhotoScannerService {
   int waitSeconds = 15;
   bool verifying = false;
   int resourceAttempts = 0;
+  int roundProcessed = 0;
+  int roundTotal = 0;
+  OriginalVerificationTarget target = OriginalVerificationTarget.exactPhotos;
   int cancelRequests = 0;
   @override
   ScanResult get scanResult => result;
@@ -84,6 +88,12 @@ class _LargeScanner extends PhotoScannerService {
   int get totalPhotoCount => 42682;
   @override
   int get attemptedResourceCount => resourceAttempts;
+  @override
+  int get originalRoundProcessed => roundProcessed;
+  @override
+  int? get originalRoundTotal => roundTotal;
+  @override
+  OriginalVerificationTarget? get originalVerificationTarget => target;
   @override
   int get analyzedAssetCount => 0;
   @override
@@ -182,7 +192,7 @@ void main() {
       expect(find.text('視覺分析成功 0 個'), findsNWidgets(2));
       expect(find.text('原始素材已驗證 0 個'), findsNWidgets(2));
       expect(find.text('待下載 7 個'), findsOneWidget);
-      expect(find.textContaining('已等待 15 秒'), findsOneWidget);
+      expect(find.textContaining('已等待 15 秒'), findsNWidgets(2));
       expect(find.text('45%'), findsNothing);
       final progress = tester.widget<LinearProgressIndicator>(
         find.byType(LinearProgressIndicator).first,
@@ -190,7 +200,7 @@ void main() {
       expect(progress.value, 0);
       scanner.tickWait();
       await tester.pump();
-      expect(find.textContaining('已等待 16 秒'), findsOneWidget);
+      expect(find.textContaining('已等待 16 秒'), findsNWidgets(2));
       await tester.tap(find.byTooltip('取消掃描並保留進度'));
       expect(scanner.cancelRequests, 1);
       expect(scanner.isScanning, isFalse);
@@ -282,7 +292,9 @@ void main() {
     (tester) async {
       final scanner = _LargeScanner()
         ..verifying = true
-        ..resourceAttempts = 20;
+        ..resourceAttempts = 42683
+        ..roundProcessed = 20
+        ..roundTotal = 42682;
       await _mount(
         tester,
         scanner,
@@ -292,13 +304,17 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('scan-details-1')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('原始素材已處理 20 / 42683 個項目'), findsOneWidget);
-      expect(find.text('原始素材已驗證 0 個'), findsNWidgets(2));
+      expect(
+        find.text(appStringsOf().scanRoundProgress(20, 42682)),
+        findsOneWidget,
+      );
+      expect(find.text(appStringsOf().scanCheckingExactTitle), findsOneWidget);
+      expect(find.text('原始素材已驗證 0 個'), findsOneWidget);
       expect(find.textContaining('才能顯示真重複和大檔'), findsOneWidget);
       final progress = tester.widget<LinearProgressIndicator>(
         find.byType(LinearProgressIndicator).first,
       );
-      expect(progress.value, closeTo(20 / 42683, .000001));
+      expect(progress.value, closeTo(20 / 42682, .000001));
       await tester.pumpWidget(const SizedBox());
     },
   );

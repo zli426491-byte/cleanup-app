@@ -99,7 +99,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get paywallWeeklySubtitle => '短期間の写真整理に';
 
   @override
-  String get paywallPhotoFeature => '重複・類似写真をグループ化し、一枚ずつ確認';
+  String get paywallPhotoFeature => '選択した写真と動画を確認後に削除';
 
   @override
   String get paywallVideoFeature => '動画を圧縮・プレビューしてコピーを保存';
@@ -217,7 +217,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get homeStorageUnavailable =>
-      '端末の容量は iPhone の設定で確認してください。ここではアクセス可能な写真と動画を整理できます。';
+      '端末の容量は設定で確認してください。ここではアクセス可能な写真と動画を整理できます。';
 
   @override
   String get homeViewIndexedPhotos => '読み込み済みの写真を見る';
@@ -416,7 +416,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String homeIndexedCountWithTotal(int count, int total) {
-    return 'アクセス可能な $total 件中 $count 件を読み込み済み';
+    return '読込済み項目：$count / $total';
   }
 
   @override
@@ -505,7 +505,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get scanStartAlbumDescription =>
-      'アクセス可能な写真と動画をすべてスキャンします。オリジナルの内容検証と画像解析により、確認してから判断できます。';
+      'まずプレビューを解析して、似た写真を確認します。完全重複や大きなファイルは、それぞれのカテゴリを開くと別に確認します。自動で削除されることはありません。';
 
   @override
   String get scanContinue => 'スキャンを続ける';
@@ -649,7 +649,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get scanIndexingTitle => '写真ライブラリの索引を作成中';
 
   @override
-  String get scanVerifyingTitle => 'オリジナルを検証して完全重複を確認中';
+  String get scanVerifyingTitle => 'オリジナルファイルを確認中';
 
   @override
   String get scanAnalyzingTitle => '端末内の写真プレビューを解析中';
@@ -782,7 +782,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String swipeConfirmDeleteDescription(int count) {
-    return '確認済みの写真 $count 枚を削除します。残したい項目が正しく選択されているか確認してください。';
+    return '削除対象の写真：$count 枚。残したい写真は削除リストから外してください。';
   }
 
   @override
@@ -1113,4 +1113,193 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get scanCheckFileSizes => '大きなファイルの容量を確認';
+
+  @override
+  String get reviewDeleteTitle => '削除内容を確認';
+
+  @override
+  String get reviewRemove => '削除リストから外す';
+
+  @override
+  String get reviewUnavailable => 'プレビューを表示できません。再試行するか、この項目を外してください。';
+
+  @override
+  String reviewUnseenCount(int count) {
+    return '削除前に確認が必要な項目：$count';
+  }
+
+  @override
+  String get reviewAllVersions => 'グループ内のすべての写真が選択されています。すべて削除しますか？';
+
+  @override
+  String get reviewDeleteAllVersions => 'すべての写真を削除';
+
+  @override
+  String reviewConfirmCount(int count) {
+    return '削除を確定 · $count';
+  }
+
+  @override
+  String swipeResumeReview(int count) {
+    return '前の確認を続ける · 確認済み $count';
+  }
+
+  @override
+  String get swipeResetReview => '最初からやり直す';
+
+  @override
+  String swipeBatchSize(int count) {
+    return '1 回に確認する項目数：$count';
+  }
+
+  @override
+  String get swipeAllMonths => 'すべての月';
+
+  @override
+  String get swipeReviewBatch => '月または件数を選択';
+
+  @override
+  String get assetVideoLoading => 'オリジナル動画を読み込み中…';
+
+  @override
+  String get assetVideoUnavailable =>
+      'オリジナル動画を表示できません。「写真」でダウンロードしてから再試行してください。';
+
+  @override
+  String get homePermissionTitle => '写真へのアクセスが必要です';
+
+  @override
+  String get homePermissionDescription =>
+      '設定でアクセスを許可すると、スキャンして確認できます。自動で削除されることはありません。';
+
+  @override
+  String get homeOpenSettings => '設定を開く';
+
+  @override
+  String get homeManagePhotoAccess => '写真へのアクセスを管理';
+
+  @override
+  String get homeReviewReady => '表示できる写真を確認';
+
+  @override
+  String get homeContinueAnalysis => '写真の解析を続ける';
+
+  @override
+  String get homeScanDetails => 'スキャンの詳細';
+
+  @override
+  String get scanCheckingExactTitle => '完全に重複する写真を確認中';
+
+  @override
+  String get scanCheckingSizesTitle => 'ファイルサイズを確認中';
+
+  @override
+  String scanRoundProgress(int total, int completed) {
+    return '処理済み $completed / $total';
+  }
+
+  @override
+  String get scanPauseReview => '確認を一時停止して整理';
+
+  @override
+  String get scanSelectionHint => 'チェックを付けると削除リストに入ります。プレビューをタップすると内容を確認できます。';
+
+  @override
+  String get scanPreviewNotReady => 'プレビューを読み込んでから選択してください';
+
+  @override
+  String scanUnreadableExcluded(int count) {
+    return 'プレビュー未読込のため選択しなかった項目：$count';
+  }
+
+  @override
+  String get scanKeepThis => 'この写真を残す';
+
+  @override
+  String get scanPreviewMore => 'さらに写真を読み込む';
+
+  @override
+  String homeKnownLibrarySize(int count, String size) {
+    return '確認済みファイルサイズ：$size · 確認した項目：$count';
+  }
+
+  @override
+  String homePendingSizes(int count) {
+    return 'サイズ未確認の項目：$count';
+  }
+
+  @override
+  String get scanReviewChanged => '写真またはアクセス権が変更されました。削除リストを再確認してください。';
+
+  @override
+  String get paywallFreePreviewNote =>
+      '写真のグループ化、プレビュー、スワイプでの選択は無料です。確定後の削除と動画圧縮には Pro が必要です。';
+
+  @override
+  String paywallSubscribeWeekly(String price) {
+    return '週額で登録 · $price';
+  }
+
+  @override
+  String paywallSubscribeYearly(String price) {
+    return '年額で登録 · $price';
+  }
+
+  @override
+  String get paywallSubscribe => '登録する';
+
+  @override
+  String paywallWeeklyRenewal(String price) {
+    return '解約しない限り、毎週 $price で自動更新されます。最終条件は App Store で確認してください。';
+  }
+
+  @override
+  String paywallYearlyRenewal(String price) {
+    return '解約しない限り、毎年 $price で自動更新されます。最終条件は App Store で確認してください。';
+  }
+
+  @override
+  String get paywallRenewalGeneric =>
+      '解約しない限り自動更新されます。確定前に App Store で請求期間と金額を確認してください。';
+
+  @override
+  String get paywallLoadingPlans => '登録プランを読み込み中…';
+
+  @override
+  String get paywallWaitingForStore => 'App Store の確認待ち…';
+
+  @override
+  String get paywallRestoring => '購入を復元中…';
+
+  @override
+  String get settingsCheckingSubscription => '登録状況を確認中…';
+
+  @override
+  String get settingsSubscriptionUnknown => '登録状況を確認できません';
+
+  @override
+  String get settingsManageSubscription => '登録を管理';
+
+  @override
+  String get settingsManageUnavailable =>
+      '登録管理を開けませんでした。ストアアカウントの設定から登録を開いてください。';
+
+  @override
+  String get onboardingStartFree => '無料で始める';
+
+  @override
+  String get swipeCheckpointSaveError =>
+      '確認の進み具合を保存できませんでした。続けられますが、次回は途中から再開できない場合があります。';
+
+  @override
+  String swipeCheckpointLimit(int count) {
+    return 'この端末に保存する最近の選択：最大 $count 件';
+  }
+
+  @override
+  String get scanSelectLoaded => '読み込んだプレビューを選択';
+
+  @override
+  String get homePhotoScopeChanged =>
+      'アクセスできる写真が変わった可能性があります。再スキャンして表示できる写真を更新してください。';
 }

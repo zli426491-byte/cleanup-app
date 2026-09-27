@@ -3,9 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image/image.dart' as img;
 
 import 'package:cleanup_app/services/photo_scanner_service.dart';
+import 'package:cleanup_app/l10n/l10n.dart';
+import 'package:cleanup_app/views/scanner/delete_review.dart';
 import 'package:cleanup_app/services/subscription_manager.dart';
 import 'package:cleanup_app/views/scanner/asset_thumbnail.dart';
 import 'package:cleanup_app/views/scanner/smart_clean_view.dart';
@@ -17,31 +20,40 @@ class ProSubscription extends SubscriptionManager {
 }
 
 class GridScanner extends PhotoScannerService {
-  GridScanner(this.assets);
+  GridScanner(this.assets) {
+    _publish();
+  }
   List<PhotoAsset> assets;
+  late ScanResult _result;
   @override
-  ScanResult get scanResult => ScanResult(
-    allAssets: assets,
-    duplicateGroups: [],
-    similarGroups: [],
-    screenshots: [],
-    largeFiles: [],
-    videos: [],
-    blurryPhotos: [],
-    darkPhotos: [],
-    overexposedPhotos: [],
-    totalSavingsEstimate: 0,
-  );
+  ScanResult get scanResult => _result;
+  void _publish() {
+    _result = ScanResult(
+      allAssets: assets,
+      duplicateGroups: [],
+      similarGroups: [],
+      screenshots: [],
+      largeFiles: [],
+      videos: [],
+      blurryPhotos: [],
+      darkPhotos: [],
+      overexposedPhotos: [],
+      totalSavingsEstimate: 0,
+    );
+  }
+
   @override
   Future<Set<String>> deleteAssetsWithResult(List<PhotoAsset> toDelete) async {
     final ids = toDelete.map((asset) => asset.id).toSet();
     assets = assets.where((asset) => !ids.contains(asset.id)).toList();
+    _publish();
     notifyListeners();
     return ids;
   }
 }
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
   testWidgets('swipe deletion clears matching grid selection when returning', (
     tester,
   ) async {
@@ -91,6 +103,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(Image), findsNWidgets(2));
     expect(find.byTooltip('重新載入預覽'), findsNothing);
+    await tester.runAsync(() async {
+      for (final image in tester.widgetList<Image>(find.byType(Image))) {
+        await precacheImage(
+          image.image,
+          tester.element(find.byType(SmartCleanView)),
+        );
+      }
+    });
+    await tester.pumpAndSettle();
     await tester.tap(find.byType(AssetThumbnail).first);
     await tester.pump();
     expect(find.text('已選擇 1 個項目'), findsOneWidget);
@@ -118,13 +139,14 @@ void main() {
     await tester.tap(find.byIcon(Icons.close_rounded).first);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
-    await tester.ensureVisible(find.byIcon(Icons.favorite_rounded).last);
-    await tester.tap(find.byIcon(Icons.favorite_rounded).last);
+    await tester.ensureVisible(find.byIcon(Icons.bookmark_rounded).last);
+    await tester.tap(find.byIcon(Icons.bookmark_rounded).last);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.text('刪除 1 張照片'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('確認刪除'));
+    expect(find.byType(DeleteReview), findsOneWidget);
+    await tester.tap(find.text(appStringsOf().reviewConfirmCount(1)));
     await tester.pumpAndSettle();
     await tester.pump(const Duration(seconds: 2));
     expect(scanner.assets.single.id, 'grid-1');

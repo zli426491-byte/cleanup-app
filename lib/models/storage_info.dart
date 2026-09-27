@@ -1,8 +1,3 @@
-import 'dart:io';
-
-import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
-
 import 'photo_asset.dart' show formatBytes;
 
 class StorageInfo {
@@ -33,64 +28,15 @@ class StorageInfo {
   /// Label suffix shown in UI when data is estimated (not real disk info).
   String get estimateLabel => isEstimate ? ' (估計值)' : '';
 
-  /// Fetches real disk storage info for the app's root filesystem.
-  ///
-  /// Attempts to read actual free space via path_provider + dart:io stat.
-  /// Falls back to realistic mock data with [isEstimate] = true if the
-  /// platform does not expose disk-space information.
-  static Future<StorageInfo> current() async {
-    try {
-      // Try to get the app documents directory and check available space.
-      final dir = await getApplicationDocumentsDirectory();
-
-      if (Platform.isAndroid || Platform.isIOS) {
-        // On mobile, use the root path to estimate.
-        final stat = await FileStat.stat(dir.path);
-        debugPrint('StorageInfo: stat on ${dir.path} -> type=${stat.type}');
-      }
-
-      // dart:io FileStat does not directly expose disk-space info.
-      // On mobile we would typically use a platform channel or a package like
-      // `disk_space`. The code below returns realistic mock values.
-      // Replace with real platform-channel calls in production.
-      //
-      // Example with a hypothetical platform channel:
-      //   final result = await MethodChannel('com.app/storage')
-      //       .invokeMethod<Map>('getDiskSpace');
-      //   return StorageInfo(
-      //     totalSpace: result['totalSpace'] as int,
-      //     usedSpace: result['usedSpace'] as int,
-      //     freeSpace: result['freeSpace'] as int,
-      //   );
-
-      // Generate semi-random but consistent mock values based on path hash
-      // so the UI looks realistic and doesn't show identical numbers every time.
-      final pathHash = dir.path.hashCode.abs();
-      final totalVariants = [64, 128, 256]; // GB options
-      final totalGB = totalVariants[pathHash % totalVariants.length];
-      final total = totalGB * 1024 * 1024 * 1024;
-      // Used between 55%-85% of total
-      final usedPct = 0.55 + (pathHash % 30) / 100.0;
-      final used = (total * usedPct).toInt();
-
-      return StorageInfo(
-        totalSpace: total,
-        usedSpace: used,
-        freeSpace: total - used,
-        isEstimate: true,
-      );
-    } catch (e) {
-      debugPrint('StorageInfo.current error: $e');
-      const total = 64 * 1024 * 1024 * 1024;
-      const used  = 45 * 1024 * 1024 * 1024;
-      return const StorageInfo(
-        totalSpace: total,
-        usedSpace: used,
-        freeSpace: total - used,
-        isEstimate: true,
-      );
-    }
-  }
+  /// Device capacity has not been supplied by a platform implementation.
+  /// Zero values mean unknown and must never be displayed as measured storage.
+  /// The UI uses the scanner's verified media byte count instead.
+  static Future<StorageInfo> current() async => const StorageInfo(
+    totalSpace: 0,
+    usedSpace: 0,
+    freeSpace: 0,
+    isEstimate: true,
+  );
 
   StorageInfo copyWith({
     int? totalSpace,

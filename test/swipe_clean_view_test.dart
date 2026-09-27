@@ -6,12 +6,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:photo_manager/photo_manager.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/semantics.dart';
 
 import 'package:cleanup_app/services/photo_scanner_service.dart';
 import 'package:cleanup_app/services/subscription_manager.dart';
 import 'package:cleanup_app/views/paywall/paywall_view.dart';
 import 'package:cleanup_app/views/scanner/swipe_clean_view.dart';
 import 'package:cleanup_app/views/scanner/asset_thumbnail.dart';
+import 'package:cleanup_app/l10n/l10n.dart';
+import 'package:cleanup_app/l10n/app_localizations.dart';
+import 'package:cleanup_app/services/review_checkpoint_service.dart';
 
 class TestSubscription extends SubscriptionManager {
   TestSubscription(this.pro);
@@ -21,6 +26,21 @@ class TestSubscription extends SubscriptionManager {
 }
 
 class TestScanner extends PhotoScannerService {
+  ScanResult result = ScanResult.empty;
+  void setAssets(List<PhotoAsset> assets) => result = ScanResult(
+    allAssets: assets,
+    duplicateGroups: [],
+    similarGroups: [],
+    screenshots: [],
+    largeFiles: [],
+    videos: [],
+    blurryPhotos: [],
+    darkPhotos: [],
+    overexposedPhotos: [],
+    totalSavingsEstimate: 0,
+  );
+  @override
+  ScanResult get scanResult => result;
   int deletionRequests = 0;
   Completer<Set<String>>? pendingDeletion;
   @override
@@ -33,7 +53,8 @@ class TestScanner extends PhotoScannerService {
 void main() {
   late TestScanner scanner;
   late TestSubscription subscription;
-  final asset = PhotoAsset(
+  late PhotoAsset asset;
+  final baseAsset = PhotoAsset(
     id: 'swipe-gate-test',
     width: 100,
     height: 100,
@@ -45,16 +66,29 @@ void main() {
     ),
   );
 
+  setUp(() {
+    asset = baseAsset.copyWith();
+    SharedPreferences.setMockInitialValues({});
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('com.fluttercandies/photo_manager'),
+          (call) async {
+            final args = call.arguments as Map;
+            if (call.method == 'fetchEntityProperties') {
+              return {'id': args['id'], 'type': 1, 'width': 100, 'height': 100};
+            }
+            if (call.method == 'getThumb') {
+              return asset.thumbnail;
+            }
+            return null;
+          },
+        );
+  });
+
   Future<void> waitForDecodedPreview(WidgetTester tester) async {
+    await tester.pump(const Duration(milliseconds: 1));
     final context = tester.element(find.byType(SwipeCleanView));
-    final images = tester
-        .widgetList<Image>(
-          find.descendant(
-            of: find.byType(SwipeCleanView),
-            matching: find.byType(Image),
-          ),
-        )
-        .toList();
+    final images = tester.widgetList<Image>(find.byType(Image)).toList();
     await tester.runAsync(() async {
       for (final image in images) {
         await precacheImage(image.image, context);
@@ -68,6 +102,7 @@ void main() {
     required bool pro,
   }) async {
     scanner = TestScanner();
+    scanner.setAssets([asset]);
     subscription = TestSubscription(pro);
     await tester.pumpWidget(
       MultiProvider(
@@ -113,7 +148,8 @@ void main() {
       await reviewForDeletion(tester, pro: true);
       await tester.tap(find.text('刪除 1 張照片'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('確認刪除'));
+      await waitForDecodedPreview(tester);
+      await tester.tap(find.text('確認刪除 · 1 個'));
       await tester.pumpAndSettle();
       expect(scanner.deletionRequests, 1);
       expect(find.byType(SwipeCleanView), findsOneWidget);
@@ -129,6 +165,7 @@ void main() {
     bool settle = true,
   }) async {
     scanner = TestScanner();
+    scanner.setAssets(assets);
     subscription = TestSubscription(true);
     await tester.pumpWidget(
       MultiProvider(
@@ -171,6 +208,32 @@ void main() {
     }
   }
 
+  testWidgets('revoked assets cannot become a stale deletion request', (
+    tester,
+  ) async {
+    await reviewForDeletion(tester, pro: true);
+    scanner.setAssets([]);
+    await tester.tap(find.text('刪除 1 張照片'));
+    await tester.pumpAndSettle();
+    expect(scanner.deletionRequests, 0);
+    expect(find.text('確認刪除 · 1 個'), findsNothing);
+    expect(find.text(appStringsOf().scanReviewChanged), findsOneWidget);
+  });
+
+  testWidgets('library change while reviewing rejects confirmation', (
+    tester,
+  ) async {
+    await reviewForDeletion(tester, pro: true);
+    await tester.tap(find.text('刪除 1 張照片'));
+    await tester.pumpAndSettle();
+    await waitForDecodedPreview(tester);
+    scanner.setAssets([]);
+    await tester.tap(find.text('確認刪除 · 1 個'));
+    await tester.pumpAndSettle();
+    expect(scanner.deletionRequests, 0);
+    expect(find.text(appStringsOf().scanReviewChanged), findsOneWidget);
+  });
+
   testWidgets('undo after skipping restores the last actually reviewed photo', (
     tester,
   ) async {
@@ -201,6 +264,112 @@ void main() {
     expect(find.text('100 × 100'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'restored review resumes and undo never executes saved deletion',
+    (tester) async {
+      final photos = List.generate(
+        3,
+        (i) => PhotoAsset(
+          id: 'resume-$i',
+          width: 100 + i,
+          height: 100,
+          size: 0,
+          modifiedDate: DateTime(2026),
+          createDate: DateTime(2026),
+          type: AssetType.image,
+          thumbnail: asset.thumbnail,
+        ),
+      );
+      final store = ReviewCheckpointService();
+      await store.load('photos', photos);
+      store.record('photos', photos[0], 'delete');
+      store.record('photos', photos[1], 'keep');
+      await store.flush('photos');
+      await mountReview(tester, photos, reduceMotion: true);
+      await tester.tap(find.byKey(const ValueKey('resume-review-checkpoint')));
+      await tester.pumpAndSettle();
+      await waitForDecodedPreview(tester);
+      expect(find.text('3/3'), findsOneWidget);
+      expect(find.text('1 刪除'), findsOneWidget);
+      expect(scanner.deletionRequests, 0);
+      await tester.ensureVisible(find.byTooltip('撤回上一個選擇'));
+      await tester.tap(find.byTooltip('撤回上一個選擇'));
+      await tester.pumpAndSettle();
+      expect(find.text('2/3'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(await ReviewCheckpointService().load('photos', photos), {
+        'resume-0': 'delete',
+      });
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
+    'batch choice limits current review and reset clears saved decisions',
+    (tester) async {
+      final photos = List.generate(
+        120,
+        (i) => PhotoAsset(
+          id: 'batch-$i',
+          width: 100,
+          height: 100,
+          size: 0,
+          createDate: DateTime(2026, i < 60 ? 2 : 1),
+          type: AssetType.image,
+          thumbnail: asset.thumbnail,
+        ),
+      );
+      await mountReview(tester, photos, reduceMotion: true);
+      await tester.tap(find.byTooltip(appStringsOf().swipeReviewBatch));
+      await tester.pumpAndSettle();
+      tester
+          .widget<DropdownButton<DateTime?>>(
+            find.byWidgetPredicate((w) => w is DropdownButton<DateTime?>),
+          )
+          .onChanged!(DateTime(2026, 2));
+      await tester.pump();
+      await tester.tap(
+        find.widgetWithText(FilledButton, appStringsOf().scanContinue),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('1/60'), findsOneWidget);
+      await tester.ensureVisible(find.byTooltip('保留'));
+      await tester.tap(find.byTooltip('保留'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip(appStringsOf().swipeReviewBatch));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('reset-review-checkpoint')));
+      await tester.pumpAndSettle();
+      expect(find.text('1/120'), findsOneWidget);
+      expect(await ReviewCheckpointService().load('photos', photos), isEmpty);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
+    'short flick advances but a slow short drag safely springs back',
+    (tester) async {
+      await mountReview(tester, [asset]);
+      await tester.fling(
+        find.byType(AssetThumbnail),
+        const Offset(-60, 0),
+        150,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('1/1'), findsOneWidget);
+      expect(find.text('完成 (0)'), findsOneWidget);
+      await tester.fling(
+        find.byType(AssetThumbnail),
+        const Offset(-60, 0),
+        1000,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('審核完成！'), findsOneWidget);
+      expect(scanner.deletionRequests, 0);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
 
   testWidgets('pending and failed previews cannot be marked for deletion', (
     tester,
@@ -282,10 +451,11 @@ void main() {
     scanner.pendingDeletion = Completer<Set<String>>();
     await tester.tap(find.text('刪除 1 張照片'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('確認刪除'));
-    await tester.pumpAndSettle();
+    await waitForDecodedPreview(tester);
+    await tester.tap(find.text('確認刪除 · 1 個'));
+    await tester.pump(const Duration(milliseconds: 100));
     await navigator.maybePop();
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 100));
     expect(find.byType(SwipeCleanView), findsOneWidget);
     expect(find.text('確定離開？'), findsNothing);
     final close = tester.widget<IconButton>(
@@ -306,6 +476,49 @@ void main() {
     await tester.tap(find.byTooltip('刪除'));
     await tester.pump();
     expect(find.text('審核完成！'), findsOneWidget);
+  });
+
+  testWidgets('VoiceOver tap activates keep undo and delete actions', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final photos = List.generate(
+      3,
+      (i) => PhotoAsset(
+        id: 'accessible-$i',
+        width: 100,
+        height: 100,
+        size: 0,
+        createDate: DateTime(2026),
+        type: AssetType.image,
+        thumbnail: asset.thumbnail,
+      ),
+    );
+    await mountReview(tester, photos, reduceMotion: true);
+    Future<void> activate(String label) async {
+      final finder = find.byWidgetPredicate(
+        (w) =>
+            w is Semantics && w.properties.label == label && w.excludeSemantics,
+      );
+      final node = tester.getSemantics(finder);
+      expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+      tester.binding.renderViews.first.owner!.semanticsOwner!.performAction(
+        node.id,
+        SemanticsAction.tap,
+      );
+      await tester.pumpAndSettle();
+      await waitForDecodedPreview(tester);
+    }
+
+    await activate('保留');
+    expect(find.text('2/3'), findsOneWidget);
+    await activate('撤回上一個選擇');
+    expect(find.text('1/3'), findsOneWidget);
+    await activate('刪除');
+    expect(find.text('2/3'), findsOneWidget);
+    expect(scanner.deletionRequests, 0);
+    await tester.pumpWidget(const SizedBox());
+    semantics.dispose();
   });
 
   testWidgets(
@@ -333,6 +546,83 @@ void main() {
     },
   );
 
+  testWidgets(
+    'all locale action footers remain visible at 200 percent on a small phone',
+    (tester) async {
+      const viewport = Size(320, 568);
+      tester.view.physicalSize = viewport;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      scanner = TestScanner();
+      subscription = TestSubscription(true);
+      for (final locale in AppLocalizations.supportedLocales) {
+        final photo = asset.copyWith();
+        scanner.setAssets([photo]);
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider<PhotoScannerService>.value(value: scanner),
+              ChangeNotifierProvider<SubscriptionManager>.value(
+                value: subscription,
+              ),
+            ],
+            child: MaterialApp(
+              locale: locale,
+              supportedLocales: AppLocalizations.supportedLocales,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(textScaler: const TextScaler.linear(2)),
+                child: child!,
+              ),
+              home: SwipeCleanView(assets: [photo], title: 'photos'),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await waitForDecodedPreview(tester);
+        final strings = lookupAppLocalizations(locale);
+        for (final label in [
+          strings.swipeDelete,
+          strings.swipeUndoChoice,
+          strings.swipeKeep,
+        ]) {
+          final action = find.byTooltip(label);
+          expect(
+            action.hitTestable(),
+            findsOneWidget,
+            reason: '$locale $label',
+          );
+          final bounds = tester.getRect(action);
+          expect(bounds.top, greaterThanOrEqualTo(0), reason: '$locale $label');
+          expect(
+            bounds.bottom,
+            lessThanOrEqualTo(viewport.height),
+            reason: '$locale $label',
+          );
+        }
+        // Scrolling content must never move the operation footer away.
+        final before = tester.getRect(
+          find.byKey(const ValueKey('swipe-fixed-actions')),
+        );
+        await tester.drag(
+          find.byType(SingleChildScrollView),
+          const Offset(0, -180),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          tester.getRect(find.byKey(const ValueKey('swipe-fixed-actions'))),
+          before,
+          reason: locale.toLanguageTag(),
+        );
+        expect(tester.takeException(), isNull, reason: locale.toLanguageTag());
+        await tester.pumpWidget(const SizedBox());
+        await tester.pumpAndSettle();
+      }
+    },
+  );
   testWidgets(
     'large-text review scrolls vertically over the photo and still swipes horizontally',
     (tester) async {
@@ -366,6 +656,7 @@ void main() {
       final scroll = tester.state<ScrollableState>(
         find.byType(Scrollable).first,
       );
+      await tester.ensureVisible(find.byType(AssetThumbnail).first);
       await tester.drag(
         find.byType(AssetThumbnail).first,
         const Offset(0, -180),
@@ -376,6 +667,7 @@ void main() {
       expect(scanner.deletionRequests, 0);
       scroll.position.jumpTo(0);
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byType(AssetThumbnail).first);
       await tester.drag(
         find.byType(AssetThumbnail).first,
         const Offset(-220, 0),

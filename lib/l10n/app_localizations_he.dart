@@ -103,8 +103,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get paywallWeeklySubtitle => 'לסבב קצר של סידור תמונות';
 
   @override
-  String get paywallPhotoFeature =>
-      'קבץ תמונות כפולות ודומות, ואז בדוק כל פריט';
+  String get paywallPhotoFeature => 'מחק את התמונות והסרטונים שבחרת לאחר אישור';
 
   @override
   String get paywallVideoFeature => 'דחוס סרטונים, צפה בהם ושמור עותקים';
@@ -185,12 +184,12 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String onboardingStep(int current, int total) {
-    return '$current/$total';
+    return '\u2066$current/$total\u2069';
   }
 
   @override
   String paywallBuild(String build) {
-    return 'בנייה $build';
+    return 'בנייה \u2068$build\u2069';
   }
 
   @override
@@ -200,32 +199,32 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String videoOriginalSize(String size) {
-    return 'מקור: $size';
+    return 'מקור: \u2068$size\u2069';
   }
 
   @override
   String videoCopySize(String size) {
-    return 'עותק: $size';
+    return 'עותק: \u2068$size\u2069';
   }
 
   @override
   String videoSizeDifference(String size) {
-    return 'הפרש בגודל הקובץ: $size';
+    return 'הפרש בגודל הקובץ: \u2068$size\u2069';
   }
 
   @override
   String videoSizeGb(String size) {
-    return '$size GB';
+    return '\u2068$size\u2069 GB';
   }
 
   @override
   String videoSizeMb(String size) {
-    return '$size MB';
+    return '\u2068$size\u2069 MB';
   }
 
   @override
   String get homeStorageUnavailable =>
-      'בדוק את אחסון המכשיר בהגדרות iPhone. כאן ניתן לסדר תמונות וסרטונים שיש אליהם גישה.';
+      'בדוק את אחסון המכשיר בהגדרות. כאן ניתן לסדר תמונות וסרטונים נגישים.';
 
   @override
   String get homeViewIndexedPhotos => 'הצג תמונות שנקראו עד כה';
@@ -409,7 +408,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String homeStorageTotal(String size) {
-    return 'סך הכול $size';
+    return 'סך הכול \u2068$size\u2069';
   }
 
   @override
@@ -426,7 +425,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String homeIndexedCountWithTotal(int count, int total) {
-    return 'נקראו $count מתוך $total פריטים נגישים';
+    return 'פריטים נגישים שנקראו: $count / $total';
   }
 
   @override
@@ -520,7 +519,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get scanStartAlbumDescription =>
-      'סרוק את כל התמונות והסרטונים הנגישים. אימות התוכן המקורי וניתוח חזותי עוזרים לך לבדוק לפני החלטה.';
+      'סרוק תחילה תצוגות מקדימות כדי לבדוק תמונות דומות. תמונות זהות וקבצים גדולים נבדקים בנפרד כשפותחים את הקטגוריות שלהם. דבר אינו נמחק אוטומטית.';
 
   @override
   String get scanContinue => 'המשך סריקה';
@@ -642,7 +641,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String scanRecommendedKeep(String reason) {
-    return 'מומלץ לשמור: $reason';
+    return 'מומלץ לשמור: \u2068$reason\u2069';
   }
 
   @override
@@ -652,7 +651,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String scanPreviewDeleteCount(int count) {
-    return 'צפה ומחק $count פריטים';
+    return 'צפה ומחק · $count';
   }
 
   @override
@@ -669,7 +668,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get scanIndexingTitle => 'יצירת אינדקס לספריית התמונות';
 
   @override
-  String get scanVerifyingTitle => 'אימות מקורות לזיהוי כפילויות מדויקות';
+  String get scanVerifyingTitle => 'בדיקת הקבצים המקוריים';
 
   @override
   String get scanAnalyzingTitle => 'ניתוח תצוגות מקומיות של תמונות';
@@ -687,7 +686,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String scanIndexedCount(int indexed, String total) {
-    return 'נוספו לאינדקס $indexed / $total פריטים';
+    return 'נוספו לאינדקס $indexed / \u2068$total\u2069 פריטים';
   }
 
   @override
@@ -722,7 +721,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String scanOperationWait(String operation, int seconds) {
-    return '$operation · ממתין $seconds שניות';
+    return '\u2068$operation\u2069 · ממתין $seconds שניות';
   }
 
   @override
@@ -778,7 +777,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String swipeProgressCount(int current, int total) {
-    return '$current/$total';
+    return '\u2066$current/$total\u2069';
   }
 
   @override
@@ -798,37 +797,37 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String swipeDeletePhotos(int count) {
-    return 'מחק $count תמונות';
+    return 'מחק תמונות · $count';
   }
 
   @override
   String swipeConfirmDeleteDescription(int count) {
-    return 'מחק $count תמונות שנבדקו. ודא שהתמונות שברצונך לשמור נבחרו נכון.';
+    return 'תמונות שנבחרו למחיקה: $count. הסר מרשימת המחיקה תמונות שברצונך לשמור.';
   }
 
   @override
   String swipePartialDeleted(int count) {
-    return 'נמחקו $count תמונות. התמונות שנותרו לא נמחקו.';
+    return 'תמונות שנמחקו: $count. התמונות שנותרו לא נמחקו.';
   }
 
   @override
   String swipeExitDescription(int count) {
-    return 'סימנת $count תמונות למחיקה. יציאה לא תמחק אותן.';
+    return 'תמונות שסומנו למחיקה: $count. יציאה לא תמחק אותן.';
   }
 
   @override
   String swipeSkipRemainingDescription(int remaining, int deleteCount) {
-    return '$remaining תמונות טרם נבדקו. לסיים את הבדיקה ולאשר את $deleteCount התמונות שכבר סומנו למחיקה?';
+    return 'תמונות שטרם נבדקו: $remaining. לסיים את הבדיקה ולאשר את התמונות שכבר סומנו למחיקה ($deleteCount)?';
   }
 
   @override
   String assetDimensions(int width, int height) {
-    return '$width × $height';
+    return '\u2066$width × $height\u2069';
   }
 
   @override
   String assetPreviewDetails(int width, int height, String size) {
-    return '$width × $height · $size';
+    return '\u2066$width × $height\u2069 · \u2068$size\u2069';
   }
 
   @override
@@ -839,17 +838,17 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String assetSizeGigabytes(String value) {
-    return '$value GB';
+    return '\u2068$value\u2069 GB';
   }
 
   @override
   String assetSizeMegabytes(String value) {
-    return '$value MB';
+    return '\u2068$value\u2069 MB';
   }
 
   @override
   String assetSizeKilobytes(String value) {
-    return '$value KB';
+    return '\u2068$value\u2069 KB';
   }
 
   @override
@@ -1069,7 +1068,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String servicePhotosPending(int count) {
-    return '$count תמונות עדיין דורשות ניתוח חזותי. המשך כדי לעבד תחילה תמונות שטרם נוסו. מקורות בענן אינם מורדים אוטומטית.';
+    return 'תמונות שממתינות לניתוח חזותי: $count. המשך כדי לעבד תחילה תמונות שטרם נוסו. מקורות בענן אינם מורדים אוטומטית.';
   }
 
   @override
@@ -1084,7 +1083,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String serviceQualitySummary(String reasons) {
-    return '$reasons; הנחיה מומלצת בלבד';
+    return '\u2068$reasons\u2069; הנחיה מומלצת בלבד';
   }
 
   @override
@@ -1133,7 +1132,14 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String scanPendingCheckCount(int count) {
-    return '$count פריטים ממתינים לבדיקה';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count פריטים ממתינים לבדיקה',
+      two: 'שני פריטים ממתינים לבדיקה',
+      one: 'פריט אחד ממתין לבדיקה',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1161,4 +1167,196 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get scanCheckFileSizes => 'בדיקת גודל קבצים גדולים';
+
+  @override
+  String get reviewDeleteTitle => 'בדיקת המחיקה';
+
+  @override
+  String get reviewRemove => 'הסר מרשימת המחיקה';
+
+  @override
+  String get reviewUnavailable =>
+      'התצוגה המקדימה אינה זמינה. נסה שוב או הסר פריט זה.';
+
+  @override
+  String reviewUnseenCount(int count) {
+    return 'פריטים שצריך לצפות בהם לפני מחיקה: $count';
+  }
+
+  @override
+  String get reviewAllVersions => 'כל הגרסאות בקבוצה נבחרו. למחוק את כולן?';
+
+  @override
+  String get reviewDeleteAllVersions => 'מחק את כל הגרסאות';
+
+  @override
+  String reviewConfirmCount(int count) {
+    return 'אישור המחיקה · $count';
+  }
+
+  @override
+  String swipeResumeReview(int count) {
+    return 'המשך בדיקה קודמת · $count נבדקו';
+  }
+
+  @override
+  String get swipeResetReview => 'התחל מחדש';
+
+  @override
+  String swipeBatchSize(int count) {
+    return 'פריטים בכל סבב: $count';
+  }
+
+  @override
+  String get swipeAllMonths => 'כל החודשים';
+
+  @override
+  String get swipeReviewBatch => 'בחר חודש או סבב';
+
+  @override
+  String get assetVideoLoading => 'טוען את הסרטון המקורי…';
+
+  @override
+  String get assetVideoUnavailable =>
+      'הסרטון המקורי אינו זמין. הורד אותו בתמונות ונסה שוב.';
+
+  @override
+  String get homePermissionTitle => 'נדרשת גישה לתמונות';
+
+  @override
+  String get homePermissionDescription =>
+      'אפשר גישה לתמונות בהגדרות כדי לסרוק ולבדוק. דבר אינו נמחק אוטומטית.';
+
+  @override
+  String get homeOpenSettings => 'פתח הגדרות';
+
+  @override
+  String get homeManagePhotoAccess => 'נהל גישה לתמונות';
+
+  @override
+  String get homeReviewReady => 'בדוק תמונות זמינות';
+
+  @override
+  String get homeContinueAnalysis => 'המשך ניתוח תמונות';
+
+  @override
+  String get homeScanDetails => 'פרטי הסריקה';
+
+  @override
+  String get scanCheckingExactTitle => 'בדיקת תמונות זהות';
+
+  @override
+  String get scanCheckingSizesTitle => 'בדיקת גדלי קבצים';
+
+  @override
+  String scanRoundProgress(int total, int completed) {
+    return 'טופלו $completed / $total';
+  }
+
+  @override
+  String get scanPauseReview => 'השהה את הבדיקה ועיין בתמונות';
+
+  @override
+  String get scanSelectionHint =>
+      'סמן פריטים כדי להוסיף למחיקה. הקש על תצוגה מקדימה לצפייה בתוכן.';
+
+  @override
+  String get scanPreviewNotReady => 'טען תצוגה מקדימה לפני הבחירה';
+
+  @override
+  String scanUnreadableExcluded(int count) {
+    return 'תצוגות שלא נטענו ולא נבחרו: $count';
+  }
+
+  @override
+  String get scanKeepThis => 'שמור תמונה זו';
+
+  @override
+  String get scanPreviewMore => 'טען עוד תמונות';
+
+  @override
+  String homeKnownLibrarySize(int count, String size) {
+    return 'גדלי קבצים שאושרו: \u2068$size\u2069 · פריטים שנבדקו: $count';
+  }
+
+  @override
+  String homePendingSizes(int count) {
+    return 'פריטים שגודלם עדיין אינו ידוע: $count';
+  }
+
+  @override
+  String get scanReviewChanged =>
+      'התמונות או ההרשאות השתנו. בדוק שוב את רשימת המחיקה.';
+
+  @override
+  String get paywallFreePreviewNote =>
+      'קיבוץ תמונות, תצוגות מקדימות וסימון בהחלקה הם בחינם. Pro מאפשר מחיקה לאחר אישור ודחיסת סרטונים.';
+
+  @override
+  String paywallSubscribeWeekly(String price) {
+    return 'מינוי שבועי · \u2068$price\u2069';
+  }
+
+  @override
+  String paywallSubscribeYearly(String price) {
+    return 'מינוי שנתי · \u2068$price\u2069';
+  }
+
+  @override
+  String get paywallSubscribe => 'הירשם';
+
+  @override
+  String paywallWeeklyRenewal(String price) {
+    return 'מתחדש אוטומטית במחיר \u2068$price\u2069 לשבוע, אלא אם מבטלים. בדוק את התנאים הסופיים ב-App Store.';
+  }
+
+  @override
+  String paywallYearlyRenewal(String price) {
+    return 'מתחדש אוטומטית במחיר \u2068$price\u2069 לשנה, אלא אם מבטלים. בדוק את התנאים הסופיים ב-App Store.';
+  }
+
+  @override
+  String get paywallRenewalGeneric =>
+      'מתחדש אוטומטית אלא אם מבטלים. בדוק את תקופת החיוב והסכום ב-App Store לפני האישור.';
+
+  @override
+  String get paywallLoadingPlans => 'טוען מסלולי מינוי…';
+
+  @override
+  String get paywallWaitingForStore => 'ממתין לאישור App Store…';
+
+  @override
+  String get paywallRestoring => 'משחזר רכישות…';
+
+  @override
+  String get settingsCheckingSubscription => 'בודק מינוי…';
+
+  @override
+  String get settingsSubscriptionUnknown => 'מצב המינוי אינו זמין';
+
+  @override
+  String get settingsManageSubscription => 'נהל מינוי';
+
+  @override
+  String get settingsManageUnavailable =>
+      'לא ניתן לפתוח את ניהול המינוי. פתח מינויים בהגדרות חשבון החנות שלך.';
+
+  @override
+  String get onboardingStartFree => 'התחל בחינם';
+
+  @override
+  String get swipeCheckpointSaveError =>
+      'לא ניתן לשמור את התקדמות הבדיקה. אפשר להמשיך, אך ייתכן שלא ניתן יהיה לשחזר בפעם הבאה.';
+
+  @override
+  String swipeCheckpointLimit(int count) {
+    return 'בחירות אחרונות שנשמרות במכשיר: עד $count';
+  }
+
+  @override
+  String get scanSelectLoaded => 'בחר תצוגות שנטענו';
+
+  @override
+  String get homePhotoScopeChanged =>
+      'ייתכן שהגישה לתמונות השתנתה. סרוק שוב כדי לעדכן את התמונות הזמינות.';
 }

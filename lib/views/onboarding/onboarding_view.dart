@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cleanup_app/l10n/l10n.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../analytics/analytics_manager.dart';
 import '../../utils/app_theme.dart';
-import '../paywall/paywall_view.dart';
+import '../home/main_tab_view.dart';
 
 class OnboardingView extends StatefulWidget {
   const OnboardingView({super.key});
@@ -25,29 +26,29 @@ class _OnboardingViewState extends State<OnboardingView>
       Icons.auto_awesome_rounded,
       context.l10n.onboardingSmartTitle,
       context.l10n.onboardingSmartSubtitle,
-      const Color(0xFF4F6EF7),
-      const Color(0xFF7B93FF),
+      AppTheme.primary,
+      AppTheme.primaryMuted,
     ),
     _PageData(
       Icons.photo_library_rounded,
       context.l10n.onboardingPhotosTitle,
       context.l10n.onboardingPhotosSubtitle,
-      const Color(0xFFFFAA33),
-      const Color(0xFFFFD700),
+      AppTheme.warning,
+      AppTheme.accent,
     ),
     _PageData(
       Icons.swipe_rounded,
       context.l10n.onboardingSwipeTitle,
       context.l10n.onboardingSwipeSubtitle,
-      const Color(0xFF00D68F),
-      const Color(0xFF00F5A0),
+      AppTheme.primary,
+      AppTheme.primaryMuted,
     ),
     _PageData(
       Icons.check_circle_outline_rounded,
       context.l10n.onboardingChoiceTitle,
       context.l10n.onboardingChoiceSubtitle,
-      const Color(0xFF9D6AFF),
-      const Color(0xFFC084FC),
+      AppTheme.primary,
+      AppTheme.primaryMuted,
     ),
   ];
 
@@ -85,7 +86,7 @@ class _OnboardingViewState extends State<OnboardingView>
     final page = _pages[_currentPage];
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.bg,
       body: Stack(
         children: [
           // Animated background gradient blobs
@@ -172,19 +173,9 @@ class _OnboardingViewState extends State<OnboardingView>
                                   ),
                                   foregroundColor: AppTheme.textSecondary,
                                 ),
-                                onPressed: () {
-                                  if (_reduceMotion) {
-                                    _controller.jumpToPage(_pages.length - 1);
-                                  } else {
-                                    _controller.animateToPage(
-                                      _pages.length - 1,
-                                      duration: const Duration(
-                                        milliseconds: 400,
-                                      ),
-                                      curve: Curves.easeOut,
-                                    );
-                                  }
-                                },
+                                onPressed: _isCompleting
+                                    ? null
+                                    : _completeOnboarding,
                                 child: Text(
                                   context.l10n.onboardingSkip,
                                   textAlign: TextAlign.end,
@@ -378,7 +369,7 @@ class _OnboardingViewState extends State<OnboardingView>
                         ? context.l10n.onboardingPreparing
                         : _currentPage < _pages.length - 1
                         ? context.l10n.onboardingContinue
-                        : context.l10n.onboardingGetStarted,
+                        : context.l10n.onboardingStartFree,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -419,27 +410,38 @@ class _OnboardingViewState extends State<OnboardingView>
         _controller.jumpToPage(_currentPage + 1);
       } else {
         _controller.nextPage(
-          duration: const Duration(milliseconds: 400),
+          duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
         );
       }
     } else {
-      setState(() => _isCompleting = true);
-      try {
-        AnalyticsManager.instance.track(
-          AnalyticsEvent.onboardingCompleted.name,
-        );
-        await AnalyticsManager.instance.requestATT();
-        if (!mounted) return;
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const PaywallView(fromOnboarding: true),
-          ),
-        );
-      } finally {
-        if (mounted) setState(() => _isCompleting = false);
+      await _completeOnboarding();
+    }
+  }
+
+  Future<void> _completeOnboarding() async {
+    if (_isCompleting || !mounted) return;
+    setState(() => _isCompleting = true);
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      if (!await preferences.setBool('hasCompletedOnboarding', true)) {
+        throw StateError('Could not complete onboarding');
       }
+      if (!mounted || !(ModalRoute.of(context)?.isCurrent ?? true)) return;
+      AnalyticsManager.instance.track(AnalyticsEvent.onboardingCompleted.name);
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const MainTabView()),
+        (route) => false,
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.serviceOperationFailed)),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isCompleting = false);
     }
   }
 }

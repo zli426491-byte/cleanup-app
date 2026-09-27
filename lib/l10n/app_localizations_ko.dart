@@ -102,7 +102,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get paywallWeeklySubtitle => '짧은 기간 동안 사진을 정리할 때';
 
   @override
-  String get paywallPhotoFeature => '중복·유사 사진을 그룹화하고 한 장씩 확인';
+  String get paywallPhotoFeature => '선택한 사진과 동영상을 확인 후 삭제';
 
   @override
   String get paywallVideoFeature => '동영상을 압축하고 미리 본 뒤 사본 저장';
@@ -221,7 +221,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get homeStorageUnavailable =>
-      '기기 저장 공간은 iPhone 설정에서 확인하세요. 여기에서는 접근 가능한 사진과 동영상을 정리할 수 있습니다.';
+      '기기 저장 공간은 설정에서 확인하세요. 여기에서는 접근 가능한 사진과 동영상을 정리할 수 있습니다.';
 
   @override
   String get homeViewIndexedPhotos => '읽은 사진 보기';
@@ -420,7 +420,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String homeIndexedCountWithTotal(int count, int total) {
-    return '접근 가능한 항목 $total개 중 $count개 읽음';
+    return '불러온 접근 가능한 항목: $count / $total';
   }
 
   @override
@@ -509,7 +509,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get scanStartAlbumDescription =>
-      '접근 가능한 모든 사진과 동영상을 스캔합니다. 원본 내용 검증과 시각 분석을 통해 먼저 확인한 뒤 결정할 수 있습니다.';
+      '먼저 미리 보기를 분석해 비슷한 사진을 확인합니다. 완전 중복과 대용량 파일은 해당 카테고리를 열면 별도로 검사합니다. 자동으로 삭제되지 않습니다.';
 
   @override
   String get scanContinue => '스캔 계속';
@@ -654,7 +654,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get scanIndexingTitle => '사진 보관함 색인 생성 중';
 
   @override
-  String get scanVerifyingTitle => '완전 중복 확인을 위해 원본 검증 중';
+  String get scanVerifyingTitle => '원본 파일 확인 중';
 
   @override
   String get scanAnalyzingTitle => '기기 내 사진 미리보기 분석 중';
@@ -787,7 +787,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String swipeConfirmDeleteDescription(int count) {
-    return '확인한 사진 $count장을 삭제합니다. 보관할 항목이 올바르게 선택되었는지 확인하세요.';
+    return '삭제할 사진: $count장. 보관할 사진은 삭제 목록에서 제외하세요.';
   }
 
   @override
@@ -1127,4 +1127,193 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get scanCheckFileSizes => '대용량 파일 크기 확인';
+
+  @override
+  String get reviewDeleteTitle => '삭제 항목 확인';
+
+  @override
+  String get reviewRemove => '삭제 목록에서 제외';
+
+  @override
+  String get reviewUnavailable => '미리 보기를 사용할 수 없습니다. 다시 시도하거나 이 항목을 제외하세요.';
+
+  @override
+  String reviewUnseenCount(int count) {
+    return '삭제 전에 확인할 항목: $count';
+  }
+
+  @override
+  String get reviewAllVersions => '그룹의 모든 사본이 선택되었습니다. 모두 삭제할까요?';
+
+  @override
+  String get reviewDeleteAllVersions => '모든 사본 삭제';
+
+  @override
+  String reviewConfirmCount(int count) {
+    return '삭제 확인 · $count';
+  }
+
+  @override
+  String swipeResumeReview(int count) {
+    return '이전 확인 계속 · 확인한 항목 $count';
+  }
+
+  @override
+  String get swipeResetReview => '처음부터 시작';
+
+  @override
+  String swipeBatchSize(int count) {
+    return '한 번에 확인할 항목: $count';
+  }
+
+  @override
+  String get swipeAllMonths => '모든 월';
+
+  @override
+  String get swipeReviewBatch => '월 또는 묶음 선택';
+
+  @override
+  String get assetVideoLoading => '원본 동영상 불러오는 중…';
+
+  @override
+  String get assetVideoUnavailable =>
+      '원본 동영상을 사용할 수 없습니다. 사진 앱에서 다운로드한 뒤 다시 시도하세요.';
+
+  @override
+  String get homePermissionTitle => '사진 접근 권한이 필요해요';
+
+  @override
+  String get homePermissionDescription =>
+      '설정에서 사진 접근을 허용하면 스캔하고 확인할 수 있습니다. 자동으로 삭제되지 않습니다.';
+
+  @override
+  String get homeOpenSettings => '설정 열기';
+
+  @override
+  String get homeManagePhotoAccess => '사진 접근 관리';
+
+  @override
+  String get homeReviewReady => '사용 가능한 사진 확인';
+
+  @override
+  String get homeContinueAnalysis => '사진 분석 계속';
+
+  @override
+  String get homeScanDetails => '스캔 상세 정보';
+
+  @override
+  String get scanCheckingExactTitle => '완전히 같은 사진 확인 중';
+
+  @override
+  String get scanCheckingSizesTitle => '파일 크기 확인 중';
+
+  @override
+  String scanRoundProgress(int total, int completed) {
+    return '처리 완료 $completed / $total';
+  }
+
+  @override
+  String get scanPauseReview => '검사 일시 중지 후 확인';
+
+  @override
+  String get scanSelectionHint => '체크하면 삭제 목록에 추가됩니다. 미리 보기를 눌러 내용을 확인하세요.';
+
+  @override
+  String get scanPreviewNotReady => '미리 보기를 불러온 뒤 선택하세요';
+
+  @override
+  String scanUnreadableExcluded(int count) {
+    return '미리 보기를 불러오지 못해 선택에서 제외: $count';
+  }
+
+  @override
+  String get scanKeepThis => '이 사진 보관';
+
+  @override
+  String get scanPreviewMore => '사진 더 불러오기';
+
+  @override
+  String homeKnownLibrarySize(int count, String size) {
+    return '확인된 파일 크기: $size · 확인한 항목: $count';
+  }
+
+  @override
+  String homePendingSizes(int count) {
+    return '아직 크기를 확인하지 못한 항목: $count';
+  }
+
+  @override
+  String get scanReviewChanged => '사진 또는 권한이 변경되었습니다. 삭제 목록을 다시 확인하세요.';
+
+  @override
+  String get paywallFreePreviewNote =>
+      '사진 그룹화, 미리 보기, 스와이프 표시는 무료입니다. 확인 후 삭제와 동영상 압축에는 Pro가 필요합니다.';
+
+  @override
+  String paywallSubscribeWeekly(String price) {
+    return '주간 구독 · $price';
+  }
+
+  @override
+  String paywallSubscribeYearly(String price) {
+    return '연간 구독 · $price';
+  }
+
+  @override
+  String get paywallSubscribe => '구독하기';
+
+  @override
+  String paywallWeeklyRenewal(String price) {
+    return '취소하지 않으면 매주 $price에 자동 갱신됩니다. 최종 조건은 App Store에서 확인하세요.';
+  }
+
+  @override
+  String paywallYearlyRenewal(String price) {
+    return '취소하지 않으면 매년 $price에 자동 갱신됩니다. 최종 조건은 App Store에서 확인하세요.';
+  }
+
+  @override
+  String get paywallRenewalGeneric =>
+      '취소하지 않으면 자동 갱신됩니다. 확인 전에 App Store에서 청구 기간과 금액을 확인하세요.';
+
+  @override
+  String get paywallLoadingPlans => '구독 요금제 불러오는 중…';
+
+  @override
+  String get paywallWaitingForStore => 'App Store 확인 대기 중…';
+
+  @override
+  String get paywallRestoring => '구매 복원 중…';
+
+  @override
+  String get settingsCheckingSubscription => '구독 확인 중…';
+
+  @override
+  String get settingsSubscriptionUnknown => '구독 상태를 확인할 수 없습니다';
+
+  @override
+  String get settingsManageSubscription => '구독 관리';
+
+  @override
+  String get settingsManageUnavailable =>
+      '구독 관리를 열지 못했습니다. 스토어 계정 설정에서 구독을 여세요.';
+
+  @override
+  String get onboardingStartFree => '무료로 시작';
+
+  @override
+  String get swipeCheckpointSaveError =>
+      '진행 상황을 저장하지 못했습니다. 계속 확인할 수 있지만 다음에 이어서 확인하지 못할 수 있습니다.';
+
+  @override
+  String swipeCheckpointLimit(int count) {
+    return '이 기기에 보관하는 최근 선택: 최대 $count개';
+  }
+
+  @override
+  String get scanSelectLoaded => '불러온 미리 보기 선택';
+
+  @override
+  String get homePhotoScopeChanged =>
+      '사진 접근 범위가 바뀌었을 수 있습니다. 다시 스캔해 사용 가능한 사진을 갱신하세요.';
 }

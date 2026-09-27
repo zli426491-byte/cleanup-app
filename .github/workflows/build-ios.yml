@@ -28,10 +28,17 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: '3.41.7'
           cache: true
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Generate and verify all supported languages
+        run: |
+          flutter gen-l10n
+          python3 scripts/check_localizations.py --escape-dart-isolates
+          python3 -m unittest discover -s scripts -p 'test_check*.py'
 
       - name: Analyze code
         run: flutter analyze
@@ -42,11 +49,16 @@ jobs:
       - name: Build iOS (no code signing)
         run: flutter build ios --release --no-codesign --target lib/main.dart --dart-define=REVENUECAT_IOS_API_KEY=${{ secrets.REVENUECAT_IOS_API_KEY }}
 
+      - name: Verify packaged iOS languages and minimum OS
+        run: python3 scripts/check_ios_ipa.py build/ios/iphoneos/Runner.app --report build/ios/ipa-verification.json
+
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: ios-build
-          path: build/ios/iphoneos/
+          path: |
+            build/ios/iphoneos/
+            build/ios/ipa-verification.json
 
   build-android:
     if: ${{ inputs.native_verification_only != true }}
@@ -67,10 +79,17 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: '3.41.7'
           cache: true
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Generate and verify all supported languages
+        run: |
+          flutter gen-l10n
+          python3 scripts/check_localizations.py --escape-dart-isolates
+          python3 -m unittest discover -s scripts -p 'test_check*.py'
 
       - name: Analyze code
         run: flutter analyze
@@ -109,11 +128,14 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Generate and verify all supported languages
+        run: |
+          flutter gen-l10n
+          python3 scripts/check_localizations.py --escape-dart-isolates
+          python3 -m unittest discover -s scripts -p 'test_check*.py'
+
       - name: Analyze
         run: flutter analyze
-
-      - name: Check language coverage and iOS permission resources
-        run: python3 scripts/check_localizations.py
 
       - name: Test
         run: flutter test

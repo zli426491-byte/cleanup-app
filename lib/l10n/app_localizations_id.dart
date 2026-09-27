@@ -105,7 +105,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get paywallPhotoFeature =>
-      'Kelompokkan foto duplikat dan mirip, lalu periksa satu per satu';
+      'Hapus foto dan video yang Anda pilih setelah konfirmasi';
 
   @override
   String get paywallVideoFeature =>
@@ -227,7 +227,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get homeStorageUnavailable =>
-      'Periksa penyimpanan perangkat di Pengaturan iPhone. Di sini Anda dapat merapikan foto dan video yang dapat diakses.';
+      'Periksa penyimpanan perangkat di Pengaturan. Di sini Anda dapat merapikan foto dan video yang dapat diakses.';
 
   @override
   String get homeViewIndexedPhotos => 'Lihat foto yang sudah dibaca';
@@ -429,7 +429,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String homeIndexedCountWithTotal(int count, int total) {
-    return 'Membaca $count dari $total item yang dapat diakses';
+    return 'Item yang dapat diakses terbaca: $count / $total';
   }
 
   @override
@@ -519,7 +519,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get scanStartAlbumDescription =>
-      'Pindai semua foto dan video yang dapat diakses. Verifikasi konten asli dan analisis visual membantu Anda memeriksa sebelum memutuskan.';
+      'Pindai pratinjau terlebih dahulu untuk memeriksa foto mirip. Foto identik dan file besar diperiksa terpisah saat kategorinya dibuka. Tidak ada yang dihapus otomatis.';
 
   @override
   String get scanContinue => 'Lanjutkan pemindaian';
@@ -670,8 +670,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get scanIndexingTitle => 'Mengindeks pustaka foto';
 
   @override
-  String get scanVerifyingTitle =>
-      'Memverifikasi file asli untuk duplikat identik';
+  String get scanVerifyingTitle => 'Memeriksa file asli';
 
   @override
   String get scanAnalyzingTitle => 'Menganalisis pratinjau foto lokal';
@@ -807,7 +806,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String swipeConfirmDeleteDescription(int count) {
-    return 'Hapus $count foto yang sudah diperiksa. Pastikan item yang ingin disimpan dipilih dengan benar.';
+    return 'Foto dipilih untuk dihapus: $count. Keluarkan foto yang ingin disimpan dari daftar penghapusan.';
   }
 
   @override
@@ -1175,4 +1174,197 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get scanCheckFileSizes => 'Periksa ukuran file besar';
+
+  @override
+  String get reviewDeleteTitle => 'Periksa penghapusan';
+
+  @override
+  String get reviewRemove => 'Hapus dari daftar penghapusan';
+
+  @override
+  String get reviewUnavailable =>
+      'Pratinjau tidak tersedia. Coba lagi atau keluarkan item ini.';
+
+  @override
+  String reviewUnseenCount(int count) {
+    return 'Item yang perlu dipratinjau sebelum dihapus: $count';
+  }
+
+  @override
+  String get reviewAllVersions =>
+      'Semua versi dalam satu kelompok dipilih. Hapus semuanya?';
+
+  @override
+  String get reviewDeleteAllVersions => 'Hapus semua versi';
+
+  @override
+  String reviewConfirmCount(int count) {
+    return 'Konfirmasi penghapusan · $count';
+  }
+
+  @override
+  String swipeResumeReview(int count) {
+    return 'Lanjutkan pemeriksaan · $count diperiksa';
+  }
+
+  @override
+  String get swipeResetReview => 'Mulai ulang';
+
+  @override
+  String swipeBatchSize(int count) {
+    return 'Item per kelompok: $count';
+  }
+
+  @override
+  String get swipeAllMonths => 'Semua bulan';
+
+  @override
+  String get swipeReviewBatch => 'Pilih bulan atau kelompok';
+
+  @override
+  String get assetVideoLoading => 'Memuat video asli…';
+
+  @override
+  String get assetVideoUnavailable =>
+      'Video asli tidak tersedia. Unduh di Foto, lalu coba lagi.';
+
+  @override
+  String get homePermissionTitle => 'Akses foto diperlukan';
+
+  @override
+  String get homePermissionDescription =>
+      'Izinkan akses foto di Pengaturan untuk memindai dan memeriksa. Tidak ada yang dihapus otomatis.';
+
+  @override
+  String get homeOpenSettings => 'Buka Pengaturan';
+
+  @override
+  String get homeManagePhotoAccess => 'Kelola akses foto';
+
+  @override
+  String get homeReviewReady => 'Periksa foto yang tersedia';
+
+  @override
+  String get homeContinueAnalysis => 'Lanjutkan analisis foto';
+
+  @override
+  String get homeScanDetails => 'Detail pemindaian';
+
+  @override
+  String get scanCheckingExactTitle => 'Memeriksa foto yang sama persis';
+
+  @override
+  String get scanCheckingSizesTitle => 'Memeriksa ukuran file';
+
+  @override
+  String scanRoundProgress(int total, int completed) {
+    return 'Diproses $completed / $total';
+  }
+
+  @override
+  String get scanPauseReview => 'Jeda pemeriksaan dan lihat foto';
+
+  @override
+  String get scanSelectionHint =>
+      'Centang item untuk dihapus. Ketuk Pratinjau untuk melihat isinya.';
+
+  @override
+  String get scanPreviewNotReady => 'Muat pratinjau sebelum memilih';
+
+  @override
+  String scanUnreadableExcluded(int count) {
+    return 'Pratinjau belum dimuat dan tidak dipilih: $count';
+  }
+
+  @override
+  String get scanKeepThis => 'Simpan foto ini';
+
+  @override
+  String get scanPreviewMore => 'Muat foto lainnya';
+
+  @override
+  String homeKnownLibrarySize(int count, String size) {
+    return 'Ukuran file terkonfirmasi: $size · Diperiksa: $count';
+  }
+
+  @override
+  String homePendingSizes(int count) {
+    return 'Item dengan ukuran belum diketahui: $count';
+  }
+
+  @override
+  String get scanReviewChanged =>
+      'Foto atau izin telah berubah. Periksa daftar penghapusan lagi.';
+
+  @override
+  String get paywallFreePreviewNote =>
+      'Pengelompokan foto, pratinjau, dan penandaan dengan geser gratis. Pro membuka penghapusan terkonfirmasi dan kompresi video.';
+
+  @override
+  String paywallSubscribeWeekly(String price) {
+    return 'Langganan mingguan · $price';
+  }
+
+  @override
+  String paywallSubscribeYearly(String price) {
+    return 'Langganan tahunan · $price';
+  }
+
+  @override
+  String get paywallSubscribe => 'Berlangganan';
+
+  @override
+  String paywallWeeklyRenewal(String price) {
+    return 'Diperpanjang otomatis dengan biaya $price per minggu kecuali dibatalkan. Periksa ketentuan akhir di App Store.';
+  }
+
+  @override
+  String paywallYearlyRenewal(String price) {
+    return 'Diperpanjang otomatis dengan biaya $price per tahun kecuali dibatalkan. Periksa ketentuan akhir di App Store.';
+  }
+
+  @override
+  String get paywallRenewalGeneric =>
+      'Diperpanjang otomatis kecuali dibatalkan. Periksa periode tagihan dan jumlah di App Store sebelum konfirmasi.';
+
+  @override
+  String get paywallLoadingPlans => 'Memuat paket langganan…';
+
+  @override
+  String get paywallWaitingForStore => 'Menunggu konfirmasi App Store…';
+
+  @override
+  String get paywallRestoring => 'Memulihkan pembelian…';
+
+  @override
+  String get settingsCheckingSubscription => 'Memeriksa langganan…';
+
+  @override
+  String get settingsSubscriptionUnknown => 'Status langganan tidak tersedia';
+
+  @override
+  String get settingsManageSubscription => 'Kelola langganan';
+
+  @override
+  String get settingsManageUnavailable =>
+      'Pengelolaan langganan tidak dapat dibuka. Buka langganan di pengaturan akun toko Anda.';
+
+  @override
+  String get onboardingStartFree => 'Mulai gratis';
+
+  @override
+  String get swipeCheckpointSaveError =>
+      'Progres tidak dapat disimpan. Anda bisa terus memeriksa, tetapi mungkin tidak dapat melanjutkannya nanti.';
+
+  @override
+  String swipeCheckpointLimit(int count) {
+    return 'Pilihan pemeriksaan terbaru di perangkat ini: hingga $count';
+  }
+
+  @override
+  String get scanSelectLoaded => 'Pilih pratinjau yang sudah dimuat';
+
+  @override
+  String get homePhotoScopeChanged =>
+      'Akses foto mungkin berubah. Pindai lagi untuk memperbarui foto yang tersedia.';
 }

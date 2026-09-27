@@ -47,7 +47,8 @@
 //  Strategy:
 //    - Show a pre-permission screen BEFORE the native ATT dialog. Explain
 //      the value ("help us keep the app free") so the user understands why.
-//    - Request ATT after onboarding is complete but before the paywall.
+//    - Keep ATT separate from the first-use cleanup flow. If enabled later,
+//      request it after a dedicated pre-permission explanation.
 //    - If the user denies, respect it -- do not re-prompt. Adjust and
 //      Facebook SDKs will fall back to SKAdNetwork / aggregated events.
 //

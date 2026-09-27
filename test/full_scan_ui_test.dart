@@ -1,4 +1,5 @@
 import 'package:cleanup_app/services/photo_scanner_service.dart';
+import 'package:cleanup_app/l10n/l10n.dart';
 import 'package:cleanup_app/services/subscription_manager.dart';
 import 'package:cleanup_app/views/paywall/paywall_view.dart';
 import 'package:cleanup_app/views/scanner/smart_clean_view.dart';
@@ -8,6 +9,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:provider/provider.dart';
+import 'package:image/image.dart' as img;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+
+final _png = img.encodePng(img.Image(width: 8, height: 8));
 
 PhotoAsset _photo(
   String id, {
@@ -20,12 +26,39 @@ PhotoAsset _photo(
   size: known ? 8 * 1048576 : 0,
   sizeKnown: known,
   analysisPending: !known,
+  thumbnail: _png,
   createDate: DateTime(2026),
   type: type,
 );
 
 class _Scanner extends PhotoScannerService {
   _Scanner({this.scanning = false});
+  late final result = ScanResult(
+    allAssets: [...photos, video],
+    duplicateGroups: [
+      DuplicateGroup(
+        hash: 'content-hash',
+        assets: photos.take(2).toList(),
+        bestAssetId: 'same-a',
+        bestReason: '解析度與品質較佳',
+      ),
+    ],
+    similarGroups: [
+      SimilarGroup(
+        assets: photos.skip(2).take(2).toList(),
+        hammingDistance: 3,
+        bestAssetId: 'similar-b',
+        bestReason: '清晰度較佳',
+      ),
+    ],
+    screenshots: [],
+    largeFiles: [photos.first, video],
+    videos: [video],
+    blurryPhotos: [],
+    darkPhotos: [],
+    overexposedPhotos: [],
+    totalSavingsEstimate: 0,
+  );
   bool scanning;
   bool cancelled = false;
   int resumeRequests = 0;
@@ -95,32 +128,16 @@ class _Scanner extends PhotoScannerService {
   }
 
   @override
-  ScanResult get scanResult => ScanResult(
-    allAssets: [...photos, video],
-    duplicateGroups: [
-      DuplicateGroup(
-        hash: 'content-hash',
-        assets: photos.take(2).toList(),
-        bestAssetId: 'same-a',
-        bestReason: '解析度與品質較佳',
-      ),
-    ],
-    similarGroups: [
-      SimilarGroup(
-        assets: photos.skip(2).take(2).toList(),
-        hammingDistance: 3,
-        bestAssetId: 'similar-b',
-        bestReason: '清晰度較佳',
-      ),
-    ],
-    screenshots: [],
-    largeFiles: [photos.first, video],
-    videos: [video],
-    blurryPhotos: [],
-    darkPhotos: [],
-    overexposedPhotos: [],
-    totalSavingsEstimate: 0,
-  );
+  ScanResult get scanResult => result;
+}
+
+Future<void> _decodeVisible(WidgetTester tester) async {
+  for (final element in find.byType(Image).evaluate()) {
+    final widget = element.widget as Image;
+    await tester.runAsync(() => precacheImage(widget.image, element));
+  }
+  await tester.pump();
+  await tester.pump();
 }
 
 Future<void> _mount(
@@ -154,6 +171,14 @@ Future<void> _mount(
 
 void main() {
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    PackageInfo.setMockInitialValues(
+      appName: 'Cleanup',
+      packageName: 'com.cleanupapp.cleaner',
+      version: '1.1.3',
+      buildNumber: '43',
+      buildSignature: '',
+    );
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('com.fluttercandies/photo_manager'),
@@ -178,14 +203,31 @@ void main() {
       );
       expect(find.text('2 張真重複照片'), findsOneWidget);
       expect(find.text('建議保留'), findsOneWidget);
+      final strings = tester.element(find.byType(SmartCleanView)).l10n;
+      final details = find
+          .widgetWithText(ExpansionTile, strings.scanDetails)
+          .last;
+      final reasonHeader = find
+          .descendant(of: details, matching: find.text(strings.scanDetails))
+          .first;
+      await tester.ensureVisible(reasonHeader);
+      await tester.pumpAndSettle();
+      await tester.tap(reasonHeader);
+      await tester.pumpAndSettle();
       expect(find.textContaining('解析度與品質較佳'), findsOneWidget);
       expect(find.textContaining('已選擇'), findsNothing);
+      final menu = find.byType(PopupMenuButton<bool>);
+      await tester.ensureVisible(menu);
+      await tester.pumpAndSettle();
+      await tester.tap(menu);
+      await tester.pumpAndSettle();
       await tester.tap(find.text('撤回保留建議'));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.text('建議保留'), findsNothing);
       expect(find.textContaining('已選擇'), findsNothing);
       await tester.ensureVisible(find.byKey(const ValueKey('select-same-b')));
       await tester.pumpAndSettle();
+      await _decodeVisible(tester);
       await tester.tap(
         find.descendant(
           of: find.byKey(const ValueKey('select-same-b')),
@@ -198,6 +240,19 @@ void main() {
       await tester.tap(find.text('視覺相似'));
       await tester.pump();
       expect(find.text('2 張視覺相似照片'), findsOneWidget);
+      final similarDetails = find
+          .widgetWithText(ExpansionTile, strings.scanDetails)
+          .last;
+      final similarReasonHeader = find
+          .descendant(
+            of: similarDetails,
+            matching: find.text(strings.scanDetails),
+          )
+          .first;
+      await tester.ensureVisible(similarReasonHeader);
+      await tester.pumpAndSettle();
+      await tester.tap(similarReasonHeader);
+      await tester.pumpAndSettle();
       expect(find.textContaining('清晰度較佳'), findsOneWidget);
       expect(find.textContaining('已選擇'), findsNothing);
       await tester.pumpWidget(const SizedBox());
@@ -232,7 +287,11 @@ void main() {
       await tester.tap(find.byTooltip('取消掃描並保留進度'));
       await tester.pump();
       expect(scanner.cancelled, isTrue);
-      await tester.tap(find.text('繼續掃描／重試待處理項目'));
+      final resume = find.text(
+        tester.element(find.byType(SmartCleanView)).l10n.scanPreviewMore,
+      );
+      await tester.ensureVisible(resume);
+      await tester.tap(resume);
       expect(scanner.resumeRequests, 1);
       await tester.pumpWidget(const SizedBox());
     },

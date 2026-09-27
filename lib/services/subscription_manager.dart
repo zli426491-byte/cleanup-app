@@ -4,6 +4,14 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 
 import '../utils/constants.dart';
 
+enum SubscriptionOperation {
+  idle,
+  checking,
+  loadingPlans,
+  purchasing,
+  restoring,
+}
+
 class SubscriptionManager extends ChangeNotifier {
   // RevenueCat public SDK keys are intended to be embedded in client apps.
   // CI can still override them with --dart-define when needed.
@@ -23,6 +31,9 @@ class SubscriptionManager extends ChangeNotifier {
   bool _isInitializing = false;
   bool _isLoadingProducts = false;
   bool _isTransactionInProgress = false;
+  bool _isRefreshingCustomerInfo = false;
+  bool _isRestoring = false;
+  bool _hasCheckedSubscription = false;
   bool _isConfigured = false;
   bool _isDisposed = false;
   bool? _isIos;
@@ -34,8 +45,25 @@ class SubscriptionManager extends ChangeNotifier {
 
   bool get isPro => _isPlaceholder ? false : _isPro;
   bool get isLoading =>
-      _isInitializing || _isLoadingProducts || _isTransactionInProgress;
+      _isInitializing ||
+      _isRefreshingCustomerInfo ||
+      _isLoadingProducts ||
+      _isTransactionInProgress;
   bool get isInitializing => _isInitializing;
+  bool get hasCheckedSubscription => _hasCheckedSubscription;
+  SubscriptionOperation get operation {
+    if (_isTransactionInProgress) {
+      return _isRestoring
+          ? SubscriptionOperation.restoring
+          : SubscriptionOperation.purchasing;
+    }
+    if (_isInitializing || _isRefreshingCustomerInfo) {
+      return SubscriptionOperation.checking;
+    }
+    if (_isLoadingProducts) return SubscriptionOperation.loadingPlans;
+    return SubscriptionOperation.idle;
+  }
+
   bool get showPaywall => _showPaywall;
   bool get isPlaceholder => _isPlaceholder;
   String get statusMessage => _statusMessage;
@@ -59,7 +87,11 @@ class SubscriptionManager extends ChangeNotifier {
   }
 
   Future<void> init({required bool isIos}) async {
-    if (_isDisposed || _isInitializing) return;
+    if (_isDisposed || isLoading) return;
+    if (_isConfigured) {
+      await retry();
+      return;
+    }
     _isIos = isIos;
     _isInitializing = true;
     _statusMessage = '';
@@ -94,6 +126,7 @@ class SubscriptionManager extends ChangeNotifier {
       final customerInfo = await Purchases.getCustomerInfo().timeout(
         _revenueCatTimeout,
       );
+      if (_isDisposed) return;
       _updateProStatus(customerInfo);
 
       await loadProducts();
@@ -107,7 +140,10 @@ class SubscriptionManager extends ChangeNotifier {
   }
 
   Future<List<Package>> loadProducts() async {
-    if (_isDisposed || !_isConfigured || _isLoadingProducts) {
+    if (_isDisposed ||
+        !_isConfigured ||
+        !_hasCheckedSubscription ||
+        _isLoadingProducts) {
       return _availablePackages;
     }
     if (_isPlaceholder) {
@@ -124,6 +160,7 @@ class SubscriptionManager extends ChangeNotifier {
       final offerings = await Purchases.getOfferings().timeout(
         _revenueCatTimeout,
       );
+      if (_isDisposed) return _availablePackages;
       final current =
           offerings.current ??
           (offerings.all.isNotEmpty ? offerings.all.values.first : null);
@@ -143,6 +180,7 @@ class SubscriptionManager extends ChangeNotifier {
           const [AppConstants.weeklyProductId, AppConstants.yearlyProductId],
           productCategory: ProductCategory.subscription,
         ).timeout(_revenueCatTimeout);
+        if (_isDisposed) return _availablePackages;
       }
 
       _statusMessage = _storeProducts.isEmpty
@@ -171,7 +209,26 @@ class SubscriptionManager extends ChangeNotifier {
   Future<void> retry() async {
     if (_isDisposed || isLoading) return;
     if (_isConfigured) {
-      await loadProducts();
+      _isRefreshingCustomerInfo = true;
+      _statusMessage = '';
+      notifyListeners();
+      var refreshed = false;
+      try {
+        final info = await Purchases.getCustomerInfo().timeout(
+          _revenueCatTimeout,
+        );
+        if (_isDisposed) return;
+        _updateProStatus(info);
+        refreshed = true;
+      } catch (error) {
+        debugPrint('SubscriptionManager.retry customer info error: $error');
+        _statusMessage = '訂閱系統初始化失敗，請稍後再試。';
+      } finally {
+        _isRefreshingCustomerInfo = false;
+        notifyListeners();
+      }
+      // Product availability must not erase a failure to confirm paid access.
+      if (refreshed && !_isDisposed) await loadProducts();
     } else if (_isIos != null) {
       await init(isIos: _isIos!);
     }
@@ -248,6 +305,7 @@ class SubscriptionManager extends ChangeNotifier {
     }
 
     _isTransactionInProgress = true;
+    _isRestoring = true;
     _statusMessage = '';
     notifyListeners();
 
@@ -262,6 +320,7 @@ class SubscriptionManager extends ChangeNotifier {
       return false;
     } finally {
       _isTransactionInProgress = false;
+      _isRestoring = false;
       notifyListeners();
     }
   }
@@ -287,6 +346,7 @@ class SubscriptionManager extends ChangeNotifier {
 
   void _updateProStatus(CustomerInfo info) {
     _isPro = info.entitlements.active.keys.any(_proEntitlements.contains);
+    _hasCheckedSubscription = true;
   }
 
   @override

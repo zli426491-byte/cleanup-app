@@ -3,6 +3,8 @@ import 'dart:ui' show SemanticsAction, Tristate;
 
 import 'package:cleanup_app/services/subscription_manager.dart';
 import 'package:cleanup_app/l10n/app_localizations.dart';
+import 'package:cleanup_app/l10n/l10n.dart';
+import 'package:cleanup_app/l10n/locale_controller.dart';
 import 'package:cleanup_app/utils/app_theme.dart';
 import 'package:cleanup_app/utils/constants.dart';
 import 'package:cleanup_app/views/paywall/paywall_view.dart';
@@ -35,11 +37,18 @@ const _products = [
 class _PendingSubscription extends SubscriptionManager {
   final result = Completer<bool>();
   bool busy = false;
+  bool restoring = false;
 
   @override
   bool get isPlaceholder => false;
   @override
   bool get isLoading => busy;
+  @override
+  SubscriptionOperation get operation => busy
+      ? (restoring
+            ? SubscriptionOperation.restoring
+            : SubscriptionOperation.purchasing)
+      : SubscriptionOperation.idle;
   @override
   List<StoreProduct> get storeProducts => _products;
   @override
@@ -55,7 +64,11 @@ class _PendingSubscription extends SubscriptionManager {
   }
 
   @override
-  Future<bool> restorePurchases() => _operation();
+  Future<bool> restorePurchases() {
+    restoring = true;
+    return _operation();
+  }
+
   @override
   Future<bool> purchaseStoreProduct(StoreProduct product) => _operation();
 }
@@ -145,11 +158,29 @@ void main() {
         final subscriptions = _PendingSubscription();
         final observer = _RouteObserver();
         await _openPaywall(tester, subscriptions, observer);
-        final action = find.text(operation == 'restore' ? '恢復購買' : '繼續');
+        final action = find.text(
+          operation == 'restore'
+              ? '恢復購買'
+              : tester
+                    .element(find.byType(PaywallView))
+                    .l10n
+                    .paywallSubscribeYearly('NT\$990'),
+        );
         await tester.ensureVisible(action);
         await tester.tap(action);
         await tester.pump();
         expect(subscriptions.busy, isTrue);
+        expect(
+          find.text(
+            operation == 'restore'
+                ? tester.element(find.byType(PaywallView)).l10n.paywallRestoring
+                : tester
+                      .element(find.byType(PaywallView))
+                      .l10n
+                      .paywallWaitingForStore,
+          ),
+          findsOneWidget,
+        );
 
         await tester.tap(find.byTooltip('關閉'));
         await tester.pump(const Duration(milliseconds: 16));
@@ -253,38 +284,72 @@ void main() {
     },
   );
 
-  for (final locale in [const Locale('de'), const Locale('ar')]) {
+  testWidgets(
+    'subscription action is accessible and states price, period and renewal',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      final subscriptions = _PendingSubscription();
+      await _openPaywall(tester, subscriptions, _RouteObserver());
+      final strings = tester.element(find.byType(PaywallView)).l10n;
+      expect(find.text(strings.paywallBestValue), findsNothing);
+      expect(find.text(strings.paywallFreePreviewNote), findsOneWidget);
+      expect(
+        find.text(strings.paywallYearlyRenewal('NT\$990')),
+        findsOneWidget,
+      );
+      final action = find.text(strings.paywallSubscribeYearly('NT\$990'));
+      await tester.ensureVisible(action);
+      final node = tester.getSemantics(action);
+      expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+      node.owner!.performAction(node.id, SemanticsAction.tap);
+      await tester.pump();
+      expect(subscriptions.busy, isTrue);
+      expect(find.text(strings.paywallWaitingForStore), findsOneWidget);
+      subscriptions.result.complete(false);
+      await tester.pumpAndSettle();
+      expect(find.byType(PaywallView), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      subscriptions.dispose();
+      semantics.dispose();
+    },
+  );
+
+  for (final locale in LocaleController.supportedLocales) {
     for (final size in [const Size(320, 568), const Size(1366, 1024)]) {
-      testWidgets('${locale.languageCode} real plans fit $size at 200% text', (
-        tester,
-      ) async {
-        tester.view.physicalSize = size;
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
-        final subscriptions = _PendingSubscription();
-        await _openPaywall(
-          tester,
-          subscriptions,
-          _RouteObserver(),
-          locale: locale,
-          textScale: 2,
-        );
-        final weekly = find.byKey(
-          const ValueKey('paywall-plan-${AppConstants.weeklyProductId}'),
-        );
-        await tester.ensureVisible(weekly);
-        await tester.pump();
-        expect(find.text('NT\$90'), findsOneWidget);
-        expect(
-          Directionality.of(tester.element(weekly)),
-          locale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
-        );
-        expect(tester.getRect(weekly).width, lessThanOrEqualTo(640 - 48));
-        expect(tester.takeException(), isNull);
-        await tester.pumpWidget(const SizedBox.shrink());
-        subscriptions.dispose();
-      });
+      testWidgets(
+        '${locale.toLanguageTag()} real plans fit $size at 200% text',
+        (tester) async {
+          tester.view.physicalSize = size;
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          final subscriptions = _PendingSubscription();
+          await _openPaywall(
+            tester,
+            subscriptions,
+            _RouteObserver(),
+            locale: locale,
+            textScale: 2,
+          );
+          final weekly = find.byKey(
+            const ValueKey('paywall-plan-${AppConstants.weeklyProductId}'),
+          );
+          await tester.ensureVisible(weekly);
+          await tester.pump();
+          expect(find.text('NT\$90'), findsOneWidget);
+          expect(
+            Directionality.of(tester.element(weekly)),
+            ['ar', 'he'].contains(locale.languageCode)
+                ? TextDirection.rtl
+                : TextDirection.ltr,
+          );
+          expect(tester.getRect(weekly).width, lessThanOrEqualTo(640 - 48));
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox.shrink());
+          subscriptions.dispose();
+        },
+      );
     }
   }
 }

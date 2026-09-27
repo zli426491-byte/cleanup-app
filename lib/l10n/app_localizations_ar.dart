@@ -104,7 +104,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get paywallPhotoFeature =>
-      'اجمع الصور المكررة والمتشابهة، ثم راجع كل عنصر';
+      'حذف الصور والفيديوهات التي تحددها بعد التأكيد';
 
   @override
   String get paywallVideoFeature => 'اضغط الفيديوهات وعاينها واحفظ نسخًا منها';
@@ -185,12 +185,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String onboardingStep(int current, int total) {
-    return '$current/$total';
+    return '\u2066$current/$total\u2069';
   }
 
   @override
   String paywallBuild(String build) {
-    return 'الإصدار البرمجي $build';
+    return 'الإصدار البرمجي \u2068$build\u2069';
   }
 
   @override
@@ -200,32 +200,32 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String videoOriginalSize(String size) {
-    return 'الأصل: $size';
+    return 'الأصل: \u2068$size\u2069';
   }
 
   @override
   String videoCopySize(String size) {
-    return 'النسخة: $size';
+    return 'النسخة: \u2068$size\u2069';
   }
 
   @override
   String videoSizeDifference(String size) {
-    return 'فرق حجم الملف: $size';
+    return 'فرق حجم الملف: \u2068$size\u2069';
   }
 
   @override
   String videoSizeGb(String size) {
-    return '$size غيغابايت';
+    return '\u2068$size\u2069 غيغابايت';
   }
 
   @override
   String videoSizeMb(String size) {
-    return '$size ميغابايت';
+    return '\u2068$size\u2069 ميغابايت';
   }
 
   @override
   String get homeStorageUnavailable =>
-      'تحقق من مساحة الجهاز في إعدادات iPhone. يمكنك هنا تنظيم الصور والفيديوهات المتاح الوصول إليها.';
+      'تحقق من مساحة الجهاز في الإعدادات. يمكنك هنا تنظيم الصور والفيديوهات المتاحة.';
 
   @override
   String get homeViewIndexedPhotos => 'عرض الصور المقروءة حتى الآن';
@@ -409,7 +409,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String homeStorageTotal(String size) {
-    return 'الإجمالي $size';
+    return 'الإجمالي \u2068$size\u2069';
   }
 
   @override
@@ -429,7 +429,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String homeIndexedCountWithTotal(int count, int total) {
-    return 'تمت قراءة $count من $total عنصرًا متاحًا';
+    return 'العناصر المتاحة المقروءة: $count / $total';
   }
 
   @override
@@ -538,7 +538,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get scanStartAlbumDescription =>
-      'افحص جميع الصور والفيديوهات المتاح الوصول إليها. يساعد التحقق من المحتوى الأصلي والتحليل البصري على المراجعة قبل اتخاذ القرار.';
+      'افحص معاينات الصور أولًا لمراجعة الصور المتشابهة. تُفحص الصور المتطابقة والملفات الكبيرة بشكل منفصل عند فتح فئتها. لا يُحذف شيء تلقائيًا.';
 
   @override
   String get scanContinue => 'متابعة الفحص';
@@ -660,7 +660,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String scanRecommendedKeep(String reason) {
-    return 'مقترحة للاحتفاظ: $reason';
+    return 'مقترحة للاحتفاظ: \u2068$reason\u2069';
   }
 
   @override
@@ -670,7 +670,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String scanPreviewDeleteCount(int count) {
-    return 'معاينة وحذف $count عنصرًا';
+    return 'معاينة وحذف · $count';
   }
 
   @override
@@ -687,7 +687,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get scanIndexingTitle => 'فهرسة مكتبة الصور';
 
   @override
-  String get scanVerifyingTitle => 'التحقق من الأصول لتأكيد التطابق';
+  String get scanVerifyingTitle => 'فحص الملفات الأصلية';
 
   @override
   String get scanAnalyzingTitle => 'تحليل معاينات الصور المحلية';
@@ -705,7 +705,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String scanIndexedCount(int indexed, String total) {
-    return 'تمت فهرسة $indexed / $total عنصرًا';
+    return 'تمت فهرسة $indexed / \u2068$total\u2069 عنصرًا';
   }
 
   @override
@@ -740,7 +740,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String scanOperationWait(String operation, int seconds) {
-    return '$operation · الانتظار $seconds ثانية';
+    return '\u2068$operation\u2069 · الانتظار $seconds ثانية';
   }
 
   @override
@@ -796,7 +796,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String swipeProgressCount(int current, int total) {
-    return '$current/$total';
+    return '\u2066$current/$total\u2069';
   }
 
   @override
@@ -816,37 +816,37 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String swipeDeletePhotos(int count) {
-    return 'حذف $count صورة';
+    return 'حذف الصور · $count';
   }
 
   @override
   String swipeConfirmDeleteDescription(int count) {
-    return 'حذف $count صورة تمت مراجعتها. تأكد من اختيار الصور التي تريد الاحتفاظ بها بشكل صحيح.';
+    return 'الصور المحددة للحذف: $count. أزل الصور التي تريد الاحتفاظ بها من قائمة الحذف.';
   }
 
   @override
   String swipePartialDeleted(int count) {
-    return 'حُذفت $count صورة. لم تُحذف الصور المتبقية.';
+    return 'الصور المحذوفة: $count. لم تُحذف الصور المتبقية.';
   }
 
   @override
   String swipeExitDescription(int count) {
-    return 'حددت $count صورة للحذف. مغادرة المراجعة لن تحذفها.';
+    return 'الصور المحددة للحذف: $count. مغادرة المراجعة لن تحذفها.';
   }
 
   @override
   String swipeSkipRemainingDescription(int remaining, int deleteCount) {
-    return 'لم تُراجع $remaining صورة. هل تريد إنهاء المراجعة وتأكيد الصور المحددة للحذف، وعددها $deleteCount؟';
+    return 'صور لم تُراجع بعد: $remaining. هل تريد إنهاء المراجعة وتأكيد الصور المحددة للحذف ($deleteCount)؟';
   }
 
   @override
   String assetDimensions(int width, int height) {
-    return '$width × $height';
+    return '\u2066$width × $height\u2069';
   }
 
   @override
   String assetPreviewDetails(int width, int height, String size) {
-    return '$width × $height · $size';
+    return '\u2066$width × $height\u2069 · \u2068$size\u2069';
   }
 
   @override
@@ -857,17 +857,17 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String assetSizeGigabytes(String value) {
-    return '$value غيغابايت';
+    return '\u2068$value\u2069 غيغابايت';
   }
 
   @override
   String assetSizeMegabytes(String value) {
-    return '$value ميغابايت';
+    return '\u2068$value\u2069 ميغابايت';
   }
 
   @override
   String assetSizeKilobytes(String value) {
-    return '$value كيلوبايت';
+    return '\u2068$value\u2069 كيلوبايت';
   }
 
   @override
@@ -1087,7 +1087,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String servicePhotosPending(int count) {
-    return 'لا تزال $count صورة بحاجة إلى التحليل البصري. تابع لمعالجة الصور التي لم تُجرب أولًا. لا تُنزّل الأصول السحابية تلقائيًا.';
+    return 'صور بانتظار التحليل البصري: $count. تابع لمعالجة الصور التي لم تُجرب أولًا. لا تُنزّل الأصول السحابية تلقائيًا.';
   }
 
   @override
@@ -1102,7 +1102,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String serviceQualitySummary(String reasons) {
-    return '$reasons؛ إرشاد مقترح فقط';
+    return '\u2068$reasons\u2069؛ إرشاد مقترح فقط';
   }
 
   @override
@@ -1151,7 +1151,17 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String scanPendingCheckCount(int count) {
-    return '$count عنصر بانتظار الفحص';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count عنصر بانتظار الفحص',
+      many: '$count عنصرًا بانتظار الفحص',
+      few: '$count عناصر بانتظار الفحص',
+      two: 'عنصران بانتظار الفحص',
+      one: 'عنصر واحد بانتظار الفحص',
+      zero: 'لا عناصر بانتظار الفحص',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1179,4 +1189,197 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get scanCheckFileSizes => 'فحص أحجام الملفات الكبيرة';
+
+  @override
+  String get reviewDeleteTitle => 'مراجعة الحذف';
+
+  @override
+  String get reviewRemove => 'إزالة من قائمة الحذف';
+
+  @override
+  String get reviewUnavailable =>
+      'المعاينة غير متاحة. أعد المحاولة أو أزل هذا العنصر.';
+
+  @override
+  String reviewUnseenCount(int count) {
+    return 'عناصر تحتاج إلى معاينة قبل الحذف: $count';
+  }
+
+  @override
+  String get reviewAllVersions =>
+      'تم تحديد جميع النسخ في مجموعة. هل تريد حذفها كلها؟';
+
+  @override
+  String get reviewDeleteAllVersions => 'حذف جميع النسخ';
+
+  @override
+  String reviewConfirmCount(int count) {
+    return 'تأكيد الحذف · $count';
+  }
+
+  @override
+  String swipeResumeReview(int count) {
+    return 'متابعة المراجعة السابقة · تمت مراجعة $count';
+  }
+
+  @override
+  String get swipeResetReview => 'البدء من جديد';
+
+  @override
+  String swipeBatchSize(int count) {
+    return 'العناصر في كل دفعة: $count';
+  }
+
+  @override
+  String get swipeAllMonths => 'كل الأشهر';
+
+  @override
+  String get swipeReviewBatch => 'اختيار شهر أو دفعة';
+
+  @override
+  String get assetVideoLoading => 'جارٍ تحميل الفيديو الأصلي…';
+
+  @override
+  String get assetVideoUnavailable =>
+      'الفيديو الأصلي غير متاح. نزّله في تطبيق الصور ثم أعد المحاولة.';
+
+  @override
+  String get homePermissionTitle => 'يلزم الوصول إلى الصور';
+
+  @override
+  String get homePermissionDescription =>
+      'اسمح بالوصول إلى الصور في الإعدادات للفحص والمراجعة. لا يُحذف شيء تلقائيًا.';
+
+  @override
+  String get homeOpenSettings => 'فتح الإعدادات';
+
+  @override
+  String get homeManagePhotoAccess => 'إدارة الوصول إلى الصور';
+
+  @override
+  String get homeReviewReady => 'مراجعة الصور المتاحة';
+
+  @override
+  String get homeContinueAnalysis => 'متابعة تحليل الصور';
+
+  @override
+  String get homeScanDetails => 'تفاصيل الفحص';
+
+  @override
+  String get scanCheckingExactTitle => 'فحص الصور المتطابقة تمامًا';
+
+  @override
+  String get scanCheckingSizesTitle => 'فحص أحجام الملفات';
+
+  @override
+  String scanRoundProgress(int total, int completed) {
+    return 'تمت معالجة $completed / $total';
+  }
+
+  @override
+  String get scanPauseReview => 'إيقاف الفحص مؤقتًا والمراجعة';
+
+  @override
+  String get scanSelectionHint =>
+      'حدّد العناصر لإضافتها إلى قائمة الحذف. اضغط على المعاينة لعرض محتواها.';
+
+  @override
+  String get scanPreviewNotReady => 'حمّل المعاينة قبل التحديد';
+
+  @override
+  String scanUnreadableExcluded(int count) {
+    return 'معاينات لم تُحمّل واستُبعدت من التحديد: $count';
+  }
+
+  @override
+  String get scanKeepThis => 'الاحتفاظ بهذه الصورة';
+
+  @override
+  String get scanPreviewMore => 'تحميل المزيد من الصور';
+
+  @override
+  String homeKnownLibrarySize(int count, String size) {
+    return 'أحجام الملفات المؤكدة: \u2068$size\u2069 · العناصر المفحوصة: $count';
+  }
+
+  @override
+  String homePendingSizes(int count) {
+    return 'عناصر لا يزال حجمها مجهولًا: $count';
+  }
+
+  @override
+  String get scanReviewChanged =>
+      'تغيّرت الصور أو الأذونات. راجع قائمة الحذف مجددًا.';
+
+  @override
+  String get paywallFreePreviewNote =>
+      'تجميع الصور والمعاينة وتحديد الصور بالسحب مجانية. يتيح Pro الحذف بعد التأكيد وضغط الفيديو.';
+
+  @override
+  String paywallSubscribeWeekly(String price) {
+    return 'اشتراك أسبوعي · \u2068$price\u2069';
+  }
+
+  @override
+  String paywallSubscribeYearly(String price) {
+    return 'اشتراك سنوي · \u2068$price\u2069';
+  }
+
+  @override
+  String get paywallSubscribe => 'اشتراك';
+
+  @override
+  String paywallWeeklyRenewal(String price) {
+    return 'يتجدد تلقائيًا بسعر \u2068$price\u2069 كل أسبوع ما لم يُلغَ. راجع الشروط النهائية في App Store.';
+  }
+
+  @override
+  String paywallYearlyRenewal(String price) {
+    return 'يتجدد تلقائيًا بسعر \u2068$price\u2069 كل سنة ما لم يُلغَ. راجع الشروط النهائية في App Store.';
+  }
+
+  @override
+  String get paywallRenewalGeneric =>
+      'يتجدد تلقائيًا ما لم يُلغَ. راجع مدة الفوترة والمبلغ في App Store قبل التأكيد.';
+
+  @override
+  String get paywallLoadingPlans => 'جارٍ تحميل خطط الاشتراك…';
+
+  @override
+  String get paywallWaitingForStore => 'في انتظار تأكيد App Store…';
+
+  @override
+  String get paywallRestoring => 'جارٍ استعادة المشتريات…';
+
+  @override
+  String get settingsCheckingSubscription => 'جارٍ التحقق من الاشتراك…';
+
+  @override
+  String get settingsSubscriptionUnknown => 'حالة الاشتراك غير متاحة';
+
+  @override
+  String get settingsManageSubscription => 'إدارة الاشتراك';
+
+  @override
+  String get settingsManageUnavailable =>
+      'تعذّر فتح إدارة الاشتراك. افتح الاشتراكات في إعدادات حساب المتجر.';
+
+  @override
+  String get onboardingStartFree => 'البدء مجانًا';
+
+  @override
+  String get swipeCheckpointSaveError =>
+      'تعذّر حفظ تقدم المراجعة. يمكنك المتابعة، لكن قد لا يُستأنف في المرة القادمة.';
+
+  @override
+  String swipeCheckpointLimit(int count) {
+    return 'خيارات المراجعة الأخيرة المحفوظة على الجهاز: حتى $count';
+  }
+
+  @override
+  String get scanSelectLoaded => 'تحديد المعاينات المحمّلة';
+
+  @override
+  String get homePhotoScopeChanged =>
+      'قد يكون الوصول إلى الصور قد تغيّر. افحص مجددًا لتحديث الصور المتاحة.';
 }

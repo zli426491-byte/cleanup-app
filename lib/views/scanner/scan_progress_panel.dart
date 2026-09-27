@@ -30,18 +30,19 @@ class ScanProgressPanel extends StatelessWidget {
     final indexed = scanner.scannedAssetCount;
     final attempted = scanner.attemptedAnalysisCount;
     final totalPhotos = scanner.totalPhotoCount;
-    final attemptedResources = scanner.attemptedResourceCount;
+    final roundProcessed = scanner.originalRoundProcessed;
+    final roundTotal = scanner.originalRoundTotal;
     final visual = scanner.analyzedAssetCount;
     final verified = scanner.verifiedOriginalCount;
     final denominator = indexing
         ? total
         : verifying
-        ? indexed
+        ? roundTotal
         : totalPhotos;
     final numerator = indexing
         ? indexed
         : verifying
-        ? attemptedResources
+        ? roundProcessed
         : attempted;
     final ratio = denominator == null || denominator == 0
         ? null
@@ -61,7 +62,13 @@ class ScanProgressPanel extends StatelessWidget {
             indexing
                 ? context.l10n.scanIndexingTitle
                 : verifying
-                ? context.l10n.scanVerifyingTitle
+                ? switch (scanner.originalVerificationTarget) {
+                    OriginalVerificationTarget.exactPhotos =>
+                      context.l10n.scanCheckingExactTitle,
+                    OriginalVerificationTarget.fileSizes =>
+                      context.l10n.scanCheckingSizesTitle,
+                    _ => context.l10n.scanVerifyingTitle,
+                  }
                 : context.l10n.scanAnalyzingTitle,
             style: AppTheme.body.copyWith(fontWeight: FontWeight.w700),
           ),
@@ -81,17 +88,28 @@ class ScanProgressPanel extends StatelessWidget {
           Text(context.l10n.scanPreviewAttemptCount(attempted, totalPhotos)),
           if (verifying)
             Text(
-              context.l10n.scanOriginalAttemptCount(
-                attemptedResources,
-                indexed,
-              ),
+              roundTotal == null
+                  ? context.l10n.scanCountConfirming
+                  : context.l10n.scanRoundProgress(roundProcessed, roundTotal),
             ),
           Wrap(
             spacing: 16,
             runSpacing: 6,
             children: [
               Text(context.l10n.scanVisualSuccessCount(visual)),
-              Text(context.l10n.scanOriginalVerifiedCount(verified)),
+              Text(switch (scanner.originalVerificationTarget) {
+                OriginalVerificationTarget.exactPhotos when verifying =>
+                  context.l10n.scanVerificationProgress(
+                    scanner.verifiedHashAssetCount,
+                    totalPhotos,
+                  ),
+                OriginalVerificationTarget.fileSizes when verifying =>
+                  context.l10n.scanVerificationProgress(
+                    scanner.knownSizeAssetCount,
+                    indexed,
+                  ),
+                _ => context.l10n.scanOriginalVerifiedCount(verified),
+              }),
               Text(
                 context.l10n.scanCloudPendingCount(scanner.cloudPendingCount),
               ),

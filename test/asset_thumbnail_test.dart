@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:convert';
+import 'package:image/image.dart' as img;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,8 +14,8 @@ void main() {
   const channel = MethodChannel('com.fluttercandies/photo_manager');
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-  final Uint8List pixel = base64Decode(
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aG2kAAAAASUVORK5CYII=',
+  final Uint8List pixel = Uint8List.fromList(
+    img.encodePng(img.Image(width: 8, height: 12)),
   );
   late List<String> thumbnailRequests;
   late bool failThumbnail;
@@ -135,4 +135,43 @@ void main() {
     expect(find.byTooltip('重新載入預覽'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'corrupt embedded preview retries native bytes and reports actual decoded readiness',
+    (tester) async {
+      final states = <bool>[];
+      final asset = photo(
+        'embedded-corrupt',
+      ).copyWith(thumbnail: Uint8List.fromList([1, 2, 3]));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AssetThumbnail(asset: asset, onPreviewReady: states.add),
+        ),
+      );
+      await tester.pumpAndSettle();
+      var image = tester.widget<Image>(find.byType(Image));
+      await tester.runAsync(
+        () => precacheImage(
+          image.image,
+          tester.element(find.byType(AssetThumbnail)),
+          onError: (_, _) {},
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(states.last, isFalse);
+      await tester.tap(find.byTooltip('重新載入預覽'));
+      await tester.pumpAndSettle();
+      image = tester.widget<Image>(find.byType(Image));
+      await tester.runAsync(
+        () => precacheImage(
+          image.image,
+          tester.element(find.byType(AssetThumbnail)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(thumbnailRequests, ['embedded-corrupt']);
+      expect(states.last, isTrue);
+      expect(find.byTooltip('重新載入預覽'), findsNothing);
+    },
+  );
 }

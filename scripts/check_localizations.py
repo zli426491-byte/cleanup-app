@@ -16,28 +16,200 @@ NATIVE_KEYS = {
     'NSUserTrackingUsageDescription': 'nativeTracking',
 }
 
+# Numbers, units, brand names and genuine shared words are intentional matches.
+# A new untranslated English sentence must not silently enter a shipped locale.
+SHARED_KEYS = {
+    'onboardingStep', 'homeProBadge', 'homeUsedPercent', 'swipeProgressCount',
+    'assetDimensions', 'assetPreviewDetails', 'videoSizeGb', 'videoSizeMb',
+    'assetSizeGigabytes', 'assetSizeMegabytes', 'assetSizeKilobytes',
+    'paywallTitle', 'homeAppName', 'settingsProPlan', 'appName',
+}
+SHARED_WORDS = {
+    'de': {'videoPauseOriginal', 'paywallBuild', 'videoOriginalSize',
+           'homeScreenshots', 'settingsVersion', 'scanCategoryScreenshots',
+           'scanCategoryVideos'},
+    'es': {'videoOriginalSize', 'settingsStorageTotal', 'settingsGeneral',
+           'homeStorageTotal'},
+    'fr': {'settingsStorageTotal', 'settingsVersion', 'homeStorageTotal',
+           'homePhotoCount', 'scanCategoryPhotos'},
+    'id': {'settingsStorageTotal', 'homeStorageTotal'},
+    'pt': {'videoOriginalSize', 'settingsStorageTotal', 'homeStorageTotal'},
+    'ro': {'videoOriginalSize', 'settingsStorageTotal', 'settingsGeneral',
+           'homeStorageTotal'},
+}
+
+
+def unique_object(pairs):
+    value = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError(f'Duplicate JSON key: {key}')
+        value[key] = item
+    return value
+
+
+def read_catalog(path):
+    return json.loads(path.read_text(encoding='utf-8-sig'),
+                      object_pairs_hook=unique_object)
+
+
+def icu_arguments(message):
+    """Read nested ICU arguments and require a valid fallback for every choice.
+
+    This complements gen-l10n's compiler: checking argument sets with a regex
+    alone previously accepted broken nested choices or a missing `other`.
+    """
+    args, index = {}, 0
+
+    def whitespace():
+        nonlocal index
+        while index < len(message) and message[index].isspace():
+            index += 1
+
+    def body(nested=False):
+        nonlocal index
+        while index < len(message):
+            if message[index] == '}':
+                if not nested:
+                    raise ValueError('Unexpected closing ICU brace')
+                index += 1
+                return
+            if message[index] != '{':
+                index += 1
+                continue
+            index += 1
+            whitespace()
+            match = re.match(r'[A-Za-z][A-Za-z0-9_]*', message[index:])
+            if match is None:
+                raise ValueError('Invalid ICU argument name')
+            name = match.group()
+            index += len(name)
+            args.setdefault(name, set())
+            whitespace()
+            if index < len(message) and message[index] == '}':
+                args[name].add('value')
+                index += 1
+                continue
+            if index >= len(message) or message[index] != ',':
+                raise ValueError(f'{name}: incomplete ICU argument')
+            index += 1
+            whitespace()
+            match = re.match(r'plural|selectordinal|select', message[index:])
+            if match is None:
+                raise ValueError(f'{name}: unsupported ICU choice')
+            kind = match.group()
+            args[name].add(kind)
+            index += len(kind)
+            whitespace()
+            if index >= len(message) or message[index] != ',':
+                raise ValueError(f'{name}: missing choice separator')
+            index += 1
+            whitespace()
+            offset = re.match(r'offset:\s*\d+', message[index:])
+            if offset:
+                index += len(offset.group())
+                whitespace()
+            options = set()
+            while index < len(message) and message[index] != '}':
+                match = re.match(r'=\d+|[A-Za-z][A-Za-z0-9_]*', message[index:])
+                if match is None:
+                    raise ValueError(f'{name}: invalid choice selector')
+                option = match.group()
+                if option in options:
+                    raise ValueError(f'{name}: duplicate choice {option}')
+                if kind != 'select' and not (
+                    option.startswith('=') or option in
+                    {'zero', 'one', 'two', 'few', 'many', 'other'}
+                ):
+                    raise ValueError(f'{name}: invalid plural category {option}')
+                options.add(option)
+                index += len(option)
+                whitespace()
+                if index >= len(message) or message[index] != '{':
+                    raise ValueError(f'{name}: missing choice body')
+                index += 1
+                body(nested=True)
+                whitespace()
+            if 'other' not in options:
+                raise ValueError(f'{name}: choice missing other fallback')
+            if index >= len(message):
+                raise ValueError(f'{name}: unclosed ICU choice')
+            index += 1
+        if nested:
+            raise ValueError('Unclosed ICU body')
+
+    body()
+    return args
+
+
+def validate_translation(language, key, source, translation):
+    if not isinstance(translation, str) or not translation.strip():
+        raise ValueError(f'{language}:{key}: empty or invalid translation')
+    expected, actual = icu_arguments(source), icu_arguments(translation)
+    if set(expected) != set(actual):
+        raise ValueError(f'{language}:{key}: changed placeholders '
+                         f'{set(expected)} -> {set(actual)}')
+    if '${' in translation or '\ufffd' in translation:
+        raise ValueError(f'{language}:{key}: interpolation or invalid Unicode')
+    plain_translation = re.sub(r'[\u2066-\u2069]', '', translation)
+    plain_source = re.sub(r'[\u2066-\u2069]', '', source)
+    if (language != 'en' and plain_translation == plain_source and
+        key not in SHARED_KEYS and key not in SHARED_WORDS.get(language, set())):
+        raise ValueError(f'{language}:{key}: untranslated English fallback')
+    if language not in {'zh_Hans', 'zh_Hant', 'ja'} and re.search(
+        r'[\u4e00-\u9fff]', translation
+    ):
+        raise ValueError(f'{language}:{key}: unexpected Chinese text')
+    if re.search(r'[\u202a-\u202e]', translation):
+        raise ValueError(f'{language}:{key}: directional override is unsafe')
+    depth = 0
+    for character in translation:
+        if character in '\u2066\u2067\u2068':
+            depth += 1
+        elif character == '\u2069':
+            depth -= 1
+            if depth < 0:
+                raise ValueError(f'{language}:{key}: unmatched bidi terminator')
+    if depth:
+        raise ValueError(f'{language}:{key}: unclosed bidi isolate')
+
 def load_catalogs():
-    base = json.loads((ROOT / 'lib/l10n/app_en.arb').read_text(encoding='utf-8-sig'))
+    base = read_catalog(ROOT / 'lib/l10n/app_en.arb')
     keys = {key for key in base if not key.startswith('@')}
+    for key in keys:
+        params = icu_arguments(base[key])
+        metadata = base.get('@' + key, {}).get('placeholders', {})
+        if set(params) != set(metadata):
+            raise ValueError(f'en:{key}: missing or stale placeholder metadata')
+        for name, kinds in params.items():
+            field_type = metadata[name].get('type')
+            if field_type not in {'int', 'String'}:
+                raise ValueError(f'en:{key}:{name}: invalid placeholder type')
+            if kinds.intersection({'plural', 'selectordinal'}) and field_type != 'int':
+                raise ValueError(f'en:{key}:{name}: plural requires an int')
     catalogs = {}
     for language in LANGUAGES:
         path = ROOT / f'lib/l10n/app_{language}.arb'
-        value = json.loads(path.read_text(encoding='utf-8-sig'))
+        value = read_catalog(path)
         if value.get('@@locale') != language:
             raise ValueError(f'{path}: incorrect locale')
         actual = {key for key in value if not key.startswith('@')}
         if keys != actual:
             raise ValueError(f'{path}: missing {keys - actual}, extra {actual - keys}')
         for key in keys:
-            if not isinstance(value[key], str) or not value[key].strip():
-                raise ValueError(f'{path}:{key}: empty or invalid translation')
-            params = set(re.findall(r'\{([A-Za-z][A-Za-z0-9_]*)\s*[,}]', base[key]))
-            translated = set(re.findall(r'\{([A-Za-z][A-Za-z0-9_]*)\s*[,}]', value[key]))
-            if params != translated:
-                raise ValueError(f'{path}:{key}: changed placeholders {params} -> {translated}')
-            if '${' in value[key]:
-                raise ValueError(f'{path}:{key}: Dart interpolation in translation')
+            validate_translation(language, key, base[key], value[key])
+            kinds = icu_arguments(value[key])
+            metadata = base.get('@' + key, {}).get('placeholders', {})
+            for name, variants in kinds.items():
+                if variants.intersection({'plural', 'selectordinal'}) and metadata[name]['type'] != 'int':
+                    raise ValueError(f'{path}:{key}:{name}: non-numeric plural')
         catalogs[language] = value
+    chinese = read_catalog(ROOT / 'lib/l10n/app_zh.arb')
+    hans = catalogs['zh_Hans']
+    if chinese.get('@@locale') != 'zh' or {
+        key: value for key, value in chinese.items() if not key.startswith('@')
+    } != {key: value for key, value in hans.items() if not key.startswith('@')}:
+        raise ValueError('Chinese base catalog does not match Simplified Chinese')
     return catalogs, len(keys)
 
 def identifier(name):
@@ -93,12 +265,40 @@ def check_ios(catalogs):
         if expected != actual or f'path = "{tag}.lproj/InfoPlist.strings";' not in project:
             raise ValueError(f'iOS {tag}: missing or stale permission translations')
 
+
+def escape_dart_isolates(paths=None):
+    """Keep intentional RTL isolates visible to reviewers in generated Dart.
+
+    gen-l10n emits these characters literally. Dart flags invisible direction
+    controls even when they are intentional and balanced. Unicode escapes have
+    identical runtime text without hiding source characters or ignoring warnings.
+    Run after gen-l10n; ARB and native permission resources are not altered.
+    """
+    paths = paths if paths is not None else (
+        ROOT / 'lib/l10n'
+    ).glob('app_localizations*.dart')
+    changed = 0
+    for path in paths:
+        source = path.read_text(encoding='utf-8')
+        escaped = source
+        for code in [0x2066, 0x2067, 0x2068, 0x2069]:
+            escaped = escaped.replace(chr(code), f'\\u{code:04x}')
+        if source != escaped:
+            path.write_text(escaped, encoding='utf-8')
+            changed += 1
+    return changed
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--write-ios', action='store_true')
+    parser.add_argument('--escape-dart-isolates', action='store_true',
+                        help='Make generated RTL isolates explicit after gen-l10n')
     args = parser.parse_args()
     catalogs, count = load_catalogs()
     if args.write_ios:
         write_ios(catalogs)
+    if args.escape_dart_isolates:
+        escaped = escape_dart_isolates()
+        print(f'Escaped RTL isolates in {escaped} generated Dart files')
     check_ios(catalogs)
     print(f'PASS: {len(catalogs)} languages, {count} messages each, placeholders, and iOS permission resources')

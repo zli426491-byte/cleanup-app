@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:cleanup_app/l10n/app_localizations.dart';
 import 'package:cleanup_app/l10n/l10n.dart';
 import 'package:cleanup_app/l10n/locale_controller.dart';
@@ -18,7 +16,9 @@ import 'package:cleanup_app/views/scanner/swipe_clean_view.dart';
 import 'package:cleanup_app/views/components/video_compression_view.dart';
 import 'package:cleanup_app/views/settings/settings_view.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
@@ -27,6 +27,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  const photos = MethodChannel('com.fluttercandies/photo_manager');
+  final messenger =
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+  final previewBytes = img.encodePng(img.Image(width: 8, height: 12));
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     PackageInfo.setMockInitialValues(
@@ -36,7 +40,21 @@ void main() {
       buildNumber: '41',
       buildSignature: '',
     );
+    // Full previews intentionally bypass embedded grid thumbnails. Exercise the
+    // actual native request path with a completed, decodable fixture response.
+    messenger.setMockMethodCallHandler(photos, (call) async {
+      final arguments = call.arguments as Map?;
+      switch (call.method) {
+        case 'fetchEntityProperties':
+          return {'id': arguments!['id'], 'type': 1, 'width': 8, 'height': 12};
+        case 'getThumb':
+          return previewBytes;
+        default:
+          throw MissingPluginException('Unexpected Photos call ${call.method}');
+      }
+    });
   });
+  tearDown(() => messenger.setMockMethodCallHandler(photos, null));
 
   test(
     '19 explicit languages distinguish both Chinese scripts and preferences',
@@ -150,9 +168,7 @@ void main() {
                   size: 0,
                   createDate: DateTime(2026, 9, 27),
                   type: AssetType.image,
-                  thumbnail: base64Decode(
-                    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aG2kAAAAASUVORK5CYII=',
-                  ),
+                  thumbnail: previewBytes,
                 ),
               ],
               title: '',
@@ -203,6 +219,14 @@ void main() {
             );
             await tester.pump();
             final context = tester.element(find.byWidget(screen));
+            await tester.runAsync(() async {
+              for (final image in tester.widgetList<Image>(
+                find.byType(Image),
+              )) {
+                await precacheImage(image.image, context);
+              }
+            });
+            await tester.pump();
             expect(
               Directionality.of(context),
               rtl ? TextDirection.rtl : TextDirection.ltr,
@@ -232,7 +256,7 @@ void main() {
       final dispatcher = tester.platformDispatcher;
       dispatcher.localesTestValue = const [Locale('zh', 'TW')];
       addTearDown(dispatcher.clearLocalesTestValue);
-      final subscriptions = SubscriptionManager();
+      final subscriptions = _LocalizedProducts();
       final controller = LocaleController();
       await tester.pumpWidget(
         CleanupApp(
@@ -264,7 +288,7 @@ void main() {
   testWidgets('settings changes current app language and preserves the tab', (
     tester,
   ) async {
-    final subscriptions = SubscriptionManager();
+    final subscriptions = _LocalizedProducts();
     final controller = LocaleController(initialLocale: const Locale('en'));
     await tester.pumpWidget(
       CleanupApp(
@@ -334,12 +358,25 @@ void main() {
 String? preferenceTag(SharedPreferences preferences) =>
     preferences.getString(LocaleController.preferenceKey);
 
-// Exercise actual plan cards as well as empty/loading copy at large text sizes.
+// Show real plan card layouts without invoking StoreKit or asynchronous SDK
+// retries; subscription behavior is covered separately by transaction tests.
 class _LocalizedProducts extends SubscriptionManager {
   @override
   bool get isPlaceholder => false;
   @override
-  bool get isInitializing => true;
+  bool get isInitializing => false;
+  @override
+  bool get isLoading => false;
+  @override
+  bool get hasCheckedSubscription => true;
+  @override
+  SubscriptionOperation get operation => SubscriptionOperation.idle;
+  @override
+  Future<void> init({required bool isIos}) async {}
+  @override
+  Future<void> retry() async {}
+  @override
+  Future<List<Package>> loadProducts() async => const [];
   @override
   List<StoreProduct> get storeProducts => const [
     StoreProduct(

@@ -276,4 +276,76 @@ void main() {
     expect(manager.statusMessage, isEmpty);
     expect(manager.isLoading, isFalse);
   });
+
+  testWidgets(
+    'customer info retry confirms paid access without reconfiguring SDK',
+    (tester) async {
+      var setupCalls = 0;
+      var infoCalls = 0;
+      var offeringCalls = 0;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(_channel, (call) async {
+            switch (call.method) {
+              case 'setupPurchases':
+                setupCalls++;
+                return null;
+              case 'getCustomerInfo':
+                infoCalls++;
+                if (infoCalls == 1) {
+                  throw PlatformException(code: '10', message: 'Offline');
+                }
+                return _customerInfo(pro: true);
+              case 'getOfferings':
+                offeringCalls++;
+                return {'all': {}, 'current': null};
+              case 'getProductInfo':
+                return [_product.toJson()];
+              default:
+                throw UnimplementedError(call.method);
+            }
+          });
+
+      await tester.runAsync(() => manager.init(isIos: true));
+      expect(manager.hasCheckedSubscription, isFalse);
+      expect(manager.isPro, isFalse);
+      expect(manager.statusMessage, contains('初始化失敗'));
+      await manager.loadProducts();
+      expect(offeringCalls, 0);
+      expect(manager.statusMessage, contains('初始化失敗'));
+      await tester.runAsync(manager.retry);
+      expect(setupCalls, 1);
+      expect(infoCalls, 2);
+      expect(offeringCalls, 1);
+      expect(manager.hasCheckedSubscription, isTrue);
+      expect(manager.isPro, isTrue);
+      expect(manager.statusMessage, isEmpty);
+    },
+  );
+
+  testWidgets('failed customer info retry retains unknown state and error', (
+    tester,
+  ) async {
+    var offeringCalls = 0;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_channel, (call) async {
+          switch (call.method) {
+            case 'setupPurchases':
+              return null;
+            case 'getCustomerInfo':
+              throw PlatformException(code: '10', message: 'Offline');
+            case 'getOfferings':
+              offeringCalls++;
+              return {'all': {}, 'current': null};
+            default:
+              throw UnimplementedError(call.method);
+          }
+        });
+    await tester.runAsync(() => manager.init(isIos: true));
+    await tester.runAsync(manager.retry);
+    expect(offeringCalls, 0);
+    expect(manager.hasCheckedSubscription, isFalse);
+    expect(manager.isLoading, isFalse);
+    expect(manager.operation, SubscriptionOperation.idle);
+    expect(manager.statusMessage, contains('初始化失敗'));
+  });
 }

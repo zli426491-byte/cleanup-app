@@ -10,6 +10,7 @@ import '../../services/photo_scanner_service.dart';
 import '../../services/subscription_manager.dart';
 import '../../services/video_compression_service.dart';
 import '../../utils/app_theme.dart';
+import 'video_playback_controls.dart';
 
 class VideoCompressionView extends StatefulWidget {
   final PhotoAsset asset;
@@ -81,6 +82,7 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
       _cancelRequested = false;
     });
     final oldPlayer = _player;
+    final comparisonPosition = oldPlayer?.value.position ?? Duration.zero;
     oldPlayer?.removeListener(_onPlayerChanged);
     _player = null;
     await oldPlayer?.dispose();
@@ -97,6 +99,15 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
         return;
       }
       await player.setLooping(true);
+      if (!mounted || _cancelRequested || generation != _previewGeneration) {
+        await player.dispose();
+        return;
+      }
+      await player.seekTo(
+        comparisonPosition > player.value.duration
+            ? player.value.duration
+            : comparisonPosition,
+      );
       if (!mounted || _cancelRequested || generation != _previewGeneration) {
         await player.dispose();
         return;
@@ -205,177 +216,191 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
           body: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 720),
-              child: ListView(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
-                children: [
-                  Text(
-                    context.l10n.videoDescription,
-                    style: const TextStyle(color: AppTheme.textSecondary),
-                  ),
-                  const SizedBox(height: 20),
-                  if (!isPro) Text(context.l10n.videoProRequired),
-                  if (_cancelRequested)
-                    Text(context.l10n.serviceVideoCancelled),
-                  if (_service.isBusy && !_cancelRequested) ...[
-                    LinearProgressIndicator(
-                      value: _service.isSaving ? null : _service.progress,
-                    ),
-                    const SizedBox(height: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                     Text(
-                      _service.isSaving
-                          ? context.l10n.videoSaving
-                          : context.l10n.videoCompressionProgress(
-                              (100 * _service.progress).round(),
-                            ),
+                      context.l10n.videoDescription,
+                      style: const TextStyle(color: AppTheme.textSecondary),
                     ),
-                    if (!_service.isSaving)
-                      TextButton(
-                        onPressed: _cancel,
-                        child: Text(context.l10n.videoCancelCompression),
-                      ),
-                  ],
-                  if (_initializingPreview) ...[
-                    const LinearProgressIndicator(),
-                    const SizedBox(height: 12),
-                    Text(context.l10n.videoLoadingPreview),
-                    TextButton(
-                      onPressed: _cancel,
-                      child: Text(context.l10n.scanCancel),
-                    ),
-                  ],
-                  if (_error != null) ...[
-                    Text(
-                      _localizedError(_error!),
-                      style: const TextStyle(color: AppTheme.danger),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  if (prepared == null && !_busy)
-                    FilledButton.icon(
-                      onPressed: isPro ? _prepare : null,
-                      icon: const Icon(Icons.compress_rounded),
-                      label: Text(context.l10n.videoCreatePreview),
-                    ),
-                  if (prepared != null) ...[
-                    Wrap(
-                      spacing: 24,
-                      runSpacing: 12,
-                      children: [
-                        Text(
-                          context.l10n.videoOriginalSize(
-                            _bytes(prepared.originalBytes),
-                          ),
-                        ),
-                        Text(
-                          context.l10n.videoCopySize(
-                            _bytes(prepared.outputBytes),
-                          ),
-                        ),
-                        Text(
-                          context.l10n.videoSizeDifference(
-                            _bytes(prepared.savedBytes),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      context.l10n.videoStorageNotice,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.textMuted,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    if (_player?.value.isInitialized == true &&
-                        _player?.value.hasError != true) ...[
-                      SizedBox(
-                        height: 280,
-                        child: Center(
-                          child: AspectRatio(
-                            aspectRatio: _player!.value.aspectRatio,
-                            child: VideoPlayer(_player!),
-                          ),
-                        ),
+                    const SizedBox(height: 20),
+                    if (!isPro) Text(context.l10n.videoProRequired),
+                    if (_cancelRequested)
+                      Text(context.l10n.serviceVideoCancelled),
+                    if (_service.isBusy && !_cancelRequested) ...[
+                      LinearProgressIndicator(
+                        value: _service.isSaving ? null : _service.progress,
                       ),
                       const SizedBox(height: 12),
-                      ValueListenableBuilder(
-                        valueListenable: _player!,
-                        builder: (context, value, _) => OutlinedButton.icon(
-                          onPressed: _busy
-                              ? null
-                              : () async {
-                                  try {
-                                    if (value.isPlaying) {
-                                      await _player!.pause();
-                                    } else {
-                                      await _player!.play();
-                                    }
-                                  } catch (_) {
-                                    if (mounted) {
-                                      setState(
-                                        () =>
-                                            _error = 'videoPlaybackUnavailable',
-                                      );
-                                    }
-                                  }
-                                },
-                          icon: Icon(
-                            value.isPlaying ? Icons.pause : Icons.play_arrow,
-                          ),
-                          label: Text(
-                            (_showOriginal
-                                ? (value.isPlaying
-                                      ? context.l10n.videoPauseOriginal
-                                      : context.l10n.videoPlayOriginal)
-                                : (value.isPlaying
-                                      ? context.l10n.videoPauseCopy
-                                      : context.l10n.videoPlayCopy)),
-                          ),
+                      Text(
+                        _service.isSaving
+                            ? context.l10n.videoSaving
+                            : context.l10n.videoCompressionProgress(
+                                (100 * _service.progress).round(),
+                              ),
+                      ),
+                      if (!_service.isSaving)
+                        TextButton(
+                          onPressed: _cancel,
+                          child: Text(context.l10n.videoCancelCompression),
                         ),
+                    ],
+                    if (_initializingPreview) ...[
+                      const LinearProgressIndicator(),
+                      const SizedBox(height: 12),
+                      Text(context.l10n.videoLoadingPreview),
+                      TextButton(
+                        onPressed: _cancel,
+                        child: Text(context.l10n.scanCancel),
                       ),
                     ],
-                    Wrap(
-                      spacing: 12,
-                      children: [
-                        TextButton(
-                          onPressed: _busy
-                              ? null
-                              : () => _loadPreview(
-                                  prepared.original,
-                                  original: true,
-                                ),
-                          child: Text(context.l10n.videoViewOriginal),
+                    if (_error != null) ...[
+                      Text(
+                        _localizedError(_error!),
+                        style: const TextStyle(color: AppTheme.danger),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    if (prepared == null && !_busy)
+                      FilledButton.icon(
+                        onPressed: isPro ? _prepare : null,
+                        icon: const Icon(Icons.compress_rounded),
+                        label: Text(context.l10n.videoCreatePreview),
+                      ),
+                    if (prepared != null) ...[
+                      Wrap(
+                        spacing: 24,
+                        runSpacing: 12,
+                        children: [
+                          Text(
+                            context.l10n.videoOriginalSize(
+                              _bytes(prepared.originalBytes),
+                            ),
+                          ),
+                          Text(
+                            context.l10n.videoCopySize(
+                              _bytes(prepared.outputBytes),
+                            ),
+                          ),
+                          Text(
+                            context.l10n.videoSizeDifference(
+                              _bytes(prepared.savedBytes),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        context.l10n.videoStorageNotice,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textMuted,
                         ),
-                        TextButton(
-                          onPressed: _busy
-                              ? null
-                              : () => _loadPreview(
-                                  prepared.output,
-                                  original: false,
-                                ),
-                          child: Text(context.l10n.videoViewCopy),
+                      ),
+                      const SizedBox(height: 16),
+                      if (_player?.value.isInitialized == true &&
+                          _player?.value.hasError != true) ...[
+                        SizedBox(
+                          height: 280,
+                          child: Center(
+                            child: AspectRatio(
+                              aspectRatio: _player!.value.aspectRatio,
+                              child: VideoPlayer(_player!),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        VideoPlaybackControls(
+                          controller: _player!,
+                          enabled: !_busy,
+                          onError: () {
+                            if (mounted) {
+                              setState(
+                                () => _error = 'videoPlaybackUnavailable',
+                              );
+                            }
+                          },
+                        ),
+                        ValueListenableBuilder(
+                          valueListenable: _player!,
+                          builder: (context, value, _) => OutlinedButton.icon(
+                            onPressed: _busy
+                                ? null
+                                : () async {
+                                    try {
+                                      if (value.isPlaying) {
+                                        await _player!.pause();
+                                      } else {
+                                        await _player!.play();
+                                      }
+                                    } catch (_) {
+                                      if (mounted) {
+                                        setState(
+                                          () => _error =
+                                              'videoPlaybackUnavailable',
+                                        );
+                                      }
+                                    }
+                                  },
+                            icon: Icon(
+                              value.isPlaying ? Icons.pause : Icons.play_arrow,
+                            ),
+                            label: Text(
+                              (_showOriginal
+                                  ? (value.isPlaying
+                                        ? context.l10n.videoPauseOriginal
+                                        : context.l10n.videoPlayOriginal)
+                                  : (value.isPlaying
+                                        ? context.l10n.videoPauseCopy
+                                        : context.l10n.videoPlayCopy)),
+                            ),
+                          ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 16),
-                    if (saved)
-                      Text(context.l10n.videoSaved)
-                    else
-                      FilledButton.icon(
-                        onPressed:
-                            _busy ||
-                                !isPro ||
-                                _showOriginal ||
-                                _player?.value.hasError == true ||
-                                _player?.value.isInitialized != true
-                            ? null
-                            : _save,
-                        icon: const Icon(Icons.save_alt),
-                        label: Text(context.l10n.videoConfirmSave),
+                      Wrap(
+                        spacing: 12,
+                        children: [
+                          TextButton(
+                            onPressed: _busy
+                                ? null
+                                : () => _loadPreview(
+                                    prepared.original,
+                                    original: true,
+                                  ),
+                            child: Text(context.l10n.videoViewOriginal),
+                          ),
+                          TextButton(
+                            onPressed: _busy
+                                ? null
+                                : () => _loadPreview(
+                                    prepared.output,
+                                    original: false,
+                                  ),
+                            child: Text(context.l10n.videoViewCopy),
+                          ),
+                        ],
                       ),
+                      const SizedBox(height: 16),
+                      if (saved)
+                        Text(context.l10n.videoSaved)
+                      else
+                        FilledButton.icon(
+                          onPressed:
+                              _busy ||
+                                  !isPro ||
+                                  _showOriginal ||
+                                  _player?.value.hasError == true ||
+                                  _player?.value.isInitialized != true
+                              ? null
+                              : _save,
+                          icon: const Icon(Icons.save_alt),
+                          label: Text(context.l10n.videoConfirmSave),
+                        ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),

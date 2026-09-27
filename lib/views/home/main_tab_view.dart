@@ -13,16 +13,34 @@ class MainTabView extends StatefulWidget {
 
 class _MainTabViewState extends State<MainTabView> {
   int _i = 0;
-  final _pages = const [HomeView(), SmartCleanView(), SettingsView()];
+  String _reviewCategory = 'photos';
+
+  void _openReview(String category) => setState(() {
+    _reviewCategory = category;
+    _i = 1;
+  });
 
   @override
   Widget build(BuildContext context) {
+    final pages = [
+      HomeView(onOpenReview: _openReview),
+      SmartCleanView(
+        initialCategory: _reviewCategory,
+        isActive: _i == 1,
+        onCategoryChanged: (category) {
+          if (_reviewCategory != category) {
+            setState(() => _reviewCategory = category);
+          }
+        },
+      ),
+      const SettingsView(),
+    ];
     return Scaffold(
       body: IndexedStack(
         index: _i,
         children: [
-          for (var index = 0; index < _pages.length; index++)
-            TickerMode(enabled: index == _i, child: _pages[index]),
+          for (var index = 0; index < pages.length; index++)
+            TickerMode(enabled: index == _i, child: pages[index]),
         ],
       ),
       bottomNavigationBar: Container(

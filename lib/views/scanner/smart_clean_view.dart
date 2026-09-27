@@ -15,10 +15,18 @@ import 'asset_thumbnail.dart';
 import 'asset_preview.dart';
 import 'photo_asset_labels.dart';
 import 'scan_progress_panel.dart';
+import 'delete_review.dart';
 
 class SmartCleanView extends StatefulWidget {
   final String initialCategory;
-  const SmartCleanView({super.key, this.initialCategory = 'photos'});
+  final bool isActive;
+  final ValueChanged<String>? onCategoryChanged;
+  const SmartCleanView({
+    super.key,
+    this.initialCategory = 'photos',
+    this.isActive = true,
+    this.onCategoryChanged,
+  });
 
   @override
   State<SmartCleanView> createState() => _SmartCleanViewState();
@@ -29,10 +37,13 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   int _videoSort = 0;
   final _categoryKeys = List.generate(6, (_) => GlobalKey());
   final Set<String> _selectedIds = {};
+  final Map<String, PhotoAsset> _readyPreviews = {};
+  final Map<String, PhotoAsset> _currentAssets = {};
   final Set<String> _dismissedSuggestions = {};
   final Set<int> _autoVerificationAttempted = {};
   final Set<int> _autoVerificationScheduled = {};
   bool _isDeleting = false;
+  bool _isReviewingDelete = false;
   String? _focusedAssetId;
   Set<String>? _selectionUndo;
   ScanResult? _cachedResult;
@@ -69,11 +80,52 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     _revealSelectedCategory();
   }
 
+  @override
+  void didUpdateWidget(SmartCleanView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialCategory != widget.initialCategory) {
+      final index = _categoryIds.indexOf(widget.initialCategory);
+      final next = index < 0 ? 0 : index;
+      if (next != _selectedCategory) {
+        _selectedCategory = next;
+        _selectedIds.clear();
+        _selectionUndo = null;
+        _revealSelectedCategory();
+      }
+    }
+  }
+
+  bool _previewReady(PhotoAsset asset) =>
+      identical(_readyPreviews[asset.id], asset);
+
+  void _previewReadiness(PhotoAsset asset, bool ready) {
+    if (!mounted || !identical(_currentAssets[asset.id], asset)) return;
+    final wasReady = _previewReady(asset);
+    if (wasReady == ready) return;
+    setState(() {
+      if (ready) {
+        _readyPreviews[asset.id] = asset;
+      } else {
+        _readyPreviews.remove(asset.id);
+        _selectedIds.remove(asset.id);
+      }
+    });
+  }
+
   void _updateSnapshot(PhotoScannerService scanner) {
     final result = scanner.scanResult;
     if (!identical(_cachedResult, result)) {
       _cachedResult = result;
       _cachedAssets.clear();
+      _currentAssets
+        ..clear()
+        ..addEntries(
+          result.allAssets.map((asset) => MapEntry(asset.id, asset)),
+        );
+      _readyPreviews.removeWhere(
+        (id, asset) => !identical(_currentAssets[id], asset),
+      );
+      _selectedIds.removeWhere((id) => !_readyPreviews.containsKey(id));
     }
     if (!scanner.isScanning && !identical(_selectionSource, result)) {
       _selectionSource = result;
@@ -115,7 +167,8 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   }
 
   bool _shouldAutoVerify(PhotoScannerService scanner) {
-    if (!_isResourceCategory ||
+    if (!widget.isActive ||
+        !_isResourceCategory ||
         _autoVerificationAttempted.contains(_selectedCategory) ||
         !scanner.nativeOriginalAnalysisAvailable ||
         scanner.isScanning ||
@@ -171,7 +224,14 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   @override
   Widget build(BuildContext context) {
     context.select<PhotoScannerService, Object>(
-      (scanner) => (scanner.scanResult, scanner.isScanning, scanner.isDeleting),
+      (scanner) => (
+        scanner.scanResult,
+        scanner.isScanning,
+        scanner.isDeleting,
+        scanner.lastError,
+        scanner.hasCompletedScan,
+        scanner.permissionDenied,
+      ),
     );
     final scanner = context.read<PhotoScannerService>();
     _updateSnapshot(scanner);
@@ -245,6 +305,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                       _selectedIds.clear();
                       _selectionUndo = null;
                     });
+                    widget.onCategoryChanged?.call(_categoryIds[index]);
                     _revealSelectedCategory();
                   },
                   child: Container(
@@ -375,6 +436,44 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   }
 
   Widget _emptyState(PhotoScannerService scanner) {
+    if (scanner.permissionDenied) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Icon(
+              Icons.photo_library_outlined,
+              size: 48,
+              color: AppTheme.primary,
+            ),
+            const SizedBox(height: 16),
+            Text(context.l10n.homePermissionTitle, style: AppTheme.heading3),
+            const SizedBox(height: 8),
+            Text(context.l10n.homePermissionDescription),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              key: const ValueKey('open-photo-settings'),
+              onPressed: () async {
+                final opened = await scanner.openPhotoSettings();
+                if (!mounted || opened) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(context.l10n.homePermissionDescription),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.settings_outlined),
+              label: Text(context.l10n.homeOpenSettings),
+            ),
+            TextButton(
+              onPressed: scanner.isDeleting ? null : scanner.startFullScan,
+              child: Text(context.l10n.scanStart),
+            ),
+          ],
+        ),
+      );
+    }
     final error = scanner.lastError;
     final completedEmpty = scanner.hasCompletedScan && error == null;
 
@@ -465,7 +564,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   }
 
   Widget _scanningState(PhotoScannerService scanner) => SingleChildScrollView(
-    padding: const EdgeInsets.all(16),
+    padding: const EdgeInsets.all(12),
     child: ScanProgressPanel(scanner: scanner),
   );
 
@@ -498,9 +597,32 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                         compact: groups.isNotEmpty || assets.isNotEmpty,
                       ),
                     ],
-                    const SizedBox(height: 8),
-                    _scanDetails(scanner),
-                    if (!scanner.isScanning &&
+                    if (scanner.isScanning) ...[
+                      const SizedBox(height: 8),
+                      AnimatedBuilder(
+                        animation: scanner,
+                        builder: (context, _) => Text(
+                          scanner.currentOperation == null
+                              ? context.l10n.homeScanning
+                              : context.l10n.scanOperationWait(
+                                  context.localizeServiceMessage(
+                                    scanner.currentOperation!,
+                                  ),
+                                  scanner.currentWaitSeconds,
+                                ),
+                          style: AppTheme.caption,
+                        ),
+                      ),
+                      if (!_isResourceCategory ||
+                          (groups.isEmpty && assets.isEmpty))
+                        TextButton.icon(
+                          onPressed: scanner.cancelScan,
+                          icon: const Icon(Icons.pause_circle_outline),
+                          label: Text(context.l10n.scanPauseReview),
+                        ),
+                    ],
+                    if (!_isResourceCategory &&
+                        !scanner.isScanning &&
                         (scanner.wasCancelled ||
                             scanner.pendingAnalysisCount > 0))
                       TextButton.icon(
@@ -510,20 +632,13 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                                 scanner.resumeScan,
                               ),
                         icon: const Icon(Icons.play_arrow_rounded),
-                        label: Text(context.l10n.scanResumePending),
+                        label: Text(context.l10n.scanPreviewMore),
                       ),
-                    if (!_isResourceCategory &&
-                        !scanner.isScanning &&
-                        scanner.pendingResourceCount > 0)
-                      TextButton.icon(
-                        onPressed: scanner.isDeleting || _isDeleting
-                            ? null
-                            : () => _verifyOriginals(
-                                scanner,
-                                target: OriginalVerificationTarget.all,
-                              ),
-                        icon: const Icon(Icons.verified_outlined),
-                        label: Text(context.l10n.scanVerifyNow),
+                    _scanDetails(scanner),
+                    if (assets.isNotEmpty || groups.isNotEmpty)
+                      Text(
+                        context.l10n.scanSelectionHint,
+                        style: AppTheme.caption,
                       ),
                     if (assets.isNotEmpty || _selectedIds.isNotEmpty)
                       _selectionActions(scanner, assets),
@@ -610,9 +725,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        Text(context.l10n.scanSwipeIntro, style: AppTheme.caption),
-        const SizedBox(height: 12),
+        const SizedBox(height: 4),
         FilledButton.icon(
           key: const ValueKey('start-category-swipe'),
           onPressed: scanner.isScanning || scanner.isDeleting || _isDeleting
@@ -631,25 +744,17 @@ class _SmartCleanViewState extends State<SmartCleanView> {
       key: ValueKey('scan-details-$_selectedCategory'),
       tilePadding: EdgeInsets.zero,
       title: Text(context.l10n.scanDetails),
-      subtitle: Wrap(
-        spacing: 12,
-        runSpacing: 4,
-        children: [
-          Text(
-            context.l10n.scanVisualSuccessCount(scanner.analyzedAssetCount),
-            style: AppTheme.caption,
-          ),
-          Text(
-            context.l10n.scanOriginalVerifiedCount(
-              scanner.verifiedOriginalCount,
-            ),
-            style: AppTheme.caption,
-          ),
-        ],
-      ),
       childrenPadding: const EdgeInsets.only(bottom: 12),
       expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Text(
+          context.l10n.scanVisualSuccessCount(scanner.analyzedAssetCount),
+          style: AppTheme.caption,
+        ),
+        Text(
+          context.l10n.scanOriginalVerifiedCount(scanner.verifiedOriginalCount),
+          style: AppTheme.caption,
+        ),
         if (scanner.isScanning) ...[
           ScanProgressPanel(scanner: scanner, compact: true),
           const SizedBox(height: 8),
@@ -681,6 +786,51 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     animation: scanner,
     builder: (context, _) {
       final checking = scanner.isScanning && scanner.isVerifyingOriginals;
+      if (compact) {
+        return Container(
+          key: const ValueKey('original-verification-card'),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryLight,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            children: [
+              Text(
+                context.l10n.scanVerificationProgress(
+                  _verifiedChecks(scanner),
+                  _checkTotal(scanner),
+                ),
+                style: AppTheme.caption,
+              ),
+              TextButton.icon(
+                key: const ValueKey('verify-originals-cta'),
+                onPressed: scanner.isScanning
+                    ? scanner.cancelScan
+                    : scanner.isDeleting || _isDeleting
+                    ? null
+                    : () => _verifyOriginals(scanner),
+                icon: Icon(
+                  scanner.isScanning
+                      ? Icons.pause_circle_outline
+                      : Icons.fact_check_outlined,
+                  size: 18,
+                ),
+                label: Text(
+                  scanner.isScanning
+                      ? context.l10n.scanPauseReview
+                      : _selectedCategory == 1
+                      ? context.l10n.scanCheckExactPhotos
+                      : context.l10n.scanCheckFileSizes,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
       return Container(
         key: const ValueKey('original-verification-card'),
         padding: const EdgeInsets.all(16),
@@ -767,6 +917,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                             _selectionUndo = null;
                           });
                           _revealSelectedCategory();
+                          widget.onCategoryChanged?.call('photos');
                         },
                   child: Text(context.l10n.scanBrowsePhotos),
                 ),
@@ -790,13 +941,9 @@ class _SmartCleanViewState extends State<SmartCleanView> {
         if (_isManualCategory && assets.isNotEmpty)
           TextButton.icon(
             key: const ValueKey('select-current-category'),
-            onPressed: enabled
-                ? () => _changeSelection(
-                    () => _selectedIds.addAll(assets.map((asset) => asset.id)),
-                  )
-                : null,
+            onPressed: enabled ? () => _selectLoaded(assets) : null,
             icon: const Icon(Icons.select_all_rounded),
-            label: Text(context.l10n.scanSelectAll),
+            label: Text(context.l10n.scanSelectLoaded),
           ),
         if (_selectedIds.isNotEmpty)
           TextButton.icon(
@@ -812,11 +959,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                 ? () => setState(() {
                     _selectedIds.clear();
                     _selectedIds.addAll(
-                      _selectionUndo!.intersection(
-                        scanner.scanResult.allAssets
-                            .map((asset) => asset.id)
-                            .toSet(),
-                      ),
+                      _selectionUndo!.intersection(_readyPreviews.keys.toSet()),
                     );
                     _selectionUndo = null;
                   })
@@ -837,16 +980,34 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     });
   }
 
+  void _reportExcluded(int count) {
+    if (count == 0 || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.l10n.scanUnreadableExcluded(count))),
+    );
+  }
+
+  void _selectLoaded(List<PhotoAsset> assets) {
+    final ready = assets.where(_previewReady).toList();
+    _changeSelection(() => _selectedIds.addAll(ready.map((asset) => asset.id)));
+    _reportExcluded(assets.length - ready.length);
+  }
+
   void _selectGroupOthers(_ReviewGroup group, String keepId) {
     if (!group.assets.any((asset) => asset.id == keepId)) return;
+    if (!_previewReady(
+      group.assets.firstWhere((asset) => asset.id == keepId),
+    )) {
+      _reportExcluded(1);
+      return;
+    }
+    final other = group.assets.where((asset) => asset.id != keepId).toList();
+    final ready = other.where(_previewReady).toList();
     _changeSelection(() {
       _selectedIds.removeAll(group.assets.map((asset) => asset.id));
-      _selectedIds.addAll(
-        group.assets
-            .where((asset) => asset.id != keepId)
-            .map((asset) => asset.id),
-      );
+      _selectedIds.addAll(ready.map((asset) => asset.id));
     });
+    _reportExcluded(other.length - ready.length);
   }
 
   String _keeperActionLabel(PhotoAsset asset, int index) => [
@@ -857,71 +1018,121 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   ].join(' · ');
 
   Widget _groupRow(_ReviewGroup group) {
+    final scanner = context.read<PhotoScannerService>();
     final suggested =
         !_dismissedSuggestions.contains(group.key) &&
-            group.assets.any((asset) => asset.id == group.bestAssetId)
+            group.assets.any((asset) => asset.id == group.bestAssetId) &&
+            !_selectedIds.contains(group.bestAssetId)
         ? group.bestAssetId
         : null;
     final textScale = MediaQuery.textScalerOf(context).scale(12) / 12;
-    final tileWidth = 112 * textScale.clamp(1.0, 1.5);
+    final tileWidth = ((MediaQuery.sizeOf(context).width - 60) / 2).clamp(
+      132.0,
+      240.0,
+    );
     final actionText = TextPainter(
       text: TextSpan(
-        text: context.l10n.scanKeepOneSelectOthers,
+        text: context.l10n.scanKeepThis,
         style: Theme.of(context).textTheme.labelLarge,
       ),
       textScaler: MediaQuery.textScalerOf(context),
       textDirection: Directionality.of(context),
     )..layout(maxWidth: tileWidth - 32);
-    final tileHeight = tileWidth + 60 * textScale + actionText.height + 32;
+    final tileHeight = tileWidth + 45 * textScale + actionText.height + 32;
     actionText.dispose();
+    final busy = scanner.isScanning || scanner.isDeleting || _isDeleting;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [AppTheme.softShadow],
+        color: AppTheme.cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            _selectedCategory == 1
-                ? context.l10n.scanExactGroupCount(group.assets.length)
-                : context.l10n.scanSimilarGroupCount(group.assets.length),
-            style: const TextStyle(fontWeight: FontWeight.w700),
-          ),
-          if (group.bestAssetId != null) ...[
-            if (suggested != null)
-              Text(
-                context.l10n.scanRecommendedKeep(
-                  group.bestReason == null
-                      ? context.l10n.scanKeepReasonDefault
-                      : context.localizeServiceMessage(group.bestReason!),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _selectedCategory == 1
+                      ? context.l10n.scanExactGroupCount(group.assets.length)
+                      : context.l10n.scanSimilarGroupCount(group.assets.length),
+                  style: AppTheme.heading3,
                 ),
-                style: AppTheme.caption,
               ),
-            TextButton(
-              onPressed: () => setState(() {
-                suggested == null
-                    ? _dismissedSuggestions.remove(group.key)
-                    : _dismissedSuggestions.add(group.key);
-              }),
-              child: Text(
-                suggested == null
-                    ? context.l10n.scanRestoreKeepSuggestion
-                    : context.l10n.scanDismissKeepSuggestion,
-              ),
+              if (group.bestAssetId != null)
+                PopupMenuButton<bool>(
+                  tooltip: MaterialLocalizations.of(context).moreButtonTooltip,
+                  onSelected: (_) => setState(() {
+                    if (_dismissedSuggestions.contains(group.key)) {
+                      _dismissedSuggestions.remove(group.key);
+                    } else {
+                      _dismissedSuggestions.add(group.key);
+                    }
+                  }),
+                  itemBuilder: (_) => [
+                    PopupMenuItem(
+                      value: true,
+                      child: Text(
+                        _dismissedSuggestions.contains(group.key)
+                            ? context.l10n.scanRestoreKeepSuggestion
+                            : context.l10n.scanDismissKeepSuggestion,
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: tileHeight,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: group.assets.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final asset = group.assets[index];
+                return SizedBox(
+                  width: tileWidth,
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: _thumbnail(
+                          asset,
+                          recommended: suggested == asset.id,
+                          semanticIndex: index + 1,
+                        ),
+                      ),
+                      TextButton.icon(
+                        key: ValueKey('keep-group-${asset.id}'),
+                        onPressed: busy || !_previewReady(asset)
+                            ? null
+                            : () => _selectGroupOthers(group, asset.id),
+                        icon: const Icon(Icons.bookmark_outline, size: 18),
+                        label: Text(
+                          context.l10n.scanKeepThis,
+                          semanticsLabel: _keeperActionLabel(asset, index + 1),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
-          ],
-          Text(context.l10n.scanSelectOthersHint, style: AppTheme.caption),
+          ),
           if (suggested != null)
             FilledButton.icon(
               key: ValueKey('keep-suggested-${group.key}'),
               onPressed:
-                  context.read<PhotoScannerService>().isScanning ||
-                      context.read<PhotoScannerService>().isDeleting ||
-                      _isDeleting
+                  busy ||
+                      !_previewReady(
+                        group.assets.firstWhere(
+                          (asset) => asset.id == suggested,
+                        ),
+                      )
                   ? null
                   : () => _selectGroupOthers(group, suggested),
               icon: const Icon(Icons.bookmark_rounded),
@@ -933,49 +1144,19 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                 ),
               ),
             ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: tileHeight,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: group.assets.length,
-              separatorBuilder: (context, index) => const SizedBox(width: 8),
-              itemBuilder: (context, index) => SizedBox(
-                width: tileWidth,
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: _thumbnail(
-                        group.assets[index],
-                        recommended: suggested == group.assets[index].id,
-                        semanticIndex: index + 1,
-                      ),
-                    ),
-                    TextButton(
-                      key: ValueKey('keep-group-${group.assets[index].id}'),
-                      onPressed:
-                          context.read<PhotoScannerService>().isScanning ||
-                              context.read<PhotoScannerService>().isDeleting ||
-                              _isDeleting
-                          ? null
-                          : () => _selectGroupOthers(
-                              group,
-                              group.assets[index].id,
-                            ),
-                      child: Text(
-                        context.l10n.scanKeepOneSelectOthers,
-                        semanticsLabel: _keeperActionLabel(
-                          group.assets[index],
-                          index + 1,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ],
+          if (suggested != null && group.bestReason != null)
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              title: Text(context.l10n.scanDetails, style: AppTheme.caption),
+              children: [
+                Text(
+                  context.l10n.scanRecommendedKeep(
+                    context.localizeServiceMessage(group.bestReason!),
+                  ),
+                  style: AppTheme.caption,
                 ),
-              ),
+              ],
             ),
-          ),
         ],
       ),
     );
@@ -1003,9 +1184,13 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   }) {
     final scanner = context.read<PhotoScannerService>();
     final selected = _selectedIds.contains(asset.id);
-    final enabled = !scanner.isScanning && !scanner.isDeleting && !_isDeleting;
+    final enabled =
+        !scanner.isScanning &&
+        !scanner.isDeleting &&
+        !_isDeleting &&
+        (_previewReady(asset) || selected);
     void toggleSelection() {
-      if (scanner.isScanning || scanner.isDeleting || _isDeleting) return;
+      if (!enabled) return;
       setState(() {
         _selectionUndo = null;
         selected ? _selectedIds.remove(asset.id) : _selectedIds.add(asset.id);
@@ -1025,6 +1210,8 @@ class _SmartCleanViewState extends State<SmartCleanView> {
         assetSizeLabel(asset, context: context),
       ),
       if (recommended) context.l10n.scanKeepBadge,
+      context.l10n.scanSelectionHint,
+      if (!_previewReady(asset)) context.l10n.scanPreviewNotReady,
     ].join(' · ');
     return Semantics(
       container: true,
@@ -1078,9 +1265,13 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(13),
-                        child: AssetThumbnail(asset: asset),
+                        child: AssetThumbnail(
+                          asset: asset,
+                          onPreviewReady: (ready) =>
+                              _previewReadiness(asset, ready),
+                        ),
                       ),
-                      if (recommended)
+                      if (recommended && !selected)
                         PositionedDirectional(
                           top: 4,
                           start: 4,
@@ -1094,26 +1285,74 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                         PositionedDirectional(
                           bottom: 4,
                           end: 4,
-                          child: Icon(
-                            selected
-                                ? Icons.check_circle_rounded
-                                : Icons.circle_outlined,
-                            color: selected ? AppTheme.danger : Colors.white,
-                            size: 24,
+                          child: IconButton(
+                            tooltip: context.l10n.scanSelectionHint,
+                            style: IconButton.styleFrom(
+                              backgroundColor: selected
+                                  ? AppTheme.danger
+                                  : Colors.black.withValues(alpha: 0.65),
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor: Colors.black.withValues(
+                                alpha: 0.65,
+                              ),
+                              disabledForegroundColor: Colors.white,
+                              minimumSize: const Size(44, 44),
+                            ),
+                            onPressed: enabled ? toggleSelection : null,
+                            icon: Icon(
+                              selected
+                                  ? Icons.check_circle_rounded
+                                  : Icons.circle_outlined,
+                              size: 24,
+                            ),
                           ),
                         ),
                       PositionedDirectional(
                         bottom: 0,
                         start: 0,
                         child: IconButton(
-                          tooltip: context.l10n.scanZoomPreview,
-                          icon: const Icon(
-                            Icons.zoom_in_rounded,
+                          tooltip: asset.type == AssetType.video
+                              ? context.l10n.videoPlayOriginal
+                              : context.l10n.scanZoomPreview,
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.black.withValues(
+                              alpha: 0.65,
+                            ),
+                            minimumSize: const Size(44, 44),
+                          ),
+                          icon: Icon(
+                            asset.type == AssetType.video
+                                ? Icons.play_arrow_rounded
+                                : Icons.zoom_in_rounded,
                             color: Colors.white,
                           ),
                           onPressed: () => _previewAsset(asset),
                         ),
                       ),
+                      if (asset.type == AssetType.video &&
+                          asset.durationSeconds > 0)
+                        PositionedDirectional(
+                          top: 6,
+                          end: 6,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.65),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Directionality(
+                              textDirection: TextDirection.ltr,
+                              child: Text(
+                                '${asset.durationSeconds ~/ 60}:'
+                                '${(asset.durationSeconds % 60).toString().padLeft(2, '0')}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -1169,7 +1408,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
         label,
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 8,
+          fontSize: 12,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -1371,7 +1610,12 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   void _openCompression(PhotoAsset asset) {
     final scanner = context.read<PhotoScannerService>();
     final subscription = context.read<SubscriptionManager>();
-    if (_isDeleting || scanner.isScanning || scanner.isDeleting) return;
+    if (_isReviewingDelete ||
+        _isDeleting ||
+        scanner.isScanning ||
+        scanner.isDeleting) {
+      return;
+    }
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -1382,100 +1626,85 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     );
   }
 
-  void _previewDelete(PhotoScannerService scanner, SubscriptionManager sub) {
-    if (_isDeleting || scanner.isScanning || scanner.isDeleting) return;
+  Future<void> _previewDelete(
+    PhotoScannerService scanner,
+    SubscriptionManager sub,
+  ) async {
+    if (_isReviewingDelete ||
+        _isDeleting ||
+        scanner.isScanning ||
+        scanner.isDeleting) {
+      return;
+    }
     if (!sub.isPro) {
-      Navigator.push(
+      await Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const PaywallView()),
+        MaterialPageRoute(builder: (_) => const PaywallView()),
       );
       return;
     }
-
-    final toDelete = scanner.scanResult.allAssets
+    final snapshot = scanner.scanResult;
+    final toDelete = snapshot.allAssets
         .where((asset) => _selectedIds.contains(asset.id))
         .toList();
     if (toDelete.isEmpty) return;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(context.l10n.scanConfirmDeleteTitle),
-        content: SingleChildScrollView(
-          child: SizedBox(
-            width: double.maxFinite,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  context.l10n.scanConfirmDeleteDescription(toDelete.length),
-                  style: const TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 220,
-                  child: GridView.builder(
-                    itemCount: toDelete.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 6,
-                          mainAxisSpacing: 6,
-                        ),
-                    itemBuilder: (context, index) => ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: AssetThumbnail(asset: toDelete[index]),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+    _isReviewingDelete = true;
+    List<PhotoAsset>? reviewed;
+    try {
+      reviewed = await showDeleteReview(
+        context,
+        assets: toDelete,
+        previewReadyIds: {
+          for (final asset in toDelete)
+            if (_previewReady(asset)) asset.id,
+        },
+        reviewGroups: [
+          for (final group in snapshot.duplicateGroups)
+            group.assets.map((asset) => asset.id).toSet(),
+          for (final group in snapshot.similarGroups)
+            group.assets.map((asset) => asset.id).toSet(),
+        ],
+      );
+    } finally {
+      _isReviewingDelete = false;
+    }
+    if (!mounted || reviewed == null) return;
+    final confirmed = reviewed;
+    if (!identical(scanner.scanResult, snapshot)) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.scanReviewChanged)));
+      return;
+    }
+    setState(() {
+      _selectedIds
+        ..clear()
+        ..addAll(confirmed.map((asset) => asset.id));
+    });
+    if (confirmed.isEmpty ||
+        _isDeleting ||
+        scanner.isScanning ||
+        scanner.isDeleting ||
+        !sub.isPro) {
+      return;
+    }
+    setState(() => _isDeleting = true);
+    try {
+      final deletedIds = await scanner.deleteAssetsWithResult(confirmed);
+      if (!mounted) return;
+      setState(() => _selectedIds.removeAll(deletedIds));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            deletedIds.isEmpty
+                ? context.l10n.scanNoItemsDeleted
+                : context.l10n.scanItemsDeleted(deletedIds.length),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(context.l10n.scanCancel),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              if (scanner.isScanning || scanner.isDeleting || !sub.isPro) {
-                return;
-              }
-              setState(() => _isDeleting = true);
-              final deletedIds = await scanner.deleteAssetsWithResult(toDelete);
-              if (!mounted) return;
-              setState(() {
-                _isDeleting = false;
-                _selectedIds.removeAll(deletedIds);
-              });
-              ScaffoldMessenger.of(this.context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    deletedIds.isEmpty
-                        ? this.context.l10n.scanNoItemsDeleted
-                        : this.context.l10n.scanItemsDeleted(deletedIds.length),
-                  ),
-                ),
-              );
-            },
-            child: Text(
-              context.l10n.scanConfirmDelete,
-              style: const TextStyle(
-                color: AppTheme.danger,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+      );
+    } finally {
+      if (mounted) setState(() => _isDeleting = false);
+    }
   }
 }
 

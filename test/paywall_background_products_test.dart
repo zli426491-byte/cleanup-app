@@ -1,4 +1,5 @@
 import 'package:cleanup_app/services/subscription_manager.dart';
+import 'package:cleanup_app/l10n/l10n.dart';
 import 'package:cleanup_app/utils/constants.dart';
 import 'package:cleanup_app/views/paywall/paywall_view.dart';
 import 'package:flutter/material.dart';
@@ -82,8 +83,12 @@ void main() {
     subscription.finishStartup();
     await tester.pump();
     expect(find.text('年訂閱'), findsOneWidget);
-    await tester.ensureVisible(find.text('繼續'));
-    await tester.tap(find.text('繼續'));
+    final subscribe = tester
+        .element(find.byType(PaywallView))
+        .l10n
+        .paywallSubscribeYearly(_product.priceString);
+    await tester.ensureVisible(find.text(subscribe));
+    await tester.tap(find.text(subscribe));
     await tester.pump();
     expect(subscription.purchaseCalls, 1);
 

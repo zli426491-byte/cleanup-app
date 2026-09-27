@@ -76,6 +76,9 @@ class _Player extends VideoPlayerController {
   @override
   Future<void> play() async => value = value.copyWith(isPlaying: true);
   @override
+  Future<void> seekTo(Duration position) async =>
+      value = value.copyWith(position: position);
+  @override
   Future<void> dispose() async {
     disposed = true;
     await super.dispose();
@@ -179,10 +182,32 @@ void main() {
     await tester.tap(find.text('查看壓縮副本'));
     await tester.pumpAndSettle();
     expect(players.single.value.isInitialized, isTrue);
+    await tester.scrollUntilVisible(find.text('確認副本並另存至照片'), 150);
+    await tester.pumpAndSettle();
   }
 
   FilledButton saveButton(WidgetTester tester) => tester.widget<FilledButton>(
     find.widgetWithText(FilledButton, '確認副本並另存至照片'),
+  );
+
+  testWidgets(
+    'original and compressed previews preserve the comparison position',
+    (tester) async {
+      await loadPreparedPreview(tester);
+      tester.widget<Slider>(find.byType(Slider)).onChanged!(6500);
+      await tester.pump();
+      expect(players.last.value.position, const Duration(milliseconds: 6500));
+      await tester.ensureVisible(find.text('查看原片'));
+      await tester.tap(find.text('查看原片'));
+      await tester.pumpAndSettle();
+      expect(players.last.value.position, const Duration(milliseconds: 6500));
+      expect(saveButton(tester).onPressed, isNull);
+      await tester.ensureVisible(find.text('查看壓縮副本'));
+      await tester.tap(find.text('查看壓縮副本'));
+      await tester.pumpAndSettle();
+      expect(players.last.value.position, const Duration(milliseconds: 6500));
+      expect(saveButton(tester).onPressed, isNotNull);
+    },
   );
 
   testWidgets(

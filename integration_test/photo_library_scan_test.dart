@@ -3,11 +3,13 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:cleanup_app/l10n/app_localizations.dart';
+import 'package:cleanup_app/l10n/locale_controller.dart';
 import 'package:cleanup_app/services/photo_scanner_service.dart';
 import 'package:cleanup_app/services/subscription_manager.dart';
 import 'package:cleanup_app/utils/app_theme.dart';
 import 'package:cleanup_app/views/home/home_view.dart';
 import 'package:cleanup_app/views/scanner/smart_clean_view.dart';
+import 'package:cleanup_app/views/components/video_playback_controls.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -133,6 +135,18 @@ void main() {
       _expectExactPair(scanner, duplicateIds, differentIds);
       stages['exactGroupCount'] = scanner.scanResult.duplicateGroups.length;
       stages['exactVerifiedPhotoCount'] = scanner.verifiedHashAssetCount;
+      expect(
+        scanner.originalVerificationTarget,
+        OriginalVerificationTarget.exactPhotos,
+      );
+      expect(
+        scanner.originalRoundTotal,
+        lessThanOrEqualTo(scanner.totalPhotoCount),
+      );
+      expect(
+        scanner.originalRoundProcessed,
+        lessThanOrEqualTo(scanner.originalRoundTotal!),
+      );
       final originalHash = {
         for (final id in duplicateIds)
           id: scanner.scanResult.allAssets.firstWhere((a) => a.id == id).hash,
@@ -177,13 +191,14 @@ void main() {
       _expectActiveCategoryVisible(tester, labels.scanCategoryLarge);
 
       // Large libraries retain pending previews after their bounded first pass.
-      // Use the real continuation action and ensure it preserves the already
-      // verified originals and the selected category after re-indexing again.
+      // Continue visual analysis from the Home action, then reopen the same
+      // cleanup category. Its compact toolbar stays focused on capacity checks.
       var previewContinuationChecked = false;
       if (scanner.pendingAnalysisCount > 0) {
         final knownBeforePreview = scanner.knownSizeAssetCount;
         watch.reset();
-        await _tapVisible(tester, find.text(labels.scanResumePending));
+        await _tapVisible(tester, find.byType(BackButton));
+        await _tapVisible(tester, find.text(labels.homeContinueAnalysis));
         await _waitUntil(
           tester,
           () => scanner.isScanning,
@@ -205,11 +220,85 @@ void main() {
         stages['previewResumePendingCount'] = scanner.pendingAnalysisCount;
         stages['previewResumeKnownSizeCount'] = scanner.knownSizeAssetCount;
         previewContinuationChecked = true;
+        await _tapVisible(tester, find.text(labels.homeLargeFiles));
         await tester.pump(const Duration(milliseconds: 600));
         await _revealAsset(tester, movieIds.last);
         _expectActiveCategoryVisible(tester, labels.scanCategoryLarge);
       }
       await _capture(binding, 'photos-$workload-large');
+
+      // Free cleanup review must play the actual local original, independently
+      // of compression or StoreKit. Exercise native playback and seek controls.
+      final movie = find.byKey(ValueKey('select-${movieIds.last}'));
+      await _tapVisible(
+        tester,
+        find.descendant(
+          of: movie,
+          matching: find.byTooltip(labels.videoPlayOriginal),
+        ),
+      );
+      await _waitUntil(
+        tester,
+        () => find.byType(VideoPlaybackControls).evaluate().isNotEmpty,
+        'local original movie preview',
+      );
+      final controls = tester.widget<VideoPlaybackControls>(
+        find.byType(VideoPlaybackControls),
+      );
+      expect(controls.controller.value.duration.inSeconds, greaterThan(0));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(VideoPlaybackControls),
+          matching: find.byTooltip(labels.videoPlayOriginal),
+        ),
+      );
+      await tester.pump();
+      await _waitUntil(
+        tester,
+        () =>
+            controls.controller.value.isPlaying &&
+            controls.controller.value.position.inMilliseconds > 0,
+        'native original playback',
+      );
+      await tester.tap(
+        find.descendant(
+          of: find.byType(VideoPlaybackControls),
+          matching: find.byTooltip(labels.videoPauseOriginal),
+        ),
+      );
+      await tester.pump();
+      await _waitUntil(
+        tester,
+        () => !controls.controller.value.isPlaying,
+        'native original pause',
+      );
+      final durationMs = controls.controller.value.duration.inMilliseconds;
+      final pausedMs = controls.controller.value.position.inMilliseconds;
+      final seekFraction = pausedMs < durationMs / 2 ? 0.8 : 0.2;
+      final slider = find.byType(Slider);
+      final sliderRect = tester.getRect(slider);
+      // Match the Material slider's 24px horizontal track inset and use a
+      // real hit-tested gesture, rather than invoking its callback directly.
+      final targetMs = durationMs * seekFraction;
+      await tester.tapAt(
+        Offset(
+          sliderRect.left + 24 + (sliderRect.width - 48) * seekFraction,
+          sliderRect.center.dy,
+        ),
+      );
+      await tester.pump();
+      await _waitUntil(
+        tester,
+        () =>
+            (controls.controller.value.position.inMilliseconds - targetMs)
+                .abs() <=
+            500,
+        'native original seek',
+      );
+      expect(controls.controller.value.hasError, isFalse);
+      stages['originalVideoDurationSeconds'] =
+          controls.controller.value.duration.inSeconds;
+      await _tapVisible(tester, find.text(labels.scanBackToCompare));
 
       // A separate fresh scanner really cancels its first native-resource pass;
       // then resume must recover both real videos without losing fair progress.
@@ -268,6 +357,7 @@ void main() {
         'previewContinuationPreservedOriginalResults':
             previewContinuationChecked,
         'cancelAndResumeRecoveredMovies': true,
+        'realOriginalVideoPlaybackAndSeekChecked': true,
         'screenshotFiles': [
           'photos-$workload-exact.png',
           'photos-$workload-large.png',
@@ -301,7 +391,8 @@ Future<void> _showHome(
         locale: const Locale('zh', 'TW'),
         theme: AppTheme.lightTheme,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
+        supportedLocales: LocaleController.supportedLocales,
+        localeListResolutionCallback: LocaleController.resolve,
         home: const HomeView(),
       ),
     ),
@@ -412,6 +503,7 @@ void _expectMovies(
     expect(asset.sizeKnown, isTrue);
     expect(asset.size, sizes[id]);
     expect(asset.size, greaterThan(5 * 1024 * 1024));
+    expect(asset.durationSeconds, greaterThan(0));
   }
 }
 

@@ -18,6 +18,94 @@ class SettingsView extends StatefulWidget {
   State<SettingsView> createState() => _SettingsViewState();
 }
 
+class _LanguageSheet extends StatefulWidget {
+  const _LanguageSheet({required this.controller});
+
+  final LocaleController controller;
+
+  @override
+  State<_LanguageSheet> createState() => _LanguageSheetState();
+}
+
+class _LanguageSheetState extends State<_LanguageSheet> {
+  final _selectedKey = GlobalKey();
+  bool _choosing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final selectedContext = _selectedKey.currentContext;
+      if (mounted && selectedContext != null) {
+        Scrollable.ensureVisible(selectedContext, alignment: 0.5);
+      }
+    });
+  }
+
+  Future<void> _choose(Locale? locale) async {
+    if (_choosing) return;
+    setState(() => _choosing = true);
+    try {
+      await widget.controller.setLocale(locale);
+      if (mounted) Navigator.pop(context);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _choosing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.settingsLanguageSaveError)),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final options = LocaleController.languageOptions;
+    return SafeArea(
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.8,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+              child: Text(
+                context.l10n.settingsChooseLanguage,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                key: const ValueKey('settings-language-list'),
+                child: Column(
+                  children: List.generate(options.length + 1, (index) {
+                    final option = index == 0 ? null : options[index - 1];
+                    final locale = option?.locale;
+                    final selected = widget.controller.locale == locale;
+                    return ListTile(
+                      key: selected ? _selectedKey : null,
+                      selected: selected,
+                      title: Text(
+                        option?.nativeName ??
+                            context.l10n.settingsSystemLanguage,
+                      ),
+                      trailing: Icon(
+                        selected
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_unchecked,
+                      ),
+                      enabled: !_choosing,
+                      onTap: () => _choose(locale),
+                    );
+                  }),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _SettingsViewState extends State<SettingsView> {
   StorageInfo? _storage;
   String? _version;
@@ -48,38 +136,59 @@ class _SettingsViewState extends State<SettingsView> {
           constraints: const BoxConstraints(maxWidth: 720),
           child: ListView(
             children: [
-              ListTile(
-                leading: Icon(
-                  sub.isPro
-                      ? Icons.workspace_premium
-                      : Icons.workspace_premium_outlined,
-                  color: sub.isPro ? Colors.amber : Colors.grey,
-                ),
-                title: Text(
-                  sub.isPro
-                      ? context.l10n.settingsProPlan
-                      : context.l10n.settingsFreePlan,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                trailing: sub.isPro
-                    ? null
-                    : ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxWidth: MediaQuery.sizeOf(context).width * 0.35,
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.workspace_premium_outlined,
+                          color: AppTheme.primary,
                         ),
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const PaywallView(),
-                            ),
-                          ),
+                        const SizedBox(width: 12),
+                        Expanded(
                           child: Text(
-                            context.l10n.settingsUpgrade,
-                            textAlign: TextAlign.center,
+                            sub.isPro
+                                ? context.l10n.settingsProPlan
+                                : !sub.hasCheckedSubscription
+                                ? (sub.isLoading
+                                      ? context
+                                            .l10n
+                                            .settingsCheckingSubscription
+                                      : context
+                                            .l10n
+                                            .settingsSubscriptionUnknown)
+                                : context.l10n.settingsFreePlan,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
-                      ),
+                      ],
+                    ),
+                    if (!sub.isPro) ...[
+                      const SizedBox(height: 12),
+                      if (!sub.hasCheckedSubscription && !sub.isPlaceholder)
+                        TextButton.icon(
+                          onPressed: sub.isLoading ? null : sub.retry,
+                          icon: const Icon(Icons.refresh),
+                          label: Text(context.l10n.paywallReloadPlans),
+                        ),
+                      if (sub.hasCheckedSubscription)
+                        OutlinedButton(
+                          onPressed: sub.isLoading
+                              ? null
+                              : () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const PaywallView(),
+                                  ),
+                                ),
+                          child: Text(context.l10n.settingsUpgrade),
+                        ),
+                    ],
+                  ],
+                ),
               ),
               const Divider(),
 
@@ -111,6 +220,12 @@ class _SettingsViewState extends State<SettingsView> {
                       : localeController.localeLabel,
                 ),
                 onTap: () => _chooseLanguage(localeController),
+              ),
+              ListTile(
+                key: const ValueKey('settings-manage-subscription'),
+                leading: const Icon(Icons.manage_accounts_outlined),
+                title: Text(context.l10n.settingsManageSubscription),
+                onTap: _manageSubscription,
               ),
               ListTile(
                 title: Text(
@@ -167,70 +282,27 @@ class _SettingsViewState extends State<SettingsView> {
   }
 
   Future<void> _chooseLanguage(LocaleController controller) async {
-    var choosing = false;
     await showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       showDragHandle: true,
-      builder: (sheetContext) {
-        final options = LocaleController.languageOptions;
-        Future<void> choose(Locale? locale) async {
-          if (choosing) return;
-          choosing = true;
-          try {
-            await controller.setLocale(locale);
-            if (sheetContext.mounted) Navigator.pop(sheetContext);
-          } catch (_) {
-            choosing = false;
-            if (sheetContext.mounted) {
-              ScaffoldMessenger.of(sheetContext).showSnackBar(
-                SnackBar(
-                  content: Text(sheetContext.l10n.settingsLanguageSaveError),
-                ),
-              );
-            }
-          }
-        }
+      builder: (_) => _LanguageSheet(controller: controller),
+    );
+  }
 
-        return SafeArea(
-          child: SizedBox(
-            height: MediaQuery.sizeOf(sheetContext).height * 0.75,
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    sheetContext.l10n.settingsChooseLanguage,
-                    style: Theme.of(sheetContext).textTheme.titleLarge,
-                  ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: options.length + 1,
-                    itemBuilder: (_, index) {
-                      final option = index == 0 ? null : options[index - 1];
-                      final locale = option?.locale;
-                      final selected = controller.locale == locale;
-                      return ListTile(
-                        selected: selected,
-                        title: Text(
-                          option?.nativeName ??
-                              sheetContext.l10n.settingsSystemLanguage,
-                        ),
-                        trailing: Icon(
-                          selected
-                              ? Icons.radio_button_checked
-                              : Icons.radio_button_unchecked,
-                        ),
-                        onTap: () => choose(locale),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+  Future<void> _manageSubscription() async {
+    try {
+      final opened = await launchUrl(
+        Uri.parse('https://apps.apple.com/account/subscriptions'),
+        mode: LaunchMode.externalApplication,
+      );
+      if (opened) return;
+    } catch (_) {
+      // The localized recovery message also covers unavailable storefront apps.
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.l10n.settingsManageUnavailable)),
     );
   }
 
@@ -251,7 +323,7 @@ class _SettingsViewState extends State<SettingsView> {
   Widget _settingsRow(String label, String value, {Color? valueColor}) {
     return ListTile(
       title: Text(label),
-      trailing: Text(
+      subtitle: Text(
         value,
         style: TextStyle(color: valueColor ?? Colors.grey[600]),
       ),

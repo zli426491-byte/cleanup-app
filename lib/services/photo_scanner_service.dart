@@ -44,6 +44,8 @@ class PhotoAsset {
   final String? pendingReason;
   final String? resourcePendingReason;
   final DateTime createDate;
+  final DateTime? modifiedDate;
+  final int durationSeconds;
   final AssetType type;
   final Uint8List? thumbnail;
   final String? hash;
@@ -69,6 +71,8 @@ class PhotoAsset {
     this.pendingReason,
     this.resourcePendingReason,
     required this.createDate,
+    this.modifiedDate,
+    this.durationSeconds = 0,
     required this.type,
     this.thumbnail,
     this.hash,
@@ -79,6 +83,8 @@ class PhotoAsset {
   });
 
   PhotoAsset copyWith({
+    DateTime? modifiedDate,
+    int? durationSeconds,
     bool clearHash = false,
     bool clearResourcePendingReason = false,
     int? size,
@@ -120,6 +126,8 @@ class PhotoAsset {
           ? null
           : resourcePendingReason ?? this.resourcePendingReason,
       createDate: createDate,
+      modifiedDate: modifiedDate ?? this.modifiedDate,
+      durationSeconds: durationSeconds ?? this.durationSeconds,
       type: type,
       thumbnail: thumbnail ?? this.thumbnail,
       hash: clearHash ? null : hash ?? this.hash,
@@ -256,6 +264,14 @@ class PhotoScannerService extends ChangeNotifier {
   bool _nativeAvailable;
   bool _hasCompletedScan = false;
   bool _hasLimitedAccess = false;
+  PermissionState? _photoPermission;
+  bool _photoAccessRefreshPending = false;
+  bool _checkingPhotoAccess = false;
+  bool _photoScopeChanged = false;
+  OriginalVerificationTarget? _originalVerificationTarget;
+  int? _originalRoundTotal;
+  int _originalRoundProcessed = 0;
+  int _knownLibraryBytes = 0;
   int _scanRunId = 0;
   int _nextAssetOffset = 0;
   int? _availableAssetCount;
@@ -306,6 +322,15 @@ class PhotoScannerService extends ChangeNotifier {
   int get pendingResourceCount => _pendingResourceCount;
   int get attemptedResourceCount => _attemptedResourceCount;
   int get knownSizeAssetCount => _knownSizeCount;
+  int get knownLibraryBytes => _knownLibraryBytes;
+  bool get hasLimitedAccess => _hasLimitedAccess;
+  bool get permissionDenied =>
+      _photoPermission != null && !_photoPermission!.hasAccess;
+  bool get photoScopeChanged => _photoScopeChanged;
+  OriginalVerificationTarget? get originalVerificationTarget =>
+      _originalVerificationTarget;
+  int? get originalRoundTotal => _originalRoundTotal;
+  int get originalRoundProcessed => _originalRoundProcessed;
   int get pendingSizeAssetCount => scannedAssetCount - _knownSizeCount;
   int get verifiedHashAssetCount => _verifiedHashCount;
   int get pendingHashAssetCount => totalPhotoCount - _verifiedHashCount;
@@ -334,6 +359,164 @@ class PhotoScannerService extends ChangeNotifier {
   Future<void> startFullScan() => _scan(resume: false);
   Future<void> resumeScan() => _scan(resume: true);
 
+  Future<bool> openPhotoSettings() async {
+    try {
+      await PhotoManager.openSetting();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> refreshPhotoAccess() async {
+    if (_disposed) return;
+    _photoAccessRefreshPending = true;
+    if (_isScanning || _isDeleting || _checkingPhotoAccess) return;
+    _photoAccessRefreshPending = false;
+    _checkingPhotoAccess = true;
+    final runId = _scanRunId;
+    final snapshot = _scanResult;
+    final previous = _photoPermission;
+    var checkAlive = true;
+    bool canApply() =>
+        checkAlive &&
+        !_disposed &&
+        !_isScanning &&
+        !_isDeleting &&
+        runId == _scanRunId &&
+        identical(snapshot, _scanResult);
+    try {
+      final (state, unchanged) = await (() async {
+        final state = await PhotoManager.getPermissionState(
+          requestOption: const PermissionRequestOption(),
+        );
+        if (!canApply()) throw StateError('Photo scope check superseded');
+        final unchanged =
+            state == previous &&
+            (!state.isLimited || await _limitedPhotoScopeMatches(canApply));
+        return (state, unchanged);
+      })().timeout(const Duration(seconds: 5));
+      if (!canApply()) {
+        if (!_disposed) _photoAccessRefreshPending = true;
+        return;
+      }
+      if (unchanged) return;
+      _photoScopeChanged = previous?.hasAccess == true;
+      _photoPermission = state;
+      _hasLimitedAccess = state.isLimited;
+      if (previous?.hasAccess == true || !state.hasAccess) {
+        _invalidatePhotoScope();
+      }
+      _lastError = state.hasAccess ? null : '尚未取得相簿權限，請在設定中允許存取照片後重試。';
+      notifyListeners();
+    } catch (_) {
+      if (!canApply()) {
+        if (!_disposed) _photoAccessRefreshPending = true;
+      } else if (previous?.isLimited == true) {
+        // An incomplete metadata check cannot authorize keeping a stale scope.
+        _photoScopeChanged = true;
+        _invalidatePhotoScope();
+        _lastError = null;
+        notifyListeners();
+      }
+    } finally {
+      checkAlive = false;
+      _checkingPhotoAccess = false;
+      _drainPhotoAccessRefresh();
+    }
+  }
+
+  Future<bool> _limitedPhotoScopeMatches(bool Function() canApply) async {
+    final indexed = Map<String, PhotoAsset>.of(_assets);
+    final expectedCount = _availableAssetCount;
+    if (indexed.isEmpty && expectedCount == null) return true;
+    if (expectedCount == null) return false;
+    final albums = await PhotoManager.getAssetPathList(
+      type: RequestType.common,
+      filterOption: FilterOptionGroup(
+        imageOption: const FilterOption(needTitle: false),
+        videoOption: const FilterOption(needTitle: false),
+        orders: const [
+          OrderOption(type: OrderOptionType.createDate, asc: false),
+        ],
+      ),
+    );
+    if (!canApply()) throw StateError('Photo scope check superseded');
+    if (albums.isEmpty) return expectedCount == 0 && indexed.isEmpty;
+    final album = albums.firstWhere((a) => a.isAll, orElse: () => albums.first);
+    final count = await album.assetCountAsync;
+    if (!canApply()) throw StateError('Photo scope check superseded');
+    if (count != expectedCount) return false;
+    final remaining = Set<String>.of(indexed.keys);
+    final seen = <String>{};
+    for (
+      var start = 0;
+      start < count && remaining.isNotEmpty;
+      start += _assetPageSize
+    ) {
+      final end = math.min(start + _assetPageSize, count);
+      final page = await album.getAssetListRange(start: start, end: end);
+      if (!canApply()) throw StateError('Photo scope check superseded');
+      if (page.length != end - start) return false;
+      for (final entity in page) {
+        if (!seen.add(entity.id)) return false;
+        final current = indexed[entity.id];
+        if (current == null) continue;
+        if (current.modifiedDate != entity.modifiedDateTime ||
+            current.createDate != entity.createDateTime ||
+            current.width != entity.width ||
+            current.height != entity.height ||
+            current.type != entity.type) {
+          return false;
+        }
+        remaining.remove(entity.id);
+      }
+    }
+    if (remaining.isNotEmpty) return false;
+    final finalCount = await album.assetCountAsync;
+    if (!canApply()) throw StateError('Photo scope check superseded');
+    return finalCount == expectedCount;
+  }
+
+  void _invalidatePhotoScope() {
+    // Permission changes invalidate the visible scope. Never retain a full
+    // library snapshot after the user narrows or revokes access in Settings.
+    _assets.clear();
+    _entities.clear();
+    _signatures.clear();
+    _checkpointAssets.clear();
+    _checkpointEntities.clear();
+    _checkpointSignatures.clear();
+    _hashAttempts.clear();
+    _sizeAttempts.clear();
+    _duplicateGroups = [];
+    _similarGroups = [];
+    _orderedIds = null;
+    _scanResult = ScanResult.empty;
+    _availableAssetCount = null;
+    _hasCompletedScan = false;
+    _wasCancelled = false;
+    _nextAssetOffset = 0;
+    _album = null;
+    _resetCounters();
+  }
+
+  void _drainPhotoAccessRefresh() {
+    if (_photoAccessRefreshPending &&
+        !_disposed &&
+        !_isScanning &&
+        !_isDeleting &&
+        !_checkingPhotoAccess) {
+      unawaited(refreshPhotoAccess());
+    }
+  }
+
+  Future<void> managePhotoAccess() async {
+    if (_disposed || _isScanning || _isDeleting) return;
+    await PhotoManager.presentLimited(type: RequestType.common);
+    if (!_disposed) await resumeScan();
+  }
+
   /// An explicit, bounded local-resource pass; never runs as part of a preview scan.
   /// Re-index first so revoked access or same-ID edits cannot reuse old hashes.
   Future<void> verifyOriginals({
@@ -353,6 +536,7 @@ class PhotoScannerService extends ChangeNotifier {
     _currentPhase = ScanPhase.idle;
     _publish(groups: true);
     _cancelNative(prefix);
+    _drainPhotoAccessRefresh();
   }
 
   Future<void> _scan({
@@ -365,8 +549,12 @@ class PhotoScannerService extends ChangeNotifier {
 
     _isScanning = true;
     _isVerifyingOriginals = originals;
+    _originalVerificationTarget = originals ? target : null;
+    _originalRoundTotal = null;
+    _originalRoundProcessed = 0;
     _setOperation('讀取相簿索引');
     _wasCancelled = false;
+    _photoScopeChanged = false;
     _hasCompletedScan = false;
     _lastError = null;
     _currentPhase = ScanPhase.fetchingAssets;
@@ -414,6 +602,7 @@ class PhotoScannerService extends ChangeNotifier {
         runId,
       );
       _checkRun(runId);
+      _photoPermission = permission;
       _hasLimitedAccess = permission.isLimited;
       if (!permission.hasAccess) {
         _checkpointAssets.clear();
@@ -507,6 +696,8 @@ class PhotoScannerService extends ChangeNotifier {
                 size: 0,
                 analysisPending: entity.type == AssetType.image,
                 createDate: entity.createDateTime,
+                modifiedDate: entity.modifiedDateTime,
+                durationSeconds: entity.duration,
                 type: entity.type,
                 isScreenshot: _isScreenshot(entity),
               ),
@@ -563,10 +754,14 @@ class PhotoScannerService extends ChangeNotifier {
     _analyzedCount = _pendingCount = _attemptedCount = _cloudCount = 0;
     _verifiedCount = _pendingResourceCount = _attemptedResourceCount = 0;
     _knownSizeCount = _verifiedHashCount = 0;
+    _knownLibraryBytes = 0;
   }
 
   void _countAsset(PhotoAsset asset, int direction) {
-    if (asset.sizeKnown) _knownSizeCount += direction;
+    if (asset.sizeKnown) {
+      _knownSizeCount += direction;
+      _knownLibraryBytes += direction * asset.size;
+    }
     if (asset.type == AssetType.image) {
       if (asset.hash != null) _verifiedHashCount += direction;
       if (asset.analysisPending) {
@@ -851,6 +1046,9 @@ class PhotoScannerService extends ChangeNotifier {
   ) async {
     if (!_nativeAvailable) return;
     final ids = _verificationQueue(target, candidates);
+    _originalRoundTotal = ids.length;
+    _originalRoundProcessed = 0;
+    notifyListeners();
     _startBudget(_resourceRoundBudget);
     var processed = 0;
     for (final id in ids) {
@@ -945,6 +1143,7 @@ class PhotoScannerService extends ChangeNotifier {
         ),
       );
       processed++;
+      _originalRoundProcessed = processed;
       _scanProgress = 0.45 + 0.55 * processed / math.max(1, ids.length);
       await _publishAnalysisBatch(runId, first: processed == 1);
       await Future<void>.delayed(Duration.zero);
@@ -1060,6 +1259,7 @@ class PhotoScannerService extends ChangeNotifier {
         'similar_groups': _scanResult.similarGroups.length,
       },
     );
+    _drainPhotoAccessRefresh();
   }
 
   bool _isScreenshot(AssetEntity asset) {
@@ -1239,7 +1439,16 @@ class PhotoScannerService extends ChangeNotifier {
   Future<bool> deleteAssets(List<PhotoAsset> assets) async =>
       (await deleteAssetsWithResult(assets)).isNotEmpty;
   Future<Set<String>> deleteAssetsWithResult(List<PhotoAsset> assets) async {
-    final ids = assets.map((asset) => asset.id).toSet();
+    final ids = <String>{
+      for (final asset in assets)
+        if (_assets[asset.id] case final current?)
+          if (current.modifiedDate == asset.modifiedDate &&
+              current.createDate == asset.createDate &&
+              current.width == asset.width &&
+              current.height == asset.height &&
+              current.type == asset.type)
+            asset.id,
+    };
     if (_disposed || _isScanning || _isDeleting || ids.isEmpty) return {};
     _isDeleting = true;
     notifyListeners();
@@ -1280,6 +1489,7 @@ class PhotoScannerService extends ChangeNotifier {
     } finally {
       _isDeleting = false;
       if (!_disposed) notifyListeners();
+      _drainPhotoAccessRefresh();
     }
   }
 

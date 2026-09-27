@@ -24,11 +24,14 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Generate and verify all supported languages
+        run: |
+          flutter gen-l10n
+          python3 scripts/check_localizations.py --escape-dart-isolates
+          python3 -m unittest discover -s scripts -p 'test_check*.py'
+
       - name: Analyze
         run: flutter analyze
-
-      - name: Check language coverage and iOS permission resources
-        run: python3 scripts/check_localizations.py
 
       - name: Test
         run: flutter test
@@ -141,6 +144,9 @@ jobs:
             --dart-define=REVENUECAT_IOS_API_KEY=${{ secrets.REVENUECAT_IOS_API_KEY }} \
             --export-options-plist="$HOME/export_options.plist"
 
+      - name: Verify packaged iOS languages and minimum OS
+        run: python3 scripts/check_ios_ipa.py build/ios/ipa/*.ipa --expected-build "$IOS_BUILD_NUMBER" --report build/ios/ipa-verification.json
+
       - name: Upload to TestFlight
         env:
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
@@ -158,4 +164,6 @@ jobs:
         if: always()
         with:
           name: ios-ipa
-          path: build/ios/ipa/*.ipa
+          path: |
+            build/ios/ipa/*.ipa
+            build/ios/ipa-verification.json

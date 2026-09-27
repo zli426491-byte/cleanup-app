@@ -32,6 +32,7 @@ class _AssetThumbnailState extends State<AssetThumbnail> {
   late Future<Uint8List?> _thumbnail;
   int _generation = 0;
   bool? _reportedReady;
+  bool _forceNative = false;
 
   @override
   void initState() {
@@ -51,6 +52,7 @@ class _AssetThumbnailState extends State<AssetThumbnail> {
         oldWidget.fullImage != widget.fullImage ||
         oldWidget.asset.thumbnail != widget.asset.thumbnail) {
       _generation++;
+      _forceNative = false;
       _reportedReady = null;
       _thumbnail = _thumbnailFor(
         widget.asset,
@@ -63,10 +65,11 @@ class _AssetThumbnailState extends State<AssetThumbnail> {
   static Future<Uint8List?> _thumbnailFor(
     PhotoAsset asset,
     int size,
-    bool fullImage,
-  ) {
+    bool fullImage, {
+    bool ignoreEmbedded = false,
+  }) {
     // A grid sample may already be cropped. Never use it as the full preview.
-    if (!fullImage && asset.thumbnail != null) {
+    if (!ignoreEmbedded && !fullImage && asset.thumbnail != null) {
       return Future.value(asset.thumbnail);
     }
     final key = (asset, size, fullImage);
@@ -123,12 +126,14 @@ class _AssetThumbnailState extends State<AssetThumbnail> {
   void _retry() {
     _cache.remove((widget.asset, widget.previewSize, widget.fullImage));
     _generation++;
+    _forceNative = true;
     _reportedReady = null;
     setState(() {
       _thumbnail = _thumbnailFor(
         widget.asset,
         widget.previewSize,
         widget.fullImage,
+        ignoreEmbedded: true,
       );
     });
   }
@@ -157,7 +162,9 @@ class _AssetThumbnailState extends State<AssetThumbnail> {
     return FutureBuilder<Uint8List?>(
       future: _thumbnail,
       builder: (context, snapshot) {
-        final fallback = widget.fullImage ? null : widget.asset.thumbnail;
+        final fallback = widget.fullImage || _forceNative
+            ? null
+            : widget.asset.thumbnail;
         final bytes = snapshot.connectionState == ConnectionState.done
             ? snapshot.data ?? fallback
             : fallback;

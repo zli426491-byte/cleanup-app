@@ -155,6 +155,8 @@ void main() {
           return permissionResponse == null
               ? permission.index
               : permissionResponse!.future;
+        case 'getPermissionState':
+          return permission.index;
         case 'getAssetPathList':
           final option = (call.arguments as Map)['option'] as Map;
           albumFilters.add(Map.of(option['child'] as Map));
@@ -207,6 +209,331 @@ void main() {
     messenger.setMockMethodCallHandler(channel, null);
     messenger.setMockMethodCallHandler(resources, null);
   });
+
+  test(
+    'permission changes clear revoked results without requesting again',
+    () async {
+      await scanner.startFullScan();
+      expect(scanner.scanResult.allAssets, hasLength(2));
+      permission = PermissionState.limited;
+      await scanner.refreshPhotoAccess();
+      expect(scanner.hasLimitedAccess, isTrue);
+      expect(scanner.scanResult.allAssets, isEmpty);
+      expect(scanner.hasCompletedScan, isFalse);
+      permission = PermissionState.denied;
+      await scanner.refreshPhotoAccess();
+      expect(scanner.permissionDenied, isTrue);
+      expect(scanner.knownLibraryBytes, 0);
+      permission = PermissionState.authorized;
+      await scanner.refreshPhotoAccess();
+      expect(scanner.permissionDenied, isFalse);
+      expect(scanner.scanResult.allAssets, isEmpty);
+    },
+  );
+
+  test(
+    'verified byte count is retained once and removed only for actual deletions',
+    () async {
+      library = [photo('a'), photo('b')];
+      nativeResults = {
+        'a': inspected('a', size: 100),
+        'b': inspected('b', size: 200),
+      };
+      await scanner.verifyOriginals(
+        target: OriginalVerificationTarget.fileSizes,
+      );
+      expect(scanner.knownLibraryBytes, 300);
+      expect(scanner.knownSizeAssetCount, 2);
+      await scanner.verifyOriginals(
+        target: OriginalVerificationTarget.exactPhotos,
+      );
+      expect(scanner.knownLibraryBytes, 300);
+      deletedBySystem = ['a'];
+      await scanner.deleteAssetsWithResult(scanner.scanResult.allAssets);
+      expect(scanner.knownLibraryBytes, 200);
+      expect(scanner.scanResult.allAssets.map((asset) => asset.id), ['b']);
+    },
+  );
+
+  test(
+    'limited-to-limited Settings changes invalidate old access and require a new scan',
+    () async {
+      permission = PermissionState.limited;
+      await scanner.startFullScan();
+      final old = scanner.scanResult.allAssets;
+      library = [photo('first'), photo('replacement')];
+      final pagesBefore = rangeEnds.length;
+      await scanner.refreshPhotoAccess();
+      expect(scanner.hasLimitedAccess, isTrue);
+      expect(scanner.photoScopeChanged, isTrue);
+      expect(scanner.scanResult.allAssets, isEmpty);
+      expect(
+        rangeEnds,
+        hasLength(pagesBefore + 1),
+        reason: 'Refresh reads metadata to detect same-count scope changes.',
+      );
+      expect(await scanner.deleteAssetsWithResult(old), isEmpty);
+      expect(deletionRequests, isEmpty);
+      await scanner.startFullScan();
+      expect(scanner.scanResult.allAssets.map((a) => a.id), [
+        'first',
+        'replacement',
+      ]);
+      expect(scanner.photoScopeChanged, isFalse);
+    },
+  );
+
+  test(
+    'unchanged limited scope preserves snapshot hashes bytes and checkpoints without media reads',
+    () async {
+      permission = PermissionState.limited;
+      nativeResults = {
+        'first': inspected('first-content', size: 100),
+        'second': inspected('second-content', size: 200),
+      };
+      await scanner.verifyOriginals(
+        target: OriginalVerificationTarget.exactPhotos,
+      );
+      final snapshot = scanner.scanResult;
+      expect(scanner.verifiedHashAssetCount, 2);
+      expect(scanner.knownLibraryBytes, 300);
+      resourceRequests.clear();
+      previewRequests.clear();
+      rangeEnds.clear();
+      await scanner.refreshPhotoAccess();
+      expect(identical(scanner.scanResult, snapshot), isTrue);
+      expect(scanner.photoScopeChanged, isFalse);
+      expect(scanner.verifiedHashAssetCount, 2);
+      expect(scanner.knownLibraryBytes, 300);
+      expect(resourceRequests, isEmpty);
+      expect(previewRequests, isEmpty);
+      expect(rangeEnds, [2]);
+      await scanner.verifyOriginals(
+        target: OriginalVerificationTarget.exactPhotos,
+      );
+      expect(
+        resourceRequests,
+        isEmpty,
+        reason: 'Validated checkpoints remain reusable.',
+      );
+      expect(scanner.verifiedHashAssetCount, 2);
+      expect(scanner.knownLibraryBytes, 300);
+    },
+  );
+
+  test(
+    'limited foreground check pages metadata and preserves an unchanged large scope',
+    () async {
+      permission = PermissionState.limited;
+      library = List.generate(241, (i) => photo('metadata-$i'));
+      await scanner.startFullScan();
+      final snapshot = scanner.scanResult;
+      resourceRequests.clear();
+      previewRequests.clear();
+      rangeEnds.clear();
+      await scanner.refreshPhotoAccess();
+      expect(identical(scanner.scanResult, snapshot), isTrue);
+      expect(rangeEnds, [120, 240, 241]);
+      expect(resourceRequests, isEmpty);
+      expect(previewRequests, isEmpty);
+    },
+  );
+
+  test(
+    'same-count limited scope invalidates a same-ID photo edited in Photos',
+    () async {
+      permission = PermissionState.limited;
+      await scanner.startFullScan();
+      library = [
+        {...photo('first'), 'modifiedDt': 1900000000},
+        photo('second'),
+      ];
+      await scanner.refreshPhotoAccess();
+      expect(scanner.scanResult.allAssets, isEmpty);
+      expect(scanner.photoScopeChanged, isTrue);
+    },
+  );
+
+  testWidgets(
+    'limited scope metadata timeout clears stale state and ignores late results',
+    (tester) async {
+      permission = PermissionState.limited;
+      await tester.runAsync(scanner.startFullScan);
+      pageResponse = Completer<Map<String, Object>>();
+      final latePage = pageResponse!;
+      final pagesBefore = rangeEnds.length;
+      final refreshing = scanner.refreshPhotoAccess();
+      for (var i = 0; i < 50 && rangeEnds.length == pagesBefore; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      expect(rangeEnds.length, pagesBefore + 1);
+      await tester.pump(const Duration(seconds: 6));
+      await refreshing;
+      expect(scanner.scanResult.allAssets, isEmpty);
+      expect(scanner.photoScopeChanged, isTrue);
+      latePage.complete({'data': library});
+      await tester.pump();
+      expect(scanner.scanResult.allAssets, isEmpty);
+      pageResponse = null;
+      await tester.runAsync(scanner.startFullScan);
+      final current = scanner.scanResult;
+      await tester.runAsync(scanner.refreshPhotoAccess);
+      expect(
+        identical(scanner.scanResult, current),
+        isTrue,
+        reason: 'The timeout releases the serialized access checker.',
+      );
+    },
+  );
+
+  testWidgets(
+    'scan beginning during a limited scope check supersedes its old result',
+    (tester) async {
+      permission = PermissionState.limited;
+      await tester.runAsync(scanner.startFullScan);
+      pageResponse = Completer<Map<String, Object>>();
+      final oldPage = pageResponse!;
+      final pagesBefore = rangeEnds.length;
+      final refreshing = scanner.refreshPhotoAccess();
+      for (var i = 0; i < 50 && rangeEnds.length == pagesBefore; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      expect(rangeEnds.length, pagesBefore + 1);
+      pageResponse = null;
+      library = [photo('new-first'), photo('new-second')];
+      await tester.runAsync(scanner.startFullScan);
+      final current = scanner.scanResult;
+      oldPage.complete({
+        'data': [photo('stale-a'), photo('stale-b')],
+      });
+      await tester.pump();
+      await refreshing;
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      expect(identical(scanner.scanResult, current), isTrue);
+      expect(scanner.scanResult.allAssets.map((a) => a.id), [
+        'new-first',
+        'new-second',
+      ]);
+      expect(scanner.photoScopeChanged, isFalse);
+    },
+  );
+
+  testWidgets(
+    'foreground permission refresh waits for scan cancellation and ignores late work',
+    (tester) async {
+      resourceResponse = Completer<Map<String, Object>>();
+      final scan = scanner.verifyOriginals();
+      for (var i = 0; i < 50 && resourceRequests.isEmpty; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      expect(scanner.isScanning, isTrue);
+      permission = PermissionState.denied;
+      await scanner.refreshPhotoAccess();
+      expect(scanner.permissionDenied, isFalse);
+      scanner.cancelScan();
+      await scan;
+      await tester.pump();
+      expect(scanner.permissionDenied, isTrue);
+      expect(scanner.scanResult.allAssets, isEmpty);
+      resourceResponse!.complete(inspected('late'));
+      await tester.pump();
+      expect(scanner.scanResult.allAssets, isEmpty);
+    },
+  );
+
+  test(
+    'permission refresh waits for native deletion to finish before invalidating access',
+    () async {
+      await scanner.startFullScan();
+      deletionResponse = Completer<List<String>>();
+      final delete = scanner.deleteAssetsWithResult(
+        scanner.scanResult.allAssets,
+      );
+      await Future<void>.delayed(Duration.zero);
+      permission = PermissionState.denied;
+      await scanner.refreshPhotoAccess();
+      expect(scanner.isDeleting, isTrue);
+      expect(scanner.scanResult.allAssets, hasLength(2));
+      deletionResponse!.complete(['first']);
+      expect(await delete, {'first'});
+      await Future<void>.delayed(Duration.zero);
+      expect(scanner.permissionDenied, isTrue);
+      expect(scanner.scanResult.allAssets, isEmpty);
+    },
+  );
+
+  test('deletion rejects an older version of a same-ID edited asset', () async {
+    await scanner.startFullScan();
+    final stale = scanner.scanResult.allAssets.first;
+    library = [
+      {...photo('first'), 'modifiedDt': 1900000000},
+    ];
+    await scanner.resumeScan();
+    expect(await scanner.deleteAssetsWithResult([stale]), isEmpty);
+    expect(deletionRequests, isEmpty);
+  });
+
+  testWidgets(
+    'capacity attempts cannot fill a new photo-only verification round',
+    (tester) async {
+      library = [photo('a'), photo('b'), photo('v', type: 2)];
+      nativeResults = {
+        'a': inspected('a', size: 100),
+        'b': inspected('b', size: 200),
+        'v': inspected('v', size: 300),
+      };
+      await tester.runAsync(
+        () => scanner.verifyOriginals(
+          target: OriginalVerificationTarget.fileSizes,
+        ),
+      );
+      expect(scanner.originalRoundTotal, 3);
+      expect(scanner.originalRoundProcessed, 3);
+      expect(scanner.verifiedHashAssetCount, 0);
+      expect(scanner.knownLibraryBytes, 600);
+      resourceRequests.clear();
+      resourceResponse = Completer<Map<String, Object>>();
+      final hashRound = scanner.verifyOriginals(
+        target: OriginalVerificationTarget.exactPhotos,
+      );
+      for (var i = 0; i < 30 && resourceRequests.isEmpty; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      expect(
+        scanner.originalVerificationTarget,
+        OriginalVerificationTarget.exactPhotos,
+      );
+      expect(scanner.originalRoundTotal, 2);
+      expect(scanner.originalRoundProcessed, 0);
+      expect(scanner.attemptedResourceCount, 3);
+      expect(resourceRequests, isNot(contains('v')));
+      scanner.cancelScan();
+      await hashRound;
+      resourceResponse!.complete(inspected('late'));
+      await tester.pump();
+      expect(scanner.originalRoundProcessed, 0);
+    },
+  );
+
+  test(
+    'metadata version and video duration are available for review checkpoints',
+    () async {
+      library = [
+        {...photo('v', type: 2), 'duration': 123},
+      ];
+      await scanner.startFullScan();
+      final asset = scanner.scanResult.videos.single;
+      expect(
+        asset.modifiedDate,
+        DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
+      );
+      expect(asset.durationSeconds, 123);
+      expect(asset.copyWith(size: 10).modifiedDate, asset.modifiedDate);
+      expect(asset.copyWith(size: 10).durationSeconds, 123);
+    },
+  );
 
   test('matching metadata alone produces no content group', () async {
     await scanner.startFullScan();

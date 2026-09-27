@@ -113,6 +113,15 @@ Future<void> _mount(
     ),
   );
   await tester.pumpAndSettle();
+  if (view is SmartCleanView) {
+    final context = tester.element(find.byType(SmartCleanView));
+    await tester.runAsync(() async {
+      for (final image in tester.widgetList<Image>(find.byType(Image))) {
+        await precacheImage(image.image, context, onError: (_, _) {});
+      }
+    });
+    await tester.pumpAndSettle();
+  }
 }
 
 void main() {
@@ -286,7 +295,13 @@ void main() {
     (tester) async {
       await _mount(tester, const SmartCleanView(), scanner: _EmptyScanner());
       expect(find.text('Done ✓'), findsOneWidget);
-      expect(find.text('Read 0 of 0 accessible items'), findsOneWidget);
+      final strings = AppLocalizations.of(
+        tester.element(find.byType(SmartCleanView)),
+      );
+      expect(
+        find.text(strings.homeIndexedCountWithTotal(0, 0)),
+        findsOneWidget,
+      );
       expect(find.text('Start scanning your library'), findsNothing);
       expect(find.text('Start scan'), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
@@ -305,9 +320,12 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('select-review-first')));
     await tester.pump();
-    await tester.tap(find.text('Preview and delete 1 items'));
+    await tester.tap(find.text('Preview and delete 1 item'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Confirm deletion'));
+    final strings = AppLocalizations.of(
+      tester.element(find.byType(SmartCleanView)),
+    );
+    await tester.tap(find.text(strings.reviewConfirmCount(1)));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Deleting…'), findsOneWidget);

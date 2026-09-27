@@ -105,7 +105,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get paywallPhotoFeature =>
-      'Yinelenen ve benzer fotoğrafları gruplayın, ardından her öğeyi inceleyin';
+      'Seçtiğiniz fotoğraf ve videoları onayladıktan sonra silin';
 
   @override
   String get paywallVideoFeature =>
@@ -229,7 +229,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get homeStorageUnavailable =>
-      'Cihaz depolamasını iPhone Ayarları\'ndan kontrol edin. Burada erişilebilir fotoğraf ve videoları düzenleyebilirsiniz.';
+      'Cihaz depolamasını Ayarlar’dan kontrol edin. Burada erişilebilir fotoğraf ve videoları düzenleyebilirsiniz.';
 
   @override
   String get homeViewIndexedPhotos => 'Şimdiye kadar okunan fotoğrafları gör';
@@ -433,7 +433,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String homeIndexedCountWithTotal(int count, int total) {
-    return 'Erişilebilir $total öğeden $count tanesi okundu';
+    return 'Okunan erişilebilir öğeler: $count / $total';
   }
 
   @override
@@ -523,7 +523,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get scanStartAlbumDescription =>
-      'Tüm erişilebilir fotoğraf ve videoları tarayın. Orijinal içerik doğrulaması ve görsel analiz, karar vermeden önce onları incelemenize yardımcı olur.';
+      'Benzer fotoğrafları incelemek için önce önizlemeler analiz edilir. Aynı fotoğraflar ve büyük dosyalar, kategorileri açıldığında ayrı kontrol edilir. Hiçbir şey otomatik silinmez.';
 
   @override
   String get scanContinue => 'Taramaya devam et';
@@ -674,8 +674,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get scanIndexingTitle => 'Fotoğraf arşivi dizine ekleniyor';
 
   @override
-  String get scanVerifyingTitle =>
-      'Tam kopyaları belirlemek için orijinaller doğrulanıyor';
+  String get scanVerifyingTitle => 'Orijinal dosyalar kontrol ediliyor';
 
   @override
   String get scanAnalyzingTitle =>
@@ -811,7 +810,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String swipeConfirmDeleteDescription(int count) {
-    return 'İncelenen $count fotoğrafı silin. Tutmak istediğiniz öğelerin doğru seçildiğinden emin olun.';
+    return 'Silinmek üzere seçilen fotoğraflar: $count. Tutmak istediklerinizi silme listesinden çıkarın.';
   }
 
   @override
@@ -1179,4 +1178,197 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get scanCheckFileSizes => 'Büyük dosya boyutlarını kontrol et';
+
+  @override
+  String get reviewDeleteTitle => 'Silmeyi gözden geçir';
+
+  @override
+  String get reviewRemove => 'Silme listesinden çıkar';
+
+  @override
+  String get reviewUnavailable =>
+      'Önizleme kullanılamıyor. Tekrar deneyin veya bu öğeyi çıkarın.';
+
+  @override
+  String reviewUnseenCount(int count) {
+    return 'Silmeden önce önizlenmesi gereken öğeler: $count';
+  }
+
+  @override
+  String get reviewAllVersions =>
+      'Bir gruptaki tüm sürümler seçili. Hepsi silinsin mi?';
+
+  @override
+  String get reviewDeleteAllVersions => 'Tüm sürümleri sil';
+
+  @override
+  String reviewConfirmCount(int count) {
+    return 'Silmeyi onayla · $count';
+  }
+
+  @override
+  String swipeResumeReview(int count) {
+    return 'Önceki incelemeye devam · $count incelendi';
+  }
+
+  @override
+  String get swipeResetReview => 'Yeniden başla';
+
+  @override
+  String swipeBatchSize(int count) {
+    return 'Her gruptaki öğe sayısı: $count';
+  }
+
+  @override
+  String get swipeAllMonths => 'Tüm aylar';
+
+  @override
+  String get swipeReviewBatch => 'Ay veya grup seç';
+
+  @override
+  String get assetVideoLoading => 'Orijinal video yükleniyor…';
+
+  @override
+  String get assetVideoUnavailable =>
+      'Orijinal video kullanılamıyor. Fotoğraflar’dan indirin ve tekrar deneyin.';
+
+  @override
+  String get homePermissionTitle => 'Fotoğraf erişimi gerekli';
+
+  @override
+  String get homePermissionDescription =>
+      'Taramak ve incelemek için Ayarlar’dan fotoğraf erişimine izin verin. Hiçbir şey otomatik silinmez.';
+
+  @override
+  String get homeOpenSettings => 'Ayarlar’ı aç';
+
+  @override
+  String get homeManagePhotoAccess => 'Fotoğraf erişimini yönet';
+
+  @override
+  String get homeReviewReady => 'Erişilebilir fotoğrafları incele';
+
+  @override
+  String get homeContinueAnalysis => 'Fotoğraf analizine devam';
+
+  @override
+  String get homeScanDetails => 'Tarama ayrıntıları';
+
+  @override
+  String get scanCheckingExactTitle => 'Aynı fotoğraflar kontrol ediliyor';
+
+  @override
+  String get scanCheckingSizesTitle => 'Dosya boyutları kontrol ediliyor';
+
+  @override
+  String scanRoundProgress(int total, int completed) {
+    return 'İşlenen $completed / $total';
+  }
+
+  @override
+  String get scanPauseReview => 'Kontrolü duraklat ve incele';
+
+  @override
+  String get scanSelectionHint =>
+      'Silinecek öğeleri işaretleyin. İçeriklerini görmek için Önizleme’ye dokunun.';
+
+  @override
+  String get scanPreviewNotReady => 'Seçmeden önce önizlemeyi yükleyin';
+
+  @override
+  String scanUnreadableExcluded(int count) {
+    return 'Önizlemesi yüklenmeyen ve seçilmeyen öğeler: $count';
+  }
+
+  @override
+  String get scanKeepThis => 'Bu fotoğrafı tut';
+
+  @override
+  String get scanPreviewMore => 'Daha fazla fotoğraf yükle';
+
+  @override
+  String homeKnownLibrarySize(int count, String size) {
+    return 'Doğrulanan dosya boyutu: $size · Kontrol edilen: $count';
+  }
+
+  @override
+  String homePendingSizes(int count) {
+    return 'Boyutu hâlâ bilinmeyen öğeler: $count';
+  }
+
+  @override
+  String get scanReviewChanged =>
+      'Fotoğraflar veya izinler değişti. Silme listenizi yeniden inceleyin.';
+
+  @override
+  String get paywallFreePreviewNote =>
+      'Fotoğraf gruplama, önizleme ve kaydırarak işaretleme ücretsizdir. Pro ile onaylı silme ve video sıkıştırma açılır.';
+
+  @override
+  String paywallSubscribeWeekly(String price) {
+    return 'Haftalık abone ol · $price';
+  }
+
+  @override
+  String paywallSubscribeYearly(String price) {
+    return 'Yıllık abone ol · $price';
+  }
+
+  @override
+  String get paywallSubscribe => 'Abone ol';
+
+  @override
+  String paywallWeeklyRenewal(String price) {
+    return 'İptal edilmezse haftada $price karşılığında otomatik yenilenir. Son koşulları App Store’da inceleyin.';
+  }
+
+  @override
+  String paywallYearlyRenewal(String price) {
+    return 'İptal edilmezse yılda $price karşılığında otomatik yenilenir. Son koşulları App Store’da inceleyin.';
+  }
+
+  @override
+  String get paywallRenewalGeneric =>
+      'İptal edilmezse otomatik yenilenir. Onaylamadan önce App Store’da dönem ve tutarı inceleyin.';
+
+  @override
+  String get paywallLoadingPlans => 'Abonelik planları yükleniyor…';
+
+  @override
+  String get paywallWaitingForStore => 'App Store onayı bekleniyor…';
+
+  @override
+  String get paywallRestoring => 'Satın alımlar geri yükleniyor…';
+
+  @override
+  String get settingsCheckingSubscription => 'Abonelik kontrol ediliyor…';
+
+  @override
+  String get settingsSubscriptionUnknown => 'Abonelik durumu kullanılamıyor';
+
+  @override
+  String get settingsManageSubscription => 'Aboneliği yönet';
+
+  @override
+  String get settingsManageUnavailable =>
+      'Abonelik yönetimi açılamadı. Mağaza hesabı ayarlarınızdan abonelikleri açın.';
+
+  @override
+  String get onboardingStartFree => 'Ücretsiz başla';
+
+  @override
+  String get swipeCheckpointSaveError =>
+      'İnceleme ilerlemesi kaydedilemedi. Devam edebilirsiniz ancak bir dahaki sefere kaldığınız yerden başlayamayabilirsiniz.';
+
+  @override
+  String swipeCheckpointLimit(int count) {
+    return 'Bu cihazda saklanan son inceleme seçimleri: en fazla $count';
+  }
+
+  @override
+  String get scanSelectLoaded => 'Yüklenen önizlemeleri seç';
+
+  @override
+  String get homePhotoScopeChanged =>
+      'Fotoğraf erişimi değişmiş olabilir. Erişilebilir fotoğrafları yenilemek için tekrar tarayın.';
 }

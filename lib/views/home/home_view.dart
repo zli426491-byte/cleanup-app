@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -6,24 +7,43 @@ import 'package:cleanup_app/l10n/l10n.dart';
 import '../../services/photo_scanner_service.dart';
 import '../../services/subscription_manager.dart';
 import '../../models/storage_info.dart';
+import '../../models/photo_asset.dart' show formatBytes;
 import '../../utils/app_theme.dart';
 import '../scanner/smart_clean_view.dart';
 import '../scanner/scan_progress_panel.dart';
 import '../scanner/swipe_clean_view.dart';
 
 class HomeView extends StatefulWidget {
-  const HomeView({super.key});
+  final ValueChanged<String>? onOpenReview;
+  const HomeView({super.key, this.onOpenReview});
   @override
   State<HomeView> createState() => _HomeViewState();
 }
 
-class _HomeViewState extends State<HomeView> {
+class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   StorageInfo? _storage;
+  ScanResult? _photoSource;
+  List<PhotoAsset> _photos = [];
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadStorage();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      unawaited(context.read<PhotoScannerService>().refreshPhotoAccess());
+      unawaited(_loadStorage());
+    }
   }
 
   Future<void> _loadStorage() async {
@@ -39,9 +59,18 @@ class _HomeViewState extends State<HomeView> {
         scanner.isScanning,
         scanner.isDeleting,
         scanner.hasCompletedScan,
+        scanner.permissionDenied,
+        scanner.hasLimitedAccess,
+        scanner.photoScopeChanged,
       ),
     );
     final scanner = context.read<PhotoScannerService>();
+    if (!identical(_photoSource, scanner.scanResult)) {
+      _photoSource = scanner.scanResult;
+      _photos = scanner.scanResult.allAssets
+          .where((asset) => asset.type == AssetType.image)
+          .toList();
+    }
     final isPro = context.select<SubscriptionManager, bool>((sub) => sub.isPro);
 
     return Scaffold(
@@ -59,17 +88,60 @@ class _HomeViewState extends State<HomeView> {
                   const SizedBox(height: AppTheme.s20),
                   if (_storage != null && !_storage!.isEstimate)
                     _buildStorageCard(_storage!)
-                  else
+                  else if (scanner.knownSizeAssetCount > 0)
                     Text(
-                      context.l10n.homeStorageUnavailable,
-                      style: AppTheme.caption,
+                      context.l10n.homeKnownLibrarySize(
+                        scanner.knownSizeAssetCount,
+                        formatBytes(scanner.knownLibraryBytes),
+                      ),
+                      style: AppTheme.body,
                     ),
                   const SizedBox(height: AppTheme.s16),
-                  _buildScanButton(scanner),
+                  if (scanner.photoScopeChanged &&
+                      !scanner.permissionDenied) ...[
+                    Text(
+                      context.l10n.homePhotoScopeChanged,
+                      style: AppTheme.body,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (scanner.permissionDenied && !scanner.isScanning)
+                    _buildPermissionCard(scanner)
+                  else if (!scanner.isScanning &&
+                      scanner.scanResult.allAssets.isNotEmpty) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: scanner.isDeleting ? null : _openReview,
+                        icon: const Icon(Icons.photo_library_outlined),
+                        label: Text(context.l10n.homeReviewReady),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: scanner.isDeleting
+                          ? null
+                          : _shouldResume(scanner)
+                          ? scanner.resumeScan
+                          : scanner.startFullScan,
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: Text(context.l10n.homeContinueAnalysis),
+                    ),
+                  ] else
+                    _buildScanButton(scanner),
+                  if (scanner.hasLimitedAccess)
+                    TextButton.icon(
+                      onPressed: scanner.isScanning || scanner.isDeleting
+                          ? null
+                          : () => _manageAccess(scanner),
+                      icon: const Icon(Icons.photo_library_outlined),
+                      label: Text(context.l10n.homeManagePhotoAccess),
+                    ),
                   if (!scanner.isScanning ||
                       scanner.scanResult.allAssets.isNotEmpty) ...[
-                    const SizedBox(height: AppTheme.s16),
-                    _buildSwipeEntry(scanner),
+                    if (!scanner.permissionDenied) ...[
+                      const SizedBox(height: AppTheme.s16),
+                      _buildSwipeEntry(scanner),
+                    ],
                   ],
                   if (scanner.isScanning) ...[
                     const SizedBox(height: AppTheme.s12),
@@ -89,6 +161,7 @@ class _HomeViewState extends State<HomeView> {
                     ),
                   ],
                   if (!scanner.isScanning &&
+                      !scanner.permissionDenied &&
                       (scanner.hasCompletedScan ||
                           scanner.scannedAssetCount > 0 ||
                           scanner.wasCancelled ||
@@ -100,10 +173,6 @@ class _HomeViewState extends State<HomeView> {
                   _buildSectionHeader(context.l10n.homeCleanupTools),
                   const SizedBox(height: AppTheme.s10),
                   _buildToolList(scanner),
-                  const SizedBox(height: AppTheme.s16),
-                  _buildSectionHeader(context.l10n.homeQuickActions),
-                  const SizedBox(height: AppTheme.s10),
-                  _buildQuickActions(),
                 ],
               ),
             ),
@@ -112,6 +181,51 @@ class _HomeViewState extends State<HomeView> {
       ),
     );
   }
+
+  Future<void> _manageAccess(PhotoScannerService scanner) async {
+    try {
+      await scanner.managePhotoAccess();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.homePermissionDescription)),
+      );
+    }
+  }
+
+  Widget _buildPermissionCard(PhotoScannerService scanner) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: AppTheme.primaryLight,
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(context.l10n.homePermissionTitle, style: AppTheme.heading3),
+        const SizedBox(height: 8),
+        Text(context.l10n.homePermissionDescription),
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          key: const ValueKey('open-photo-settings'),
+          onPressed: () async {
+            final opened = await scanner.openPhotoSettings();
+            if (!mounted || opened) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(context.l10n.homePermissionDescription)),
+            );
+          },
+          icon: const Icon(Icons.settings_outlined),
+          label: Text(context.l10n.homeOpenSettings),
+        ),
+        TextButton(
+          onPressed: scanner.startFullScan,
+          child: Text(context.l10n.scanStart),
+        ),
+      ],
+    ),
+  );
 
   // ── Header ──
   Widget _buildHeader(bool isPro) => Row(
@@ -317,6 +431,7 @@ class _HomeViewState extends State<HomeView> {
     child: Material(
       color: Colors.transparent,
       child: InkWell(
+        key: const ValueKey('home-scan-start'),
         borderRadius: BorderRadius.circular(AppTheme.r16),
         onTap: s.isScanning || s.isDeleting
             ? null
@@ -373,9 +488,10 @@ class _HomeViewState extends State<HomeView> {
 
   // ── Results ──
   Widget _buildResults(PhotoScannerService s) => Container(
+    width: double.infinity,
     padding: const EdgeInsets.all(AppTheme.s16),
     decoration: BoxDecoration(
-      color: AppTheme.accentLight,
+      color: AppTheme.cardBg,
       borderRadius: BorderRadius.circular(AppTheme.r16),
       border: Border.all(color: AppTheme.accent.withValues(alpha: 0.15)),
     ),
@@ -393,28 +509,30 @@ class _HomeViewState extends State<HomeView> {
         ),
         const SizedBox(height: 6),
         Text(
-          s.scanNotice == null
-              ? context.l10n.homeAnalysisSummary(
-                  s.analyzedAssetCount,
-                  s.verifiedOriginalCount,
-                )
-              : context.localizeServiceMessage(s.scanNotice!),
-          style: AppTheme.small,
-        ),
-        const SizedBox(height: 8),
-        TextButton(
-          onPressed: _openReview,
-          child: Text(context.l10n.homePreviewOrganize),
-        ),
-        if (!s.isScanning && s.pendingResourceCount > 0)
-          TextButton(
-            onPressed: s.isDeleting ? null : s.verifyOriginals,
-            child: Text(context.l10n.homeVerifyOriginals),
+          context.l10n.homeAnalysisSummary(
+            s.analyzedAssetCount,
+            s.verifiedOriginalCount,
           ),
-        if (!s.isScanning && _shouldResume(s))
-          TextButton(
-            onPressed: s.isDeleting ? null : s.resumeScan,
-            child: Text(context.l10n.homeRetryPending),
+          style: AppTheme.caption,
+        ),
+        if (s.pendingSizeAssetCount > 0)
+          Text(
+            context.l10n.homePendingSizes(s.pendingSizeAssetCount),
+            style: AppTheme.caption,
+          ),
+        if (s.scanNotice != null)
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: Text(context.l10n.homeScanDetails),
+            children: [
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  context.localizeServiceMessage(s.scanNotice!),
+                  style: AppTheme.caption,
+                ),
+              ),
+            ],
           ),
       ],
     ),
@@ -685,9 +803,7 @@ class _HomeViewState extends State<HomeView> {
 
   // ── Quick Actions ──
   Widget _buildSwipeEntry(PhotoScannerService scanner) {
-    final photos = scanner.scanResult.allAssets
-        .where((asset) => asset.type == AssetType.image)
-        .toList();
+    final photos = _photos;
     return Container(
       key: const ValueKey('home-swipe-entry'),
       width: double.infinity,
@@ -704,104 +820,35 @@ class _HomeViewState extends State<HomeView> {
           Text(context.l10n.scanSwipeCleanup, style: AppTheme.heading3),
           const SizedBox(height: 6),
           Text(context.l10n.homeSwipeDescription, style: AppTheme.body),
-          const SizedBox(height: 14),
-          FilledButton.icon(
-            onPressed: scanner.isScanning || scanner.isDeleting
-                ? null
-                : photos.isEmpty
-                ? () => _openReview('photos')
-                : () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => SwipeCleanView(
-                        assets: photos,
-                        title: context.l10n.scanCategoryPhotos,
-                        categoryId: 'photos',
+          if (photos.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            FilledButton.icon(
+              onPressed: scanner.isScanning || scanner.isDeleting
+                  ? null
+                  : () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SwipeCleanView(
+                          assets: photos,
+                          title: context.l10n.scanCategoryPhotos,
+                          categoryId: 'photos',
+                        ),
                       ),
                     ),
-                  ),
-            icon: const Icon(Icons.arrow_forward_rounded),
-            label: Text(
-              photos.isEmpty
-                  ? context.l10n.scanStart
-                  : context.l10n.scanSwipeStart,
+              icon: const Icon(Icons.arrow_forward_rounded),
+              label: Text(context.l10n.scanSwipeStart),
             ),
-          ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildQuickActions() => Container(
-    decoration: BoxDecoration(
-      color: AppTheme.cardBg,
-      borderRadius: BorderRadius.circular(AppTheme.r12),
-      border: Border.all(color: AppTheme.border, width: 0.5),
-    ),
-    child: Column(
-      children: [
-        _buildQRow(
-          Icons.photo_library_rounded,
-          context.l10n.homePreviewPhotos,
-          context.l10n.homeChooseKeep,
-          AppTheme.primary,
-          onTap: _openReview,
-        ),
-      ],
-    ),
-  );
-
-  Widget _buildQRow(
-    IconData ic,
-    String t,
-    String st,
-    Color c, {
-    required VoidCallback onTap,
-  }) => InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(AppTheme.r12),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppTheme.s14,
-        vertical: AppTheme.s12,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: c.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(AppTheme.r8),
-            ),
-            child: Icon(ic, color: c, size: 18),
-          ),
-          const SizedBox(width: AppTheme.s12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  t,
-                  style: AppTheme.body.copyWith(fontWeight: FontWeight.w600),
-                ),
-                Text(st, style: AppTheme.small),
-              ],
-            ),
-          ),
-          Icon(
-            Directionality.of(context) == TextDirection.rtl
-                ? Icons.chevron_left_rounded
-                : Icons.chevron_right_rounded,
-            color: AppTheme.textMuted,
-            size: 18,
-          ),
-        ],
-      ),
-    ),
-  );
-
   void _openReview([String category = 'photos']) {
+    if (widget.onOpenReview != null) {
+      widget.onOpenReview!(category);
+      return;
+    }
     Navigator.push(
       context,
       MaterialPageRoute(

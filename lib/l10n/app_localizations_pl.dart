@@ -106,7 +106,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get paywallPhotoFeature =>
-      'Grupuj identyczne i podobne zdjęcia, a następnie sprawdź każdy element';
+      'Usuń wybrane zdjęcia i filmy po potwierdzeniu';
 
   @override
   String get paywallVideoFeature =>
@@ -228,7 +228,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get homeStorageUnavailable =>
-      'Sprawdź pamięć urządzenia w ustawieniach iPhone’a. Tutaj możesz porządkować dostępne zdjęcia i filmy.';
+      'Sprawdź pamięć urządzenia w Ustawieniach. Tutaj możesz porządkować dostępne zdjęcia i filmy.';
 
   @override
   String get homeViewIndexedPhotos => 'Pokaż odczytane zdjęcia';
@@ -433,7 +433,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String homeIndexedCountWithTotal(int count, int total) {
-    return 'Odczytano $count z $total dostępnych elementów';
+    return 'Odczytane dostępne elementy: $count / $total';
   }
 
   @override
@@ -533,7 +533,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get scanStartAlbumDescription =>
-      'Skanuj wszystkie dostępne zdjęcia i filmy. Weryfikacja oryginalnej treści i analiza wizualna pomagają je sprawdzić przed podjęciem decyzji.';
+      'Najpierw przeanalizuj podglądy, aby porównać podobne zdjęcia. Identyczne zdjęcia i duże pliki są sprawdzane osobno po otwarciu ich kategorii. Nic nie jest usuwane automatycznie.';
 
   @override
   String get scanContinue => 'Kontynuuj skanowanie';
@@ -684,8 +684,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get scanIndexingTitle => 'Indeksowanie biblioteki zdjęć';
 
   @override
-  String get scanVerifyingTitle =>
-      'Weryfikacja oryginałów w celu znalezienia identycznych kopii';
+  String get scanVerifyingTitle => 'Sprawdzanie plików oryginalnych';
 
   @override
   String get scanAnalyzingTitle => 'Analiza lokalnych podglądów zdjęć';
@@ -821,7 +820,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String swipeConfirmDeleteDescription(int count) {
-    return 'Usuń sprawdzone zdjęcia ($count). Upewnij się, że prawidłowo wybrano zdjęcia do zachowania.';
+    return 'Zdjęcia wybrane do usunięcia: $count. Usuń z listy zdjęcia, które chcesz zachować.';
   }
 
   @override
@@ -1162,7 +1161,15 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String scanPendingCheckCount(int count) {
-    return 'Do sprawdzenia: $count';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Do sprawdzenia: $count elementu',
+      many: 'Do sprawdzenia: $count elementów',
+      few: 'Do sprawdzenia: $count elementy',
+      one: 'Do sprawdzenia: $count element',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1190,4 +1197,198 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get scanCheckFileSizes => 'Sprawdź rozmiary dużych plików';
+
+  @override
+  String get reviewDeleteTitle => 'Sprawdź usuwanie';
+
+  @override
+  String get reviewRemove => 'Usuń z listy do usunięcia';
+
+  @override
+  String get reviewUnavailable =>
+      'Podgląd niedostępny. Spróbuj ponownie lub usuń ten element z listy.';
+
+  @override
+  String reviewUnseenCount(int count) {
+    return 'Elementy do obejrzenia przed usunięciem: $count';
+  }
+
+  @override
+  String get reviewAllVersions =>
+      'Zaznaczono wszystkie wersje w grupie. Usunąć je wszystkie?';
+
+  @override
+  String get reviewDeleteAllVersions => 'Usuń wszystkie wersje';
+
+  @override
+  String reviewConfirmCount(int count) {
+    return 'Potwierdź usunięcie · $count';
+  }
+
+  @override
+  String swipeResumeReview(int count) {
+    return 'Kontynuuj przegląd · sprawdzono $count';
+  }
+
+  @override
+  String get swipeResetReview => 'Zacznij od nowa';
+
+  @override
+  String swipeBatchSize(int count) {
+    return 'Elementy w partii: $count';
+  }
+
+  @override
+  String get swipeAllMonths => 'Wszystkie miesiące';
+
+  @override
+  String get swipeReviewBatch => 'Wybierz miesiąc lub partię';
+
+  @override
+  String get assetVideoLoading => 'Ładowanie oryginalnego filmu…';
+
+  @override
+  String get assetVideoUnavailable =>
+      'Oryginalny film jest niedostępny. Pobierz go w Zdjęciach i spróbuj ponownie.';
+
+  @override
+  String get homePermissionTitle => 'Potrzebny dostęp do zdjęć';
+
+  @override
+  String get homePermissionDescription =>
+      'Zezwól na dostęp w Ustawieniach, aby skanować i przeglądać zdjęcia. Nic nie jest usuwane automatycznie.';
+
+  @override
+  String get homeOpenSettings => 'Otwórz Ustawienia';
+
+  @override
+  String get homeManagePhotoAccess => 'Zarządzaj dostępem do zdjęć';
+
+  @override
+  String get homeReviewReady => 'Przejrzyj dostępne zdjęcia';
+
+  @override
+  String get homeContinueAnalysis => 'Kontynuuj analizę zdjęć';
+
+  @override
+  String get homeScanDetails => 'Szczegóły skanowania';
+
+  @override
+  String get scanCheckingExactTitle => 'Sprawdzanie identycznych zdjęć';
+
+  @override
+  String get scanCheckingSizesTitle => 'Sprawdzanie rozmiarów plików';
+
+  @override
+  String scanRoundProgress(int total, int completed) {
+    return 'Przetworzono $completed / $total';
+  }
+
+  @override
+  String get scanPauseReview => 'Wstrzymaj i przeglądaj';
+
+  @override
+  String get scanSelectionHint =>
+      'Zaznacz elementy do usunięcia. Dotknij Podgląd, aby zobaczyć ich zawartość.';
+
+  @override
+  String get scanPreviewNotReady => 'Wczytaj podgląd przed zaznaczeniem';
+
+  @override
+  String scanUnreadableExcluded(int count) {
+    return 'Niewczytane podglądy, pominięte w zaznaczeniu: $count';
+  }
+
+  @override
+  String get scanKeepThis => 'Zachowaj to zdjęcie';
+
+  @override
+  String get scanPreviewMore => 'Wczytaj więcej zdjęć';
+
+  @override
+  String homeKnownLibrarySize(int count, String size) {
+    return 'Potwierdzone rozmiary: $size · Sprawdzono: $count';
+  }
+
+  @override
+  String homePendingSizes(int count) {
+    return 'Elementy o nieznanym rozmiarze: $count';
+  }
+
+  @override
+  String get scanReviewChanged =>
+      'Zdjęcia lub uprawnienia się zmieniły. Sprawdź ponownie listę do usunięcia.';
+
+  @override
+  String get paywallFreePreviewNote =>
+      'Grupowanie, podgląd i oznaczanie gestem są bezpłatne. Pro umożliwia usuwanie po potwierdzeniu i kompresję filmów.';
+
+  @override
+  String paywallSubscribeWeekly(String price) {
+    return 'Subskrybuj co tydzień · $price';
+  }
+
+  @override
+  String paywallSubscribeYearly(String price) {
+    return 'Subskrybuj co rok · $price';
+  }
+
+  @override
+  String get paywallSubscribe => 'Subskrybuj';
+
+  @override
+  String paywallWeeklyRenewal(String price) {
+    return 'Odnawia się automatycznie za $price tygodniowo, chyba że anulujesz. Sprawdź ostateczne warunki w App Store.';
+  }
+
+  @override
+  String paywallYearlyRenewal(String price) {
+    return 'Odnawia się automatycznie za $price rocznie, chyba że anulujesz. Sprawdź ostateczne warunki w App Store.';
+  }
+
+  @override
+  String get paywallRenewalGeneric =>
+      'Odnawia się automatycznie, chyba że anulujesz. Przed potwierdzeniem sprawdź okres i kwotę w App Store.';
+
+  @override
+  String get paywallLoadingPlans => 'Ładowanie planów subskrypcji…';
+
+  @override
+  String get paywallWaitingForStore =>
+      'Oczekiwanie na potwierdzenie App Store…';
+
+  @override
+  String get paywallRestoring => 'Przywracanie zakupów…';
+
+  @override
+  String get settingsCheckingSubscription => 'Sprawdzanie subskrypcji…';
+
+  @override
+  String get settingsSubscriptionUnknown => 'Stan subskrypcji niedostępny';
+
+  @override
+  String get settingsManageSubscription => 'Zarządzaj subskrypcją';
+
+  @override
+  String get settingsManageUnavailable =>
+      'Nie można otworzyć zarządzania. Otwórz subskrypcje w ustawieniach konta sklepu.';
+
+  @override
+  String get onboardingStartFree => 'Zacznij bezpłatnie';
+
+  @override
+  String get swipeCheckpointSaveError =>
+      'Nie udało się zapisać postępu. Możesz kontynuować, ale przy kolejnym uruchomieniu postęp może nie zostać przywrócony.';
+
+  @override
+  String swipeCheckpointLimit(int count) {
+    return 'Ostatnie wybory przechowywane na urządzeniu: maksymalnie $count';
+  }
+
+  @override
+  String get scanSelectLoaded => 'Zaznacz wczytane podglądy';
+
+  @override
+  String get homePhotoScopeChanged =>
+      'Dostęp do zdjęć mógł się zmienić. Skanuj ponownie, aby odświeżyć dostępne zdjęcia.';
 }

@@ -29,7 +29,7 @@
   "paywallYearlyPlan": "Yearly subscription",
   "paywallYearlySubtitle": "Organize photos and videos throughout the year",
   "paywallWeeklySubtitle": "For a short photo cleanup session",
-  "paywallPhotoFeature": "Group duplicate and similar photos, then review each item",
+  "paywallPhotoFeature": "Delete the photos and videos you select after confirmation",
   "paywallVideoFeature": "Compress videos, preview them, and save copies",
   "paywallSwipeFeature": "Organize quickly with swipe gestures",
   "paywallPlansUnavailable": "Subscription plans could not be loaded. Check your connection and reload.",
@@ -120,7 +120,7 @@
       }
     }
   },
-  "homeStorageUnavailable": "Check device storage in iPhone Settings. Here, you can organize accessible photos and videos.",
+  "homeStorageUnavailable": "Check device storage in Settings. Here, you can organize accessible photos and videos.",
   "homeViewIndexedPhotos": "View photos read so far",
   "homeViewIndexedScreenshots": "View screenshots read so far",
   "homeCleanupTools": "Cleaning tools",
@@ -203,7 +203,7 @@
       }
     }
   },
-  "homeIndexedCountWithTotal": "Read {count} of {total} accessible items",
+  "homeIndexedCountWithTotal": "Accessible items read: {count} / {total}",
   "@homeIndexedCountWithTotal": {
     "placeholders": {
       "count": {
@@ -273,7 +273,7 @@
   "scanSortNewest": "Newest",
   "scanStartAlbumTitle": "Start scanning your library",
   "scanIncompleteTitle": "Scan incomplete",
-  "scanStartAlbumDescription": "Scan all accessible photos and videos. Original content verification and visual analysis help you review them before deciding.",
+  "scanStartAlbumDescription": "Scan photo previews first to review similar pictures. Exact duplicates and large files are checked separately when you open those categories. Nothing is deleted automatically.",
   "scanContinue": "Continue scan",
   "scanStart": "Start scan",
   "scanPreviewWhileRunning": "You can preview photos and screenshots. Selection, deletion and video compression are paused during scanning.",
@@ -306,7 +306,7 @@
   "scanCategoryScreenshots": "Screenshots",
   "scanCategoryVideos": "Videos",
   "scanCategoryLarge": "Large files",
-  "scanExactGroupCount": "Exact duplicates: {count} photos",
+  "scanExactGroupCount": "Exact duplicates: {count, plural, one{{count} photo} other{{count} photos}}",
   "@scanExactGroupCount": {
     "placeholders": {
       "count": {
@@ -314,7 +314,7 @@
       }
     }
   },
-  "scanSimilarGroupCount": "Visual candidates: {count} photos",
+  "scanSimilarGroupCount": "Visual candidates: {count, plural, one{{count} photo} other{{count} photos}}",
   "@scanSimilarGroupCount": {
     "placeholders": {
       "count": {
@@ -338,7 +338,7 @@
       }
     }
   },
-  "scanPreviewDeleteCount": "Preview and delete {count} items",
+  "scanPreviewDeleteCount": "Preview and delete {count, plural, one{{count} item} other{{count} items}}",
   "@scanPreviewDeleteCount": {
     "placeholders": {
       "count": {
@@ -346,7 +346,7 @@
       }
     }
   },
-  "scanConfirmDeleteDescription": "{count} items selected. Review your selection and keep recommendations before deleting. Recovered storage is determined by the system.",
+  "scanConfirmDeleteDescription": "{count, plural, one{{count} item selected} other{{count} items selected}}. Review your selection and keep recommendations before deleting. Recovered storage is determined by the system.",
   "@scanConfirmDeleteDescription": {
     "placeholders": {
       "count": {
@@ -363,7 +363,7 @@
     }
   },
   "scanIndexingTitle": "Indexing photo library",
-  "scanVerifyingTitle": "Verifying originals for exact duplicates",
+  "scanVerifyingTitle": "Checking original files",
   "scanAnalyzingTitle": "Analyzing local photo previews",
   "scanSlowOperationHint": "This operation is taking longer. You can cancel, keep progress and continue later.",
   "scanProgressPreviewHint": "You can view indexed photos and screenshots. Pending downloads or unsuccessful analyses are never treated as exact duplicates.",
@@ -494,7 +494,7 @@
       }
     }
   },
-  "swipeReviewSummary": "{deleteCount} photos to delete · {keepCount} photos to keep",
+  "swipeReviewSummary": "{deleteCount, plural, one{{deleteCount} photo} other{{deleteCount} photos}} to delete · {keepCount, plural, one{{keepCount} photo} other{{keepCount} photos}} to keep",
   "@swipeReviewSummary": {
     "placeholders": {
       "deleteCount": {
@@ -505,7 +505,7 @@
       }
     }
   },
-  "swipeDeletePhotos": "Delete {count} photos",
+  "swipeDeletePhotos": "Delete {count, plural, one{{count} photo} other{{count} photos}}",
   "@swipeDeletePhotos": {
     "placeholders": {
       "count": {
@@ -513,7 +513,7 @@
       }
     }
   },
-  "swipeConfirmDeleteDescription": "Delete {count} reviewed photos. Make sure the items you wish to keep have been selected correctly.",
+  "swipeConfirmDeleteDescription": "Photos selected for deletion: {count}. Remove any photos you want to keep from the deletion list.",
   "@swipeConfirmDeleteDescription": {
     "placeholders": {
       "count": {
@@ -521,7 +521,7 @@
       }
     }
   },
-  "swipePartialDeleted": "{count} photos deleted. Remaining photos have not been deleted.",
+  "swipePartialDeleted": "{count, plural, one{{count} photo} other{{count} photos}} deleted. Remaining photos have not been deleted.",
   "@swipePartialDeleted": {
     "placeholders": {
       "count": {
@@ -529,7 +529,7 @@
       }
     }
   },
-  "swipeExitDescription": "You marked {count} photos for deletion. Leaving will not delete them.",
+  "swipeExitDescription": "You marked {count, plural, one{{count} photo} other{{count} photos}} for deletion. Leaving will not delete them.",
   "@swipeExitDescription": {
     "placeholders": {
       "count": {
@@ -537,7 +537,7 @@
       }
     }
   },
-  "swipeSkipRemainingDescription": "{remaining} photos are not reviewed. Finish reviewing and confirm the {deleteCount} photos already marked for deletion?",
+  "swipeSkipRemainingDescription": "Unreviewed photos: {remaining}. Finish reviewing and confirm the photos already marked for deletion ({deleteCount})?",
   "@swipeSkipRemainingDescription": {
     "placeholders": {
       "remaining": {
@@ -599,7 +599,7 @@
       }
     }
   },
-  "assetSizeBytes": "{count} bytes",
+  "assetSizeBytes": "{count, plural, one{{count} byte} other{{count} bytes}}",
   "@assetSizeBytes": {
     "placeholders": {
       "count": {
@@ -675,7 +675,7 @@
       }
     }
   },
-  "servicePhotosPending": "{count} photos still need visual analysis. Continue to process untried photos first. Cloud originals are not downloaded automatically.",
+  "servicePhotosPending": "{count, plural, one{{count} photo still needs} other{{count} photos still need}} visual analysis. Continue to process untried photos first. Cloud originals are not downloaded automatically.",
   "@servicePhotosPending": {
     "placeholders": {
       "count": {
@@ -720,7 +720,7 @@
   "scanKeepOneSelectOthers": "Keep this photo, select the others",
   "scanSelectOthersHint": "Preview the suggested photo to keep, then select the rest of this group in one go.",
   "scanNotChecked": "To check",
-  "scanPendingCheckCount": "{count} items to check",
+  "scanPendingCheckCount": "{count, plural, one{{count} item to check} other{{count} items to check}}",
   "swipeGestureTitle": "Quick swipe cleanup",
   "swipeGestureDelete": "Swipe left to mark for deletion",
   "swipeGestureKeep": "Swipe right to keep",
@@ -753,5 +753,154 @@
   },
   "@scanCheckFileSizes": {
     "description": "Action to check exact resource sizes without computing photo hashes."
-  }
+  },
+  "reviewDeleteTitle": "Review deletion",
+  "reviewRemove": "Remove from deletion",
+  "reviewUnavailable": "Preview unavailable. Retry or remove this item.",
+  "reviewUnseenCount": "Items needing preview before deletion: {count}",
+  "reviewAllVersions": "All versions in a group are selected. Delete every version?",
+  "reviewDeleteAllVersions": "Delete every version",
+  "reviewConfirmCount": "Confirm deletion · {count}",
+  "swipeResumeReview": "Continue previous review · {count} reviewed",
+  "swipeResetReview": "Start over",
+  "swipeBatchSize": "Items per batch: {count}",
+  "swipeAllMonths": "All months",
+  "swipeReviewBatch": "Choose a month or batch",
+  "assetVideoLoading": "Loading original video…",
+  "assetVideoUnavailable": "Original video unavailable. Download it in Photos, then retry.",
+  "@reviewUnseenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@reviewConfirmCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@swipeResumeReview": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@swipeBatchSize": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homePermissionTitle": "Photo access needed",
+  "homePermissionDescription": "Allow photo access in Settings to scan and review. Nothing is deleted automatically.",
+  "homeOpenSettings": "Open Settings",
+  "homeManagePhotoAccess": "Manage photo access",
+  "homeReviewReady": "Review available photos",
+  "homeContinueAnalysis": "Continue photo analysis",
+  "homeScanDetails": "Scan details",
+  "scanCheckingExactTitle": "Checking exact duplicate photos",
+  "scanCheckingSizesTitle": "Checking file sizes",
+  "scanRoundProgress": "Processed {completed} / {total}",
+  "scanPauseReview": "Pause checking and review",
+  "scanSelectionHint": "Check items to mark for deletion. Tap Preview to view their content.",
+  "scanPreviewNotReady": "Load the preview before selecting",
+  "scanUnreadableExcluded": "Previews not loaded and excluded from selection: {count}",
+  "scanKeepThis": "Keep this photo",
+  "scanPreviewMore": "Load more photos",
+  "homeKnownLibrarySize": "Confirmed file sizes: {size} · Checked: {count}",
+  "homePendingSizes": "Items with size still unknown: {count}",
+  "scanReviewChanged": "Photos or permissions have changed. Review your deletion list again.",
+  "paywallFreePreviewNote": "Photo grouping, previews and swipe marking are free. Pro unlocks confirmed deletion and video compression.",
+  "paywallSubscribeWeekly": "Subscribe weekly · {price}",
+  "paywallSubscribeYearly": "Subscribe yearly · {price}",
+  "paywallSubscribe": "Subscribe",
+  "paywallWeeklyRenewal": "Renews automatically at {price} each week unless canceled. Review the final terms in the App Store.",
+  "paywallYearlyRenewal": "Renews automatically at {price} each year unless canceled. Review the final terms in the App Store.",
+  "paywallRenewalGeneric": "Renews automatically unless canceled. Review the billing period and amount in the App Store before confirming.",
+  "paywallLoadingPlans": "Loading subscription plans…",
+  "paywallWaitingForStore": "Waiting for App Store confirmation…",
+  "paywallRestoring": "Restoring purchases…",
+  "settingsCheckingSubscription": "Checking subscription…",
+  "settingsSubscriptionUnknown": "Subscription status unavailable",
+  "settingsManageSubscription": "Manage subscription",
+  "settingsManageUnavailable": "Could not open subscription management. Open subscriptions in your store account settings.",
+  "onboardingStartFree": "Start for free",
+  "swipeCheckpointSaveError": "Could not save review progress. You can keep reviewing, but it may not resume next time.",
+  "swipeCheckpointLimit": "Recent review choices kept on this device: up to {count}",
+  "@scanRoundProgress": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "completed": {
+        "type": "int"
+      }
+    }
+  },
+  "@scanUnreadableExcluded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@homeKnownLibrarySize": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "@homePendingSizes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@paywallSubscribeWeekly": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "@paywallSubscribeYearly": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "@paywallWeeklyRenewal": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "@paywallYearlyRenewal": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "@swipeCheckpointLimit": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "scanSelectLoaded": "Select loaded previews",
+  "homePhotoScopeChanged": "Photo access may have changed. Scan again to refresh available photos."
 }

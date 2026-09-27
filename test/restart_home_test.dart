@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cleanup_app/l10n/l10n.dart';
 
 import 'package:cleanup_app/services/photo_scanner_service.dart';
 import 'package:cleanup_app/services/subscription_manager.dart';
@@ -9,8 +10,35 @@ import 'package:flutter/services.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:image/image.dart' as img;
 
 class _PartialScanner extends PhotoScannerService {
+  final result = ScanResult(
+    allAssets: [
+      PhotoAsset(
+        id: 'partial',
+        width: 8,
+        height: 8,
+        size: 0,
+        createDate: DateTime(2026),
+        type: AssetType.image,
+        thumbnail: img.encodePng(img.Image(width: 8, height: 8)),
+      ),
+    ],
+    duplicateGroups: [],
+    similarGroups: [],
+    screenshots: [],
+    largeFiles: [],
+    videos: [],
+    blurryPhotos: [],
+    darkPhotos: [],
+    overexposedPhotos: [],
+    totalSavingsEstimate: 0,
+  );
+  @override
+  ScanResult get scanResult => result;
+  @override
+  int get scannedAssetCount => result.allAssets.length;
   @override
   bool get hasCompletedScan => true;
 
@@ -143,15 +171,22 @@ void main() {
         );
         await tester.pump();
 
-        expect(find.textContaining('可存取共 5000 個'), findsOneWidget);
+        expect(
+          find.text(appStringsOf().homeIndexedCountWithTotal(1, 5000)),
+          findsOneWidget,
+        );
+        expect(find.textContaining('僅讀取部分項目'), findsNothing);
+        await tester.ensureVisible(find.text(appStringsOf().homeScanDetails));
+        await tester.tap(find.text(appStringsOf().homeScanDetails));
+        await tester.pumpAndSettle();
         expect(find.textContaining('僅讀取部分項目'), findsOneWidget);
         expect(find.text('預估可釋放'), findsNothing);
         expect(find.text('模糊照片'), findsNothing);
         expect(find.text('清理信箱'), findsNothing);
         expect(find.text('清理行事曆'), findsNothing);
 
-        await tester.ensureVisible(find.text('預覽並整理'));
-        await tester.tap(find.text('預覽並整理'));
+        await tester.ensureVisible(find.text(appStringsOf().homeReviewReady));
+        await tester.tap(find.text(appStringsOf().homeReviewReady));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 400));
         expect(find.byType(SmartCleanView), findsOneWidget);
@@ -165,7 +200,7 @@ void main() {
   }
 
   testWidgets(
-    'deadline partial results expose both real resume actions without clearing checkpoints',
+    'deadline partial results expose one continuation action preserving checkpoints',
     (tester) async {
       const photos = MethodChannel('com.fluttercandies/photo_manager');
       const resources = MethodChannel('cleanup/photo_resources');
@@ -283,16 +318,23 @@ void main() {
       expect(scanner.scannedAssetCount, 401);
       expect(scanner.pendingAnalysisCount, 400);
       expect(scanner.verifiedOriginalCount, 1);
-      expect(find.textContaining('已讀取 401 個項目'), findsOneWidget);
+      expect(
+        find.text(appStringsOf().homeIndexedCountWithTotal(401, 401)),
+        findsOneWidget,
+      );
+      await tester.ensureVisible(find.text(appStringsOf().homeScanDetails));
+      await tester.tap(find.text(appStringsOf().homeScanDetails));
+      await tester.pumpAndSettle();
       expect(find.textContaining('已達 30 秒'), findsOneWidget);
-      expect(find.text('預覽並整理'), findsOneWidget);
-      expect(find.text('繼續掃描／重試待處理項目'), findsOneWidget);
-      expect(find.text('繼續掃描並保留進度'), findsOneWidget);
+      expect(find.text(appStringsOf().homeReviewReady), findsOneWidget);
+      expect(find.text(appStringsOf().homeContinueAnalysis), findsOneWidget);
       final processed = scanner.attemptedAnalysisCount;
       blockPreview = true;
       final beforeSecondary = batches.length;
-      await tester.ensureVisible(find.text('繼續掃描／重試待處理項目'));
-      await tester.tap(find.text('繼續掃描／重試待處理項目'));
+      await tester.ensureVisible(
+        find.text(appStringsOf().homeContinueAnalysis),
+      );
+      await tester.tap(find.text(appStringsOf().homeContinueAnalysis));
       await pumpUntil(() => batches.length > beforeSecondary);
       expect(batches.last.first, 'photo-$processed');
       expect(scanner.verifiedOriginalCount, 1);
@@ -300,8 +342,10 @@ void main() {
       scanner.cancelScan();
       await tester.pump();
       final beforePrimary = batches.length;
-      await tester.ensureVisible(find.text('繼續掃描並保留進度'));
-      await tester.tap(find.text('繼續掃描並保留進度'));
+      await tester.ensureVisible(
+        find.text(appStringsOf().homeContinueAnalysis),
+      );
+      await tester.tap(find.text(appStringsOf().homeContinueAnalysis));
       await pumpUntil(() => batches.length > beforePrimary);
       expect(batches.last.first, 'photo-$processed');
       expect(
@@ -363,6 +407,9 @@ void main() {
       await tester.pump();
       expect(scanner.isScanning, isFalse);
       expect(scanner.scannedAssetCount, 0);
+      await tester.ensureVisible(find.text(appStringsOf().homeScanDetails));
+      await tester.tap(find.text(appStringsOf().homeScanDetails));
+      await tester.pumpAndSettle();
       expect(find.textContaining('已暫停'), findsOneWidget);
       expect(find.text('繼續掃描並保留進度'), findsOneWidget);
       await tester.ensureVisible(find.text('繼續掃描並保留進度'));

@@ -103,8 +103,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get paywallWeeklySubtitle => 'Cho một đợt dọn dẹp ảnh ngắn';
 
   @override
-  String get paywallPhotoFeature =>
-      'Nhóm ảnh trùng và tương tự, rồi kiểm tra từng ảnh';
+  String get paywallPhotoFeature => 'Xóa ảnh và video đã chọn sau khi xác nhận';
 
   @override
   String get paywallVideoFeature => 'Nén video, xem trước và lưu bản sao';
@@ -225,7 +224,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get homeStorageUnavailable =>
-      'Kiểm tra dung lượng thiết bị trong Cài đặt iPhone. Tại đây, bạn có thể sắp xếp ảnh và video có thể truy cập.';
+      'Kiểm tra dung lượng thiết bị trong Cài đặt. Tại đây, bạn có thể sắp xếp ảnh và video có thể truy cập.';
 
   @override
   String get homeViewIndexedPhotos => 'Xem ảnh đã đọc';
@@ -425,7 +424,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String homeIndexedCountWithTotal(int count, int total) {
-    return 'Đã đọc $count trong $total mục có thể truy cập';
+    return 'Mục có thể truy cập đã đọc: $count / $total';
   }
 
   @override
@@ -515,7 +514,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get scanStartAlbumDescription =>
-      'Quét tất cả ảnh và video có thể truy cập. Xác minh nội dung bản gốc và phân tích hình ảnh giúp bạn kiểm tra trước khi quyết định.';
+      'Phân tích bản xem trước để so sánh ảnh tương tự. Ảnh trùng hoàn toàn và tệp lớn được kiểm tra riêng khi mở các danh mục đó. Không tự động xóa mục nào.';
 
   @override
   String get scanContinue => 'Tiếp tục quét';
@@ -665,8 +664,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get scanIndexingTitle => 'Đang lập chỉ mục thư viện ảnh';
 
   @override
-  String get scanVerifyingTitle =>
-      'Đang xác minh bản gốc để tìm ảnh trùng hoàn toàn';
+  String get scanVerifyingTitle => 'Đang kiểm tra tệp gốc';
 
   @override
   String get scanAnalyzingTitle => 'Đang phân tích bản xem trước ảnh trên máy';
@@ -801,7 +799,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String swipeConfirmDeleteDescription(int count) {
-    return 'Xóa $count ảnh đã kiểm tra. Đảm bảo các mục bạn muốn giữ đã được chọn đúng.';
+    return 'Ảnh đã chọn để xóa: $count. Bỏ ảnh muốn giữ khỏi danh sách xóa.';
   }
 
   @override
@@ -1168,4 +1166,198 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get scanCheckFileSizes => 'Kiểm tra dung lượng tệp lớn';
+
+  @override
+  String get reviewDeleteTitle => 'Kiểm tra mục xóa';
+
+  @override
+  String get reviewRemove => 'Bỏ khỏi danh sách xóa';
+
+  @override
+  String get reviewUnavailable =>
+      'Không có bản xem trước. Thử lại hoặc bỏ mục này.';
+
+  @override
+  String reviewUnseenCount(int count) {
+    return 'Mục cần xem trước khi xóa: $count';
+  }
+
+  @override
+  String get reviewAllVersions =>
+      'Đã chọn mọi phiên bản trong một nhóm. Xóa tất cả?';
+
+  @override
+  String get reviewDeleteAllVersions => 'Xóa mọi phiên bản';
+
+  @override
+  String reviewConfirmCount(int count) {
+    return 'Xác nhận xóa · $count';
+  }
+
+  @override
+  String swipeResumeReview(int count) {
+    return 'Tiếp tục lần trước · đã xem $count';
+  }
+
+  @override
+  String get swipeResetReview => 'Bắt đầu lại';
+
+  @override
+  String swipeBatchSize(int count) {
+    return 'Số mục mỗi đợt: $count';
+  }
+
+  @override
+  String get swipeAllMonths => 'Tất cả các tháng';
+
+  @override
+  String get swipeReviewBatch => 'Chọn tháng hoặc đợt';
+
+  @override
+  String get assetVideoLoading => 'Đang tải video gốc…';
+
+  @override
+  String get assetVideoUnavailable =>
+      'Video gốc không khả dụng. Hãy tải trong Ảnh rồi thử lại.';
+
+  @override
+  String get homePermissionTitle => 'Cần quyền truy cập ảnh';
+
+  @override
+  String get homePermissionDescription =>
+      'Cho phép truy cập ảnh trong Cài đặt để quét và xem lại. Không tự động xóa mục nào.';
+
+  @override
+  String get homeOpenSettings => 'Mở Cài đặt';
+
+  @override
+  String get homeManagePhotoAccess => 'Quản lý quyền truy cập ảnh';
+
+  @override
+  String get homeReviewReady => 'Xem ảnh hiện có';
+
+  @override
+  String get homeContinueAnalysis => 'Tiếp tục phân tích ảnh';
+
+  @override
+  String get homeScanDetails => 'Chi tiết quét';
+
+  @override
+  String get scanCheckingExactTitle => 'Đang kiểm tra ảnh trùng hoàn toàn';
+
+  @override
+  String get scanCheckingSizesTitle => 'Đang kiểm tra kích thước tệp';
+
+  @override
+  String scanRoundProgress(int total, int completed) {
+    return 'Đã xử lý $completed / $total';
+  }
+
+  @override
+  String get scanPauseReview => 'Tạm dừng kiểm tra và xem ảnh';
+
+  @override
+  String get scanSelectionHint =>
+      'Đánh dấu để thêm vào danh sách xóa. Chạm Xem trước để xem nội dung.';
+
+  @override
+  String get scanPreviewNotReady => 'Tải bản xem trước rồi mới chọn';
+
+  @override
+  String scanUnreadableExcluded(int count) {
+    return 'Bản xem trước chưa tải, không được chọn: $count';
+  }
+
+  @override
+  String get scanKeepThis => 'Giữ ảnh này';
+
+  @override
+  String get scanPreviewMore => 'Tải thêm ảnh';
+
+  @override
+  String homeKnownLibrarySize(int count, String size) {
+    return 'Kích thước đã xác nhận: $size · Đã kiểm tra: $count';
+  }
+
+  @override
+  String homePendingSizes(int count) {
+    return 'Mục chưa rõ kích thước: $count';
+  }
+
+  @override
+  String get scanReviewChanged =>
+      'Ảnh hoặc quyền đã thay đổi. Hãy kiểm tra lại danh sách xóa.';
+
+  @override
+  String get paywallFreePreviewNote =>
+      'Nhóm ảnh, xem trước và đánh dấu bằng vuốt đều miễn phí. Pro mở khóa xóa sau xác nhận và nén video.';
+
+  @override
+  String paywallSubscribeWeekly(String price) {
+    return 'Đăng ký theo tuần · $price';
+  }
+
+  @override
+  String paywallSubscribeYearly(String price) {
+    return 'Đăng ký theo năm · $price';
+  }
+
+  @override
+  String get paywallSubscribe => 'Đăng ký';
+
+  @override
+  String paywallWeeklyRenewal(String price) {
+    return 'Tự gia hạn với giá $price mỗi tuần trừ khi hủy. Xem điều khoản cuối cùng trong App Store.';
+  }
+
+  @override
+  String paywallYearlyRenewal(String price) {
+    return 'Tự gia hạn với giá $price mỗi năm trừ khi hủy. Xem điều khoản cuối cùng trong App Store.';
+  }
+
+  @override
+  String get paywallRenewalGeneric =>
+      'Tự gia hạn trừ khi hủy. Xem kỳ thanh toán và số tiền trong App Store trước khi xác nhận.';
+
+  @override
+  String get paywallLoadingPlans => 'Đang tải gói đăng ký…';
+
+  @override
+  String get paywallWaitingForStore => 'Đang chờ App Store xác nhận…';
+
+  @override
+  String get paywallRestoring => 'Đang khôi phục mua hàng…';
+
+  @override
+  String get settingsCheckingSubscription => 'Đang kiểm tra đăng ký…';
+
+  @override
+  String get settingsSubscriptionUnknown =>
+      'Không xác định được trạng thái đăng ký';
+
+  @override
+  String get settingsManageSubscription => 'Quản lý đăng ký';
+
+  @override
+  String get settingsManageUnavailable =>
+      'Không mở được quản lý đăng ký. Hãy mở đăng ký trong cài đặt tài khoản cửa hàng.';
+
+  @override
+  String get onboardingStartFree => 'Bắt đầu miễn phí';
+
+  @override
+  String get swipeCheckpointSaveError =>
+      'Không lưu được tiến trình. Bạn vẫn có thể xem tiếp, nhưng lần sau có thể không tiếp tục từ đây được.';
+
+  @override
+  String swipeCheckpointLimit(int count) {
+    return 'Lựa chọn gần đây được giữ trên thiết bị: tối đa $count';
+  }
+
+  @override
+  String get scanSelectLoaded => 'Chọn bản xem trước đã tải';
+
+  @override
+  String get homePhotoScopeChanged =>
+      'Quyền truy cập ảnh có thể đã thay đổi. Quét lại để cập nhật ảnh hiện có.';
 }

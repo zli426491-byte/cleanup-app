@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:photo_manager/photo_manager.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final _png = img.encodePng(img.Image(width: 8, height: 8));
 PhotoAsset _asset(String id, {bool video = false}) => PhotoAsset(
@@ -31,6 +32,7 @@ class _Scanner extends PhotoScannerService {
     this.nativeReady = false,
     bool groups = false,
     bool screenshots = true,
+    bool largeResults = true,
   }) {
     final photos = List.generate(4, (index) => _asset('action-$index'));
     final video = _asset('action-video', video: true);
@@ -49,7 +51,7 @@ class _Scanner extends PhotoScannerService {
           ? [SimilarGroup(assets: photos.skip(2).toList(), hammingDistance: 3)]
           : [],
       screenshots: screenshots ? [photos.last] : [],
-      largeFiles: [video],
+      largeFiles: largeResults ? [video] : [],
       videos: [video],
       blurryPhotos: [],
       darkPhotos: [],
@@ -142,12 +144,25 @@ Future<void> _mount(
   );
   await tester.pump();
   if (settle) await tester.pumpAndSettle();
+  if (settle) await _decodeVisible(tester);
+}
+
+Future<void> _decodeVisible(WidgetTester tester) async {
+  final context = tester.element(find.byType(SmartCleanView));
+  await tester.runAsync(() async {
+    for (final image in tester.widgetList<Image>(find.byType(Image))) {
+      await precacheImage(image.image, context, onError: (_, _) {});
+    }
+  });
+  await tester.pump();
+  await tester.pump();
 }
 
 Future<void> _tapKey(WidgetTester tester, String key) async {
   final finder = find.byKey(ValueKey(key));
   await tester.ensureVisible(finder);
   await tester.pumpAndSettle();
+  await _decodeVisible(tester);
   await tester.tap(finder);
   await tester.pump();
 }
@@ -164,6 +179,7 @@ bool _selected(WidgetTester tester, String id) {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() => SharedPreferences.setMockInitialValues({}));
   const channel = MethodChannel('com.fluttercandies/photo_manager');
   setUp(
     () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -237,9 +253,14 @@ void main() {
         'largeFiles',
       );
       expect(find.text('Checked 4 / 5 items'), findsOneWidget);
-      expect(find.text('1 items to check'), findsOneWidget);
-      await tester.tap(find.text('Organize photos first'));
-      await tester.pumpAndSettle();
+      expect(find.text('Organize photos first'), findsNothing);
+      final sizeScanner =
+          tester
+                  .element(find.byType(SmartCleanView))
+                  .read<PhotoScannerService>()
+              as _Scanner;
+      await _tapKey(tester, 'verify-originals-cta');
+      expect(sizeScanner.verifyTargets, [OriginalVerificationTarget.fileSizes]);
       expect(
         find.byKey(const ValueKey('select-current-category')),
         findsOneWidget,
@@ -463,7 +484,11 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await _mount(tester, _Scanner(pendingSize: 1), 'largeFiles');
+    await _mount(
+      tester,
+      _Scanner(pendingSize: 1, largeResults: false),
+      'largeFiles',
+    );
     final label = AppLocalizations.of(
       tester.element(find.byType(SmartCleanView)),
     ).scanBrowsePhotos;

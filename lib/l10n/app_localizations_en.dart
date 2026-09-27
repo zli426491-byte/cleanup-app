@@ -105,7 +105,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get paywallPhotoFeature =>
-      'Group duplicate and similar photos, then review each item';
+      'Delete the photos and videos you select after confirmation';
 
   @override
   String get paywallVideoFeature =>
@@ -227,7 +227,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeStorageUnavailable =>
-      'Check device storage in iPhone Settings. Here, you can organize accessible photos and videos.';
+      'Check device storage in Settings. Here, you can organize accessible photos and videos.';
 
   @override
   String get homeViewIndexedPhotos => 'View photos read so far';
@@ -427,7 +427,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String homeIndexedCountWithTotal(int count, int total) {
-    return 'Read $count of $total accessible items';
+    return 'Accessible items read: $count / $total';
   }
 
   @override
@@ -517,7 +517,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get scanStartAlbumDescription =>
-      'Scan all accessible photos and videos. Original content verification and visual analysis help you review them before deciding.';
+      'Scan photo previews first to review similar pictures. Exact duplicates and large files are checked separately when you open those categories. Nothing is deleted automatically.';
 
   @override
   String get scanContinue => 'Continue scan';
@@ -630,12 +630,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String scanExactGroupCount(int count) {
-    return 'Exact duplicates: $count photos';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos',
+      one: '$count photo',
+    );
+    return 'Exact duplicates: $_temp0';
   }
 
   @override
   String scanSimilarGroupCount(int count) {
-    return 'Visual candidates: $count photos';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos',
+      one: '$count photo',
+    );
+    return 'Visual candidates: $_temp0';
   }
 
   @override
@@ -650,12 +662,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String scanPreviewDeleteCount(int count) {
-    return 'Preview and delete $count items';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items',
+      one: '$count item',
+    );
+    return 'Preview and delete $_temp0';
   }
 
   @override
   String scanConfirmDeleteDescription(int count) {
-    return '$count items selected. Review your selection and keep recommendations before deleting. Recovered storage is determined by the system.';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items selected',
+      one: '$count item selected',
+    );
+    return '$_temp0. Review your selection and keep recommendations before deleting. Recovered storage is determined by the system.';
   }
 
   @override
@@ -667,7 +691,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scanIndexingTitle => 'Indexing photo library';
 
   @override
-  String get scanVerifyingTitle => 'Verifying originals for exact duplicates';
+  String get scanVerifyingTitle => 'Checking original files';
 
   @override
   String get scanAnalyzingTitle => 'Analyzing local photo previews';
@@ -793,32 +817,62 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String swipeReviewSummary(int deleteCount, int keepCount) {
-    return '$deleteCount photos to delete · $keepCount photos to keep';
+    String _temp0 = intl.Intl.pluralLogic(
+      deleteCount,
+      locale: localeName,
+      other: '$deleteCount photos',
+      one: '$deleteCount photo',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      keepCount,
+      locale: localeName,
+      other: '$keepCount photos',
+      one: '$keepCount photo',
+    );
+    return '$_temp0 to delete · $_temp1 to keep';
   }
 
   @override
   String swipeDeletePhotos(int count) {
-    return 'Delete $count photos';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos',
+      one: '$count photo',
+    );
+    return 'Delete $_temp0';
   }
 
   @override
   String swipeConfirmDeleteDescription(int count) {
-    return 'Delete $count reviewed photos. Make sure the items you wish to keep have been selected correctly.';
+    return 'Photos selected for deletion: $count. Remove any photos you want to keep from the deletion list.';
   }
 
   @override
   String swipePartialDeleted(int count) {
-    return '$count photos deleted. Remaining photos have not been deleted.';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos',
+      one: '$count photo',
+    );
+    return '$_temp0 deleted. Remaining photos have not been deleted.';
   }
 
   @override
   String swipeExitDescription(int count) {
-    return 'You marked $count photos for deletion. Leaving will not delete them.';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos',
+      one: '$count photo',
+    );
+    return 'You marked $_temp0 for deletion. Leaving will not delete them.';
   }
 
   @override
   String swipeSkipRemainingDescription(int remaining, int deleteCount) {
-    return '$remaining photos are not reviewed. Finish reviewing and confirm the $deleteCount photos already marked for deletion?';
+    return 'Unreviewed photos: $remaining. Finish reviewing and confirm the photos already marked for deletion ($deleteCount)?';
   }
 
   @override
@@ -854,7 +908,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String assetSizeBytes(int count) {
-    return '$count bytes';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count bytes',
+      one: '$count byte',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1078,7 +1138,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String servicePhotosPending(int count) {
-    return '$count photos still need visual analysis. Continue to process untried photos first. Cloud originals are not downloaded automatically.';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos still need',
+      one: '$count photo still needs',
+    );
+    return '$_temp0 visual analysis. Continue to process untried photos first. Cloud originals are not downloaded automatically.';
   }
 
   @override
@@ -1142,7 +1208,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String scanPendingCheckCount(int count) {
-    return '$count items to check';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items to check',
+      one: '$count item to check',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1170,4 +1242,197 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get scanCheckFileSizes => 'Check large-file sizes';
+
+  @override
+  String get reviewDeleteTitle => 'Review deletion';
+
+  @override
+  String get reviewRemove => 'Remove from deletion';
+
+  @override
+  String get reviewUnavailable =>
+      'Preview unavailable. Retry or remove this item.';
+
+  @override
+  String reviewUnseenCount(int count) {
+    return 'Items needing preview before deletion: $count';
+  }
+
+  @override
+  String get reviewAllVersions =>
+      'All versions in a group are selected. Delete every version?';
+
+  @override
+  String get reviewDeleteAllVersions => 'Delete every version';
+
+  @override
+  String reviewConfirmCount(int count) {
+    return 'Confirm deletion · $count';
+  }
+
+  @override
+  String swipeResumeReview(int count) {
+    return 'Continue previous review · $count reviewed';
+  }
+
+  @override
+  String get swipeResetReview => 'Start over';
+
+  @override
+  String swipeBatchSize(int count) {
+    return 'Items per batch: $count';
+  }
+
+  @override
+  String get swipeAllMonths => 'All months';
+
+  @override
+  String get swipeReviewBatch => 'Choose a month or batch';
+
+  @override
+  String get assetVideoLoading => 'Loading original video…';
+
+  @override
+  String get assetVideoUnavailable =>
+      'Original video unavailable. Download it in Photos, then retry.';
+
+  @override
+  String get homePermissionTitle => 'Photo access needed';
+
+  @override
+  String get homePermissionDescription =>
+      'Allow photo access in Settings to scan and review. Nothing is deleted automatically.';
+
+  @override
+  String get homeOpenSettings => 'Open Settings';
+
+  @override
+  String get homeManagePhotoAccess => 'Manage photo access';
+
+  @override
+  String get homeReviewReady => 'Review available photos';
+
+  @override
+  String get homeContinueAnalysis => 'Continue photo analysis';
+
+  @override
+  String get homeScanDetails => 'Scan details';
+
+  @override
+  String get scanCheckingExactTitle => 'Checking exact duplicate photos';
+
+  @override
+  String get scanCheckingSizesTitle => 'Checking file sizes';
+
+  @override
+  String scanRoundProgress(int total, int completed) {
+    return 'Processed $completed / $total';
+  }
+
+  @override
+  String get scanPauseReview => 'Pause checking and review';
+
+  @override
+  String get scanSelectionHint =>
+      'Check items to mark for deletion. Tap Preview to view their content.';
+
+  @override
+  String get scanPreviewNotReady => 'Load the preview before selecting';
+
+  @override
+  String scanUnreadableExcluded(int count) {
+    return 'Previews not loaded and excluded from selection: $count';
+  }
+
+  @override
+  String get scanKeepThis => 'Keep this photo';
+
+  @override
+  String get scanPreviewMore => 'Load more photos';
+
+  @override
+  String homeKnownLibrarySize(int count, String size) {
+    return 'Confirmed file sizes: $size · Checked: $count';
+  }
+
+  @override
+  String homePendingSizes(int count) {
+    return 'Items with size still unknown: $count';
+  }
+
+  @override
+  String get scanReviewChanged =>
+      'Photos or permissions have changed. Review your deletion list again.';
+
+  @override
+  String get paywallFreePreviewNote =>
+      'Photo grouping, previews and swipe marking are free. Pro unlocks confirmed deletion and video compression.';
+
+  @override
+  String paywallSubscribeWeekly(String price) {
+    return 'Subscribe weekly · $price';
+  }
+
+  @override
+  String paywallSubscribeYearly(String price) {
+    return 'Subscribe yearly · $price';
+  }
+
+  @override
+  String get paywallSubscribe => 'Subscribe';
+
+  @override
+  String paywallWeeklyRenewal(String price) {
+    return 'Renews automatically at $price each week unless canceled. Review the final terms in the App Store.';
+  }
+
+  @override
+  String paywallYearlyRenewal(String price) {
+    return 'Renews automatically at $price each year unless canceled. Review the final terms in the App Store.';
+  }
+
+  @override
+  String get paywallRenewalGeneric =>
+      'Renews automatically unless canceled. Review the billing period and amount in the App Store before confirming.';
+
+  @override
+  String get paywallLoadingPlans => 'Loading subscription plans…';
+
+  @override
+  String get paywallWaitingForStore => 'Waiting for App Store confirmation…';
+
+  @override
+  String get paywallRestoring => 'Restoring purchases…';
+
+  @override
+  String get settingsCheckingSubscription => 'Checking subscription…';
+
+  @override
+  String get settingsSubscriptionUnknown => 'Subscription status unavailable';
+
+  @override
+  String get settingsManageSubscription => 'Manage subscription';
+
+  @override
+  String get settingsManageUnavailable =>
+      'Could not open subscription management. Open subscriptions in your store account settings.';
+
+  @override
+  String get onboardingStartFree => 'Start for free';
+
+  @override
+  String get swipeCheckpointSaveError =>
+      'Could not save review progress. You can keep reviewing, but it may not resume next time.';
+
+  @override
+  String swipeCheckpointLimit(int count) {
+    return 'Recent review choices kept on this device: up to $count';
+  }
+
+  @override
+  String get scanSelectLoaded => 'Select loaded previews';
+
+  @override
+  String get homePhotoScopeChanged =>
+      'Photo access may have changed. Scan again to refresh available photos.';
 }

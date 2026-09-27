@@ -309,7 +309,7 @@ abstract class AppLocalizations {
   /// No description provided for @paywallPhotoFeature.
   ///
   /// In en, this message translates to:
-  /// **'Group duplicate and similar photos, then review each item'**
+  /// **'Delete the photos and videos you select after confirmation'**
   String get paywallPhotoFeature;
 
   /// No description provided for @paywallVideoFeature.
@@ -501,7 +501,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeStorageUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'Check device storage in iPhone Settings. Here, you can organize accessible photos and videos.'**
+  /// **'Check device storage in Settings. Here, you can organize accessible photos and videos.'**
   String get homeStorageUnavailable;
 
   /// No description provided for @homeViewIndexedPhotos.
@@ -873,7 +873,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeIndexedCountWithTotal.
   ///
   /// In en, this message translates to:
-  /// **'Read {count} of {total} accessible items'**
+  /// **'Accessible items read: {count} / {total}'**
   String homeIndexedCountWithTotal(int count, int total);
 
   /// No description provided for @homeAnalysisSummary.
@@ -963,7 +963,7 @@ abstract class AppLocalizations {
   /// No description provided for @scanStartAlbumDescription.
   ///
   /// In en, this message translates to:
-  /// **'Scan all accessible photos and videos. Original content verification and visual analysis help you review them before deciding.'**
+  /// **'Scan photo previews first to review similar pictures. Exact duplicates and large files are checked separately when you open those categories. Nothing is deleted automatically.'**
   String get scanStartAlbumDescription;
 
   /// No description provided for @scanContinue.
@@ -1161,13 +1161,13 @@ abstract class AppLocalizations {
   /// No description provided for @scanExactGroupCount.
   ///
   /// In en, this message translates to:
-  /// **'Exact duplicates: {count} photos'**
+  /// **'Exact duplicates: {count, plural, one{{count} photo} other{{count} photos}}'**
   String scanExactGroupCount(int count);
 
   /// No description provided for @scanSimilarGroupCount.
   ///
   /// In en, this message translates to:
-  /// **'Visual candidates: {count} photos'**
+  /// **'Visual candidates: {count, plural, one{{count} photo} other{{count} photos}}'**
   String scanSimilarGroupCount(int count);
 
   /// No description provided for @scanRecommendedKeep.
@@ -1185,13 +1185,13 @@ abstract class AppLocalizations {
   /// No description provided for @scanPreviewDeleteCount.
   ///
   /// In en, this message translates to:
-  /// **'Preview and delete {count} items'**
+  /// **'Preview and delete {count, plural, one{{count} item} other{{count} items}}'**
   String scanPreviewDeleteCount(int count);
 
   /// No description provided for @scanConfirmDeleteDescription.
   ///
   /// In en, this message translates to:
-  /// **'{count} items selected. Review your selection and keep recommendations before deleting. Recovered storage is determined by the system.'**
+  /// **'{count, plural, one{{count} item selected} other{{count} items selected}}. Review your selection and keep recommendations before deleting. Recovered storage is determined by the system.'**
   String scanConfirmDeleteDescription(int count);
 
   /// No description provided for @scanItemsDeleted.
@@ -1209,7 +1209,7 @@ abstract class AppLocalizations {
   /// No description provided for @scanVerifyingTitle.
   ///
   /// In en, this message translates to:
-  /// **'Verifying originals for exact duplicates'**
+  /// **'Checking original files'**
   String get scanVerifyingTitle;
 
   /// No description provided for @scanAnalyzingTitle.
@@ -1401,37 +1401,37 @@ abstract class AppLocalizations {
   /// No description provided for @swipeReviewSummary.
   ///
   /// In en, this message translates to:
-  /// **'{deleteCount} photos to delete · {keepCount} photos to keep'**
+  /// **'{deleteCount, plural, one{{deleteCount} photo} other{{deleteCount} photos}} to delete · {keepCount, plural, one{{keepCount} photo} other{{keepCount} photos}} to keep'**
   String swipeReviewSummary(int deleteCount, int keepCount);
 
   /// No description provided for @swipeDeletePhotos.
   ///
   /// In en, this message translates to:
-  /// **'Delete {count} photos'**
+  /// **'Delete {count, plural, one{{count} photo} other{{count} photos}}'**
   String swipeDeletePhotos(int count);
 
   /// No description provided for @swipeConfirmDeleteDescription.
   ///
   /// In en, this message translates to:
-  /// **'Delete {count} reviewed photos. Make sure the items you wish to keep have been selected correctly.'**
+  /// **'Photos selected for deletion: {count}. Remove any photos you want to keep from the deletion list.'**
   String swipeConfirmDeleteDescription(int count);
 
   /// No description provided for @swipePartialDeleted.
   ///
   /// In en, this message translates to:
-  /// **'{count} photos deleted. Remaining photos have not been deleted.'**
+  /// **'{count, plural, one{{count} photo} other{{count} photos}} deleted. Remaining photos have not been deleted.'**
   String swipePartialDeleted(int count);
 
   /// No description provided for @swipeExitDescription.
   ///
   /// In en, this message translates to:
-  /// **'You marked {count} photos for deletion. Leaving will not delete them.'**
+  /// **'You marked {count, plural, one{{count} photo} other{{count} photos}} for deletion. Leaving will not delete them.'**
   String swipeExitDescription(int count);
 
   /// No description provided for @swipeSkipRemainingDescription.
   ///
   /// In en, this message translates to:
-  /// **'{remaining} photos are not reviewed. Finish reviewing and confirm the {deleteCount} photos already marked for deletion?'**
+  /// **'Unreviewed photos: {remaining}. Finish reviewing and confirm the photos already marked for deletion ({deleteCount})?'**
   String swipeSkipRemainingDescription(int remaining, int deleteCount);
 
   /// No description provided for @assetDimensions.
@@ -1479,7 +1479,7 @@ abstract class AppLocalizations {
   /// No description provided for @assetSizeBytes.
   ///
   /// In en, this message translates to:
-  /// **'{count} bytes'**
+  /// **'{count, plural, one{{count} byte} other{{count} bytes}}'**
   String assetSizeBytes(int count);
 
   /// No description provided for @appName.
@@ -1833,7 +1833,7 @@ abstract class AppLocalizations {
   /// No description provided for @servicePhotosPending.
   ///
   /// In en, this message translates to:
-  /// **'{count} photos still need visual analysis. Continue to process untried photos first. Cloud originals are not downloaded automatically.'**
+  /// **'{count, plural, one{{count} photo still needs} other{{count} photos still need}} visual analysis. Continue to process untried photos first. Cloud originals are not downloaded automatically.'**
   String servicePhotosPending(int count);
 
   /// No description provided for @serviceReadingPreviews.
@@ -1935,7 +1935,7 @@ abstract class AppLocalizations {
   /// Number of original resources waiting to be checked.
   ///
   /// In en, this message translates to:
-  /// **'{count} items to check'**
+  /// **'{count, plural, one{{count} item to check} other{{count} items to check}}'**
   String scanPendingCheckCount(int count);
 
   /// No description provided for @swipeGestureTitle.
@@ -1985,6 +1985,318 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Check large-file sizes'**
   String get scanCheckFileSizes;
+
+  /// No description provided for @reviewDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review deletion'**
+  String get reviewDeleteTitle;
+
+  /// No description provided for @reviewRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from deletion'**
+  String get reviewRemove;
+
+  /// No description provided for @reviewUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview unavailable. Retry or remove this item.'**
+  String get reviewUnavailable;
+
+  /// No description provided for @reviewUnseenCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Items needing preview before deletion: {count}'**
+  String reviewUnseenCount(int count);
+
+  /// No description provided for @reviewAllVersions.
+  ///
+  /// In en, this message translates to:
+  /// **'All versions in a group are selected. Delete every version?'**
+  String get reviewAllVersions;
+
+  /// No description provided for @reviewDeleteAllVersions.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete every version'**
+  String get reviewDeleteAllVersions;
+
+  /// No description provided for @reviewConfirmCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm deletion · {count}'**
+  String reviewConfirmCount(int count);
+
+  /// No description provided for @swipeResumeReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue previous review · {count} reviewed'**
+  String swipeResumeReview(int count);
+
+  /// No description provided for @swipeResetReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Start over'**
+  String get swipeResetReview;
+
+  /// No description provided for @swipeBatchSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Items per batch: {count}'**
+  String swipeBatchSize(int count);
+
+  /// No description provided for @swipeAllMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'All months'**
+  String get swipeAllMonths;
+
+  /// No description provided for @swipeReviewBatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a month or batch'**
+  String get swipeReviewBatch;
+
+  /// No description provided for @assetVideoLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading original video…'**
+  String get assetVideoLoading;
+
+  /// No description provided for @assetVideoUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Original video unavailable. Download it in Photos, then retry.'**
+  String get assetVideoUnavailable;
+
+  /// No description provided for @homePermissionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo access needed'**
+  String get homePermissionTitle;
+
+  /// No description provided for @homePermissionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow photo access in Settings to scan and review. Nothing is deleted automatically.'**
+  String get homePermissionDescription;
+
+  /// No description provided for @homeOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get homeOpenSettings;
+
+  /// No description provided for @homeManagePhotoAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage photo access'**
+  String get homeManagePhotoAccess;
+
+  /// No description provided for @homeReviewReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Review available photos'**
+  String get homeReviewReady;
+
+  /// No description provided for @homeContinueAnalysis.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue photo analysis'**
+  String get homeContinueAnalysis;
+
+  /// No description provided for @homeScanDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan details'**
+  String get homeScanDetails;
+
+  /// No description provided for @scanCheckingExactTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking exact duplicate photos'**
+  String get scanCheckingExactTitle;
+
+  /// No description provided for @scanCheckingSizesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking file sizes'**
+  String get scanCheckingSizesTitle;
+
+  /// No description provided for @scanRoundProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Processed {completed} / {total}'**
+  String scanRoundProgress(int total, int completed);
+
+  /// No description provided for @scanPauseReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause checking and review'**
+  String get scanPauseReview;
+
+  /// No description provided for @scanSelectionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Check items to mark for deletion. Tap Preview to view their content.'**
+  String get scanSelectionHint;
+
+  /// No description provided for @scanPreviewNotReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Load the preview before selecting'**
+  String get scanPreviewNotReady;
+
+  /// No description provided for @scanUnreadableExcluded.
+  ///
+  /// In en, this message translates to:
+  /// **'Previews not loaded and excluded from selection: {count}'**
+  String scanUnreadableExcluded(int count);
+
+  /// No description provided for @scanKeepThis.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep this photo'**
+  String get scanKeepThis;
+
+  /// No description provided for @scanPreviewMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more photos'**
+  String get scanPreviewMore;
+
+  /// No description provided for @homeKnownLibrarySize.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed file sizes: {size} · Checked: {count}'**
+  String homeKnownLibrarySize(int count, String size);
+
+  /// No description provided for @homePendingSizes.
+  ///
+  /// In en, this message translates to:
+  /// **'Items with size still unknown: {count}'**
+  String homePendingSizes(int count);
+
+  /// No description provided for @scanReviewChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos or permissions have changed. Review your deletion list again.'**
+  String get scanReviewChanged;
+
+  /// No description provided for @paywallFreePreviewNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo grouping, previews and swipe marking are free. Pro unlocks confirmed deletion and video compression.'**
+  String get paywallFreePreviewNote;
+
+  /// No description provided for @paywallSubscribeWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscribe weekly · {price}'**
+  String paywallSubscribeWeekly(String price);
+
+  /// No description provided for @paywallSubscribeYearly.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscribe yearly · {price}'**
+  String paywallSubscribeYearly(String price);
+
+  /// No description provided for @paywallSubscribe.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscribe'**
+  String get paywallSubscribe;
+
+  /// No description provided for @paywallWeeklyRenewal.
+  ///
+  /// In en, this message translates to:
+  /// **'Renews automatically at {price} each week unless canceled. Review the final terms in the App Store.'**
+  String paywallWeeklyRenewal(String price);
+
+  /// No description provided for @paywallYearlyRenewal.
+  ///
+  /// In en, this message translates to:
+  /// **'Renews automatically at {price} each year unless canceled. Review the final terms in the App Store.'**
+  String paywallYearlyRenewal(String price);
+
+  /// No description provided for @paywallRenewalGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Renews automatically unless canceled. Review the billing period and amount in the App Store before confirming.'**
+  String get paywallRenewalGeneric;
+
+  /// No description provided for @paywallLoadingPlans.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading subscription plans…'**
+  String get paywallLoadingPlans;
+
+  /// No description provided for @paywallWaitingForStore.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for App Store confirmation…'**
+  String get paywallWaitingForStore;
+
+  /// No description provided for @paywallRestoring.
+  ///
+  /// In en, this message translates to:
+  /// **'Restoring purchases…'**
+  String get paywallRestoring;
+
+  /// No description provided for @settingsCheckingSubscription.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking subscription…'**
+  String get settingsCheckingSubscription;
+
+  /// No description provided for @settingsSubscriptionUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription status unavailable'**
+  String get settingsSubscriptionUnknown;
+
+  /// No description provided for @settingsManageSubscription.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage subscription'**
+  String get settingsManageSubscription;
+
+  /// No description provided for @settingsManageUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open subscription management. Open subscriptions in your store account settings.'**
+  String get settingsManageUnavailable;
+
+  /// No description provided for @onboardingStartFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Start for free'**
+  String get onboardingStartFree;
+
+  /// No description provided for @swipeCheckpointSaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save review progress. You can keep reviewing, but it may not resume next time.'**
+  String get swipeCheckpointSaveError;
+
+  /// No description provided for @swipeCheckpointLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent review choices kept on this device: up to {count}'**
+  String swipeCheckpointLimit(int count);
+
+  /// No description provided for @scanSelectLoaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Select loaded previews'**
+  String get scanSelectLoaded;
+
+  /// No description provided for @homePhotoScopeChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo access may have changed. Scan again to refresh available photos.'**
+  String get homePhotoScopeChanged;
 }
 
 class _AppLocalizationsDelegate

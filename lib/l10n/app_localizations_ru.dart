@@ -105,7 +105,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get paywallPhotoFeature =>
-      'Группируйте дубликаты и похожие фото, затем проверяйте каждый файл';
+      'Удаляйте выбранные фото и видео после подтверждения';
 
   @override
   String get paywallVideoFeature =>
@@ -227,7 +227,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get homeStorageUnavailable =>
-      'Проверьте память устройства в настройках iPhone. Здесь можно разбирать доступные фото и видео.';
+      'Проверьте память устройства в Настройках. Здесь можно разбирать доступные фото и видео.';
 
   @override
   String get homeViewIndexedPhotos => 'Посмотреть прочитанные фотографии';
@@ -434,7 +434,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String homeIndexedCountWithTotal(int count, int total) {
-    return 'Прочитано $count из $total доступных файлов';
+    return 'Прочитано доступных файлов: $count / $total';
   }
 
   @override
@@ -535,7 +535,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get scanStartAlbumDescription =>
-      'Сканируйте все доступные фото и видео. Проверка оригиналов и визуальный анализ помогут просмотреть файлы перед принятием решения.';
+      'Сначала анализируются предпросмотры похожих фото. Идентичные фото и большие файлы проверяются отдельно при открытии этих категорий. Ничего не удаляется автоматически.';
 
   @override
   String get scanContinue => 'Продолжить сканирование';
@@ -687,7 +687,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get scanIndexingTitle => 'Индексация медиатеки';
 
   @override
-  String get scanVerifyingTitle => 'Проверка оригиналов на точные дубликаты';
+  String get scanVerifyingTitle => 'Проверка оригинальных файлов';
 
   @override
   String get scanAnalyzingTitle => 'Анализ локальных предпросмотров фото';
@@ -823,7 +823,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String swipeConfirmDeleteDescription(int count) {
-    return 'Удалить просмотренные фото: $count. Убедитесь, что фотографии, которые вы хотите оставить, выбраны правильно.';
+    return 'Выбрано фото для удаления: $count. Уберите из списка фотографии, которые хотите оставить.';
   }
 
   @override
@@ -874,7 +874,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String assetSizeBytes(int count) {
-    return '$count байт';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count байта',
+      many: '$count байт',
+      few: '$count байта',
+      one: '$count байт',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1164,7 +1172,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String scanPendingCheckCount(int count) {
-    return 'Ожидают проверки: $count';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Проверить: $count файла',
+      many: 'Проверить: $count файлов',
+      few: 'Проверить: $count файла',
+      one: 'Проверить: $count файл',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1192,4 +1208,197 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get scanCheckFileSizes => 'Проверить размеры больших файлов';
+
+  @override
+  String get reviewDeleteTitle => 'Проверить удаление';
+
+  @override
+  String get reviewRemove => 'Убрать из списка удаления';
+
+  @override
+  String get reviewUnavailable =>
+      'Предпросмотр недоступен. Повторите попытку или уберите этот файл.';
+
+  @override
+  String reviewUnseenCount(int count) {
+    return 'Нужно просмотреть перед удалением: $count';
+  }
+
+  @override
+  String get reviewAllVersions =>
+      'Выбраны все версии в группе. Удалить их все?';
+
+  @override
+  String get reviewDeleteAllVersions => 'Удалить все версии';
+
+  @override
+  String reviewConfirmCount(int count) {
+    return 'Подтвердить удаление · $count';
+  }
+
+  @override
+  String swipeResumeReview(int count) {
+    return 'Продолжить просмотр · просмотрено $count';
+  }
+
+  @override
+  String get swipeResetReview => 'Начать заново';
+
+  @override
+  String swipeBatchSize(int count) {
+    return 'Файлов за один раз: $count';
+  }
+
+  @override
+  String get swipeAllMonths => 'Все месяцы';
+
+  @override
+  String get swipeReviewBatch => 'Выбрать месяц или набор';
+
+  @override
+  String get assetVideoLoading => 'Загрузка оригинального видео…';
+
+  @override
+  String get assetVideoUnavailable =>
+      'Оригинальное видео недоступно. Загрузите его в Фото и повторите попытку.';
+
+  @override
+  String get homePermissionTitle => 'Нужен доступ к фото';
+
+  @override
+  String get homePermissionDescription =>
+      'Разрешите доступ в Настройках для сканирования и просмотра. Ничего не удаляется автоматически.';
+
+  @override
+  String get homeOpenSettings => 'Открыть Настройки';
+
+  @override
+  String get homeManagePhotoAccess => 'Управление доступом к фото';
+
+  @override
+  String get homeReviewReady => 'Просмотреть доступные фото';
+
+  @override
+  String get homeContinueAnalysis => 'Продолжить анализ фото';
+
+  @override
+  String get homeScanDetails => 'Подробности сканирования';
+
+  @override
+  String get scanCheckingExactTitle => 'Проверка идентичных фото';
+
+  @override
+  String get scanCheckingSizesTitle => 'Проверка размеров файлов';
+
+  @override
+  String scanRoundProgress(int total, int completed) {
+    return 'Обработано $completed / $total';
+  }
+
+  @override
+  String get scanPauseReview => 'Приостановить и просмотреть';
+
+  @override
+  String get scanSelectionHint =>
+      'Отметьте файлы для удаления. Нажмите «Просмотр», чтобы увидеть содержимое.';
+
+  @override
+  String get scanPreviewNotReady => 'Загрузите предпросмотр перед выбором';
+
+  @override
+  String scanUnreadableExcluded(int count) {
+    return 'Предпросмотр не загружен, не выбрано: $count';
+  }
+
+  @override
+  String get scanKeepThis => 'Оставить это фото';
+
+  @override
+  String get scanPreviewMore => 'Загрузить ещё фото';
+
+  @override
+  String homeKnownLibrarySize(int count, String size) {
+    return 'Подтверждённый размер: $size · Проверено: $count';
+  }
+
+  @override
+  String homePendingSizes(int count) {
+    return 'Файлы с неизвестным размером: $count';
+  }
+
+  @override
+  String get scanReviewChanged =>
+      'Фото или разрешения изменились. Проверьте список удаления снова.';
+
+  @override
+  String get paywallFreePreviewNote =>
+      'Группировка, предпросмотр и отметки свайпом бесплатны. Pro открывает удаление после подтверждения и сжатие видео.';
+
+  @override
+  String paywallSubscribeWeekly(String price) {
+    return 'Подписаться на неделю · $price';
+  }
+
+  @override
+  String paywallSubscribeYearly(String price) {
+    return 'Подписаться на год · $price';
+  }
+
+  @override
+  String get paywallSubscribe => 'Подписаться';
+
+  @override
+  String paywallWeeklyRenewal(String price) {
+    return 'Автопродление за $price в неделю, если не отменить. Проверьте окончательные условия в App Store.';
+  }
+
+  @override
+  String paywallYearlyRenewal(String price) {
+    return 'Автопродление за $price в год, если не отменить. Проверьте окончательные условия в App Store.';
+  }
+
+  @override
+  String get paywallRenewalGeneric =>
+      'Продлевается автоматически, если не отменить. Перед подтверждением проверьте период и сумму в App Store.';
+
+  @override
+  String get paywallLoadingPlans => 'Загрузка планов подписки…';
+
+  @override
+  String get paywallWaitingForStore => 'Ожидание подтверждения App Store…';
+
+  @override
+  String get paywallRestoring => 'Восстановление покупок…';
+
+  @override
+  String get settingsCheckingSubscription => 'Проверка подписки…';
+
+  @override
+  String get settingsSubscriptionUnknown => 'Статус подписки недоступен';
+
+  @override
+  String get settingsManageSubscription => 'Управление подпиской';
+
+  @override
+  String get settingsManageUnavailable =>
+      'Не удалось открыть управление. Откройте подписки в настройках учётной записи магазина.';
+
+  @override
+  String get onboardingStartFree => 'Начать бесплатно';
+
+  @override
+  String get swipeCheckpointSaveError =>
+      'Не удалось сохранить прогресс. Можно продолжить, но в следующий раз он может не восстановиться.';
+
+  @override
+  String swipeCheckpointLimit(int count) {
+    return 'Последних решений на этом устройстве: до $count';
+  }
+
+  @override
+  String get scanSelectLoaded => 'Выбрать загруженные предпросмотры';
+
+  @override
+  String get homePhotoScopeChanged =>
+      'Доступ к фото мог измениться. Сканируйте снова, чтобы обновить доступные фото.';
 }

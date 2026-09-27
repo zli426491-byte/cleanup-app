@@ -47,13 +47,13 @@ class _PaywallViewState extends State<PaywallView> {
   Widget build(BuildContext context) {
     final sub = context.watch<SubscriptionManager>();
     final plans = _sortedPlans(sub);
-    if (plans.isNotEmpty &&
-        !plans.any(
-          (plan) =>
-              plan.product.identifier == _selectedPlan?.product.identifier,
-        )) {
-      _selectedPlan = plans.first;
-    }
+    _selectedPlan = plans.isEmpty
+        ? null
+        : plans.firstWhere(
+            (plan) =>
+                plan.product.identifier == _selectedPlan?.product.identifier,
+            orElse: () => plans.first,
+          );
     final canPurchase =
         !sub.isPlaceholder &&
         _selectedPlan != null &&
@@ -120,6 +120,12 @@ class _PaywallViewState extends State<PaywallView> {
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Colors.grey[600]),
                     ),
+                    const SizedBox(height: 12),
+                    Text(
+                      context.l10n.paywallFreePreviewNote,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: AppTheme.textSecondary),
+                    ),
                     const SizedBox(height: 24),
                     if (sub.statusMessage.isNotEmpty) ...[
                       _StatusBanner(
@@ -168,9 +174,6 @@ class _PaywallViewState extends State<PaywallView> {
                             isSelected:
                                 plan.product.identifier ==
                                 _selectedPlan?.product.identifier,
-                            isBestValue:
-                                plan.product.identifier ==
-                                AppConstants.yearlyProductId,
                             onTap: sub.isLoading || _isPurchasing
                                 ? null
                                 : () => setState(() => _selectedPlan = plan),
@@ -183,9 +186,18 @@ class _PaywallViewState extends State<PaywallView> {
                       isLoading: sub.isLoading || _isPurchasing,
                       label: sub.isPlaceholder
                           ? context.l10n.paywallNotConfigured
-                          : context.l10n.paywallContinue,
+                          : _purchaseLabel,
+                      loadingLabel: _loadingLabel(sub),
                       onTap: () => _purchase(sub),
                     ),
+                    if (_selectedPlan != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        _renewalNotice,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: AppTheme.textSecondary),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     Text(
                       context.l10n.paywallStoreNotice,
@@ -394,6 +406,35 @@ class _PaywallViewState extends State<PaywallView> {
     };
   }
 
+  String get _purchaseLabel => switch (_selectedPlan?.product.identifier) {
+    AppConstants.yearlyProductId => context.l10n.paywallSubscribeYearly(
+      _selectedPlan!.product.priceString,
+    ),
+    AppConstants.weeklyProductId => context.l10n.paywallSubscribeWeekly(
+      _selectedPlan!.product.priceString,
+    ),
+    _ => context.l10n.paywallSubscribe,
+  };
+
+  String get _renewalNotice => switch (_selectedPlan?.product.identifier) {
+    AppConstants.yearlyProductId => context.l10n.paywallYearlyRenewal(
+      _selectedPlan!.product.priceString,
+    ),
+    AppConstants.weeklyProductId => context.l10n.paywallWeeklyRenewal(
+      _selectedPlan!.product.priceString,
+    ),
+    _ => context.l10n.paywallRenewalGeneric,
+  };
+
+  String _loadingLabel(SubscriptionManager sub) => switch (sub.operation) {
+    SubscriptionOperation.purchasing => context.l10n.paywallWaitingForStore,
+    SubscriptionOperation.restoring => context.l10n.paywallRestoring,
+    _ =>
+      _isPurchasing
+          ? context.l10n.paywallWaitingForStore
+          : context.l10n.paywallLoadingPlans,
+  };
+
   List<_PaywallFeature> get _features => [
     _PaywallFeature(
       Icons.copy,
@@ -405,7 +446,6 @@ class _PaywallViewState extends State<PaywallView> {
       context.l10n.paywallVideoFeature,
       AppTheme.warning,
     ),
-    _PaywallFeature(Icons.swipe, context.l10n.paywallSwipeFeature, Colors.teal),
   ];
 }
 
@@ -487,52 +527,76 @@ class _PurchaseButton extends StatelessWidget {
   final bool isEnabled;
   final bool isLoading;
   final String label;
+  final String loadingLabel;
   final VoidCallback onTap;
 
   const _PurchaseButton({
     required this.isEnabled,
     required this.isLoading,
     required this.label,
+    required this.loadingLabel,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: isEnabled ? 1 : 0.55,
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: AppTheme.primaryGradient,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
+    return Semantics(
+      button: true,
+      enabled: isEnabled,
+      liveRegion: isLoading,
+      label: isLoading ? loadingLabel : label,
+      onTap: isEnabled ? onTap : null,
+      excludeSemantics: true,
+      child: Opacity(
+        opacity: isEnabled ? 1 : 0.55,
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            gradient: AppTheme.primaryGradient,
             borderRadius: BorderRadius.circular(16),
-            onTap: isEnabled ? onTap : null,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: isLoading
-                  ? const Center(
-                      child: SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: isEnabled ? onTap : null,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
+                child: isLoading
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Flexible(
+                            child: Text(
+                              loadingLabel,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
                           color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    )
-                  : Text(
-                      label,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+              ),
             ),
           ),
         ),
@@ -546,7 +610,6 @@ class _PlanCard extends StatelessWidget {
   final String subtitle;
   final String price;
   final bool isSelected;
-  final bool isBestValue;
   final VoidCallback? onTap;
 
   const _PlanCard({
@@ -555,7 +618,6 @@ class _PlanCard extends StatelessWidget {
     required this.subtitle,
     required this.price,
     required this.isSelected,
-    required this.isBestValue,
     required this.onTap,
   });
 
@@ -609,25 +671,6 @@ class _PlanCard extends StatelessWidget {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            if (isBestValue)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.warning,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  context.l10n.paywallBestValue,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
                           ],
                         ),
                         const SizedBox(height: 4),

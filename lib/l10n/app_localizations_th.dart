@@ -103,8 +103,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get paywallWeeklySubtitle => 'สำหรับจัดระเบียบรูปในช่วงสั้น ๆ';
 
   @override
-  String get paywallPhotoFeature =>
-      'จัดกลุ่มรูปซ้ำและรูปคล้ายกัน แล้วตรวจสอบทีละรูป';
+  String get paywallPhotoFeature => 'ลบรูปและวิดีโอที่เลือกหลังยืนยัน';
 
   @override
   String get paywallVideoFeature => 'บีบอัดวิดีโอ ดูตัวอย่าง และบันทึกสำเนา';
@@ -225,7 +224,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get homeStorageUnavailable =>
-      'ตรวจสอบพื้นที่จัดเก็บของอุปกรณ์ในการตั้งค่า iPhone ที่นี่คุณสามารถจัดระเบียบรูปและวิดีโอที่เข้าถึงได้';
+      'ตรวจสอบพื้นที่จัดเก็บของอุปกรณ์ในการตั้งค่า ที่นี่คุณจัดระเบียบรูปและวิดีโอที่เข้าถึงได้';
 
   @override
   String get homeViewIndexedPhotos => 'ดูรูปที่อ่านแล้ว';
@@ -425,7 +424,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String homeIndexedCountWithTotal(int count, int total) {
-    return 'อ่านแล้ว $count จาก $total รายการที่เข้าถึงได้';
+    return 'อ่านรายการที่เข้าถึงได้แล้ว: $count / $total';
   }
 
   @override
@@ -514,7 +513,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get scanStartAlbumDescription =>
-      'สแกนรูปและวิดีโอทั้งหมดที่เข้าถึงได้ การตรวจสอบเนื้อหาต้นฉบับและการวิเคราะห์ภาพช่วยให้คุณตรวจทานก่อนตัดสินใจ';
+      'วิเคราะห์ตัวอย่างก่อนเพื่อเปรียบเทียบรูปคล้ายกัน รูปที่ซ้ำทุกประการและไฟล์ขนาดใหญ่จะตรวจแยกกันเมื่อเปิดหมวดนั้น ไม่มีรายการใดถูกลบอัตโนมัติ';
 
   @override
   String get scanContinue => 'สแกนต่อ';
@@ -663,8 +662,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get scanIndexingTitle => 'กำลังสร้างดัชนีคลังรูป';
 
   @override
-  String get scanVerifyingTitle =>
-      'กำลังตรวจสอบต้นฉบับเพื่อหารายการซ้ำกันทุกประการ';
+  String get scanVerifyingTitle => 'กำลังตรวจสอบไฟล์ต้นฉบับ';
 
   @override
   String get scanAnalyzingTitle => 'กำลังวิเคราะห์ตัวอย่างรูปในเครื่อง';
@@ -798,7 +796,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String swipeConfirmDeleteDescription(int count) {
-    return 'ลบรูปที่ตรวจทานแล้ว $count รูป ตรวจสอบว่าเลือกรายการที่ต้องการเก็บไว้อย่างถูกต้อง';
+    return 'รูปที่เลือกไว้เพื่อลบ: $count รูป นำรูปที่ต้องการเก็บไว้ออกจากรายการที่จะลบ';
   }
 
   @override
@@ -1158,4 +1156,197 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get scanCheckFileSizes => 'ตรวจสอบขนาดไฟล์ใหญ่';
+
+  @override
+  String get reviewDeleteTitle => 'ตรวจทานก่อนลบ';
+
+  @override
+  String get reviewRemove => 'นำออกจากรายการที่จะลบ';
+
+  @override
+  String get reviewUnavailable =>
+      'แสดงตัวอย่างไม่ได้ ลองอีกครั้งหรือนำรายการนี้ออก';
+
+  @override
+  String reviewUnseenCount(int count) {
+    return 'รายการที่ต้องดูตัวอย่างก่อนลบ: $count';
+  }
+
+  @override
+  String get reviewAllVersions =>
+      'เลือกทุกเวอร์ชันในกลุ่มแล้ว ต้องการลบทั้งหมดหรือไม่?';
+
+  @override
+  String get reviewDeleteAllVersions => 'ลบทุกเวอร์ชัน';
+
+  @override
+  String reviewConfirmCount(int count) {
+    return 'ยืนยันการลบ · $count';
+  }
+
+  @override
+  String swipeResumeReview(int count) {
+    return 'ตรวจทานต่อ · ตรวจแล้ว $count';
+  }
+
+  @override
+  String get swipeResetReview => 'เริ่มใหม่';
+
+  @override
+  String swipeBatchSize(int count) {
+    return 'รายการต่อชุด: $count';
+  }
+
+  @override
+  String get swipeAllMonths => 'ทุกเดือน';
+
+  @override
+  String get swipeReviewBatch => 'เลือกเดือนหรือชุด';
+
+  @override
+  String get assetVideoLoading => 'กำลังโหลดวิดีโอต้นฉบับ…';
+
+  @override
+  String get assetVideoUnavailable =>
+      'เปิดวิดีโอต้นฉบับไม่ได้ ดาวน์โหลดในแอปรูปภาพแล้วลองอีกครั้ง';
+
+  @override
+  String get homePermissionTitle => 'ต้องอนุญาตให้เข้าถึงรูป';
+
+  @override
+  String get homePermissionDescription =>
+      'อนุญาตให้เข้าถึงรูปในการตั้งค่าเพื่อสแกนและตรวจทาน ไม่มีรายการใดถูกลบโดยอัตโนมัติ';
+
+  @override
+  String get homeOpenSettings => 'เปิดการตั้งค่า';
+
+  @override
+  String get homeManagePhotoAccess => 'จัดการการเข้าถึงรูป';
+
+  @override
+  String get homeReviewReady => 'ตรวจทานรูปที่เปิดได้';
+
+  @override
+  String get homeContinueAnalysis => 'วิเคราะห์รูปต่อ';
+
+  @override
+  String get homeScanDetails => 'รายละเอียดการสแกน';
+
+  @override
+  String get scanCheckingExactTitle => 'กำลังตรวจสอบรูปที่เหมือนกันทุกประการ';
+
+  @override
+  String get scanCheckingSizesTitle => 'กำลังตรวจสอบขนาดไฟล์';
+
+  @override
+  String scanRoundProgress(int total, int completed) {
+    return 'ประมวลผลแล้ว $completed / $total';
+  }
+
+  @override
+  String get scanPauseReview => 'พักการตรวจสอบแล้วดูรูป';
+
+  @override
+  String get scanSelectionHint =>
+      'เลือกรายการเพื่อเพิ่มไปยังรายการที่จะลบ แตะดูตัวอย่างเพื่อดูเนื้อหา';
+
+  @override
+  String get scanPreviewNotReady => 'โหลดตัวอย่างก่อนเลือก';
+
+  @override
+  String scanUnreadableExcluded(int count) {
+    return 'ตัวอย่างยังไม่โหลดและไม่ได้เลือก: $count';
+  }
+
+  @override
+  String get scanKeepThis => 'เก็บรูปนี้';
+
+  @override
+  String get scanPreviewMore => 'โหลดรูปเพิ่มเติม';
+
+  @override
+  String homeKnownLibrarySize(int count, String size) {
+    return 'ขนาดไฟล์ที่ยืนยันแล้ว: $size · ตรวจสอบแล้ว: $count';
+  }
+
+  @override
+  String homePendingSizes(int count) {
+    return 'รายการที่ยังไม่ทราบขนาด: $count';
+  }
+
+  @override
+  String get scanReviewChanged =>
+      'รูปหรือสิทธิ์การเข้าถึงเปลี่ยนไป โปรดตรวจสอบรายการที่จะลบอีกครั้ง';
+
+  @override
+  String get paywallFreePreviewNote =>
+      'การจัดกลุ่ม ดูตัวอย่าง และทำเครื่องหมายด้วยการปัดใช้ฟรี Pro ใช้ลบหลังยืนยันและบีบอัดวิดีโอได้';
+
+  @override
+  String paywallSubscribeWeekly(String price) {
+    return 'สมัครรายสัปดาห์ · $price';
+  }
+
+  @override
+  String paywallSubscribeYearly(String price) {
+    return 'สมัครรายปี · $price';
+  }
+
+  @override
+  String get paywallSubscribe => 'สมัครสมาชิก';
+
+  @override
+  String paywallWeeklyRenewal(String price) {
+    return 'ต่ออายุอัตโนมัติในราคา $price ต่อสัปดาห์จนกว่าจะยกเลิก ตรวจสอบเงื่อนไขสุดท้ายใน App Store';
+  }
+
+  @override
+  String paywallYearlyRenewal(String price) {
+    return 'ต่ออายุอัตโนมัติในราคา $price ต่อปีจนกว่าจะยกเลิก ตรวจสอบเงื่อนไขสุดท้ายใน App Store';
+  }
+
+  @override
+  String get paywallRenewalGeneric =>
+      'ต่ออายุอัตโนมัติจนกว่าจะยกเลิก ตรวจสอบรอบและจำนวนเงินใน App Store ก่อนยืนยัน';
+
+  @override
+  String get paywallLoadingPlans => 'กำลังโหลดแผนสมาชิก…';
+
+  @override
+  String get paywallWaitingForStore => 'กำลังรอ App Store ยืนยัน…';
+
+  @override
+  String get paywallRestoring => 'กำลังกู้คืนการซื้อ…';
+
+  @override
+  String get settingsCheckingSubscription => 'กำลังตรวจสอบสมาชิก…';
+
+  @override
+  String get settingsSubscriptionUnknown => 'ตรวจสอบสถานะสมาชิกไม่ได้';
+
+  @override
+  String get settingsManageSubscription => 'จัดการสมาชิก';
+
+  @override
+  String get settingsManageUnavailable =>
+      'เปิดการจัดการสมาชิกไม่ได้ โปรดเปิดการสมัครสมาชิกในการตั้งค่าบัญชีร้านค้า';
+
+  @override
+  String get onboardingStartFree => 'เริ่มใช้ฟรี';
+
+  @override
+  String get swipeCheckpointSaveError =>
+      'บันทึกความคืบหน้าไม่ได้ คุณตรวจทานต่อได้ แต่อาจกลับมาทำต่อครั้งหน้าไม่ได้';
+
+  @override
+  String swipeCheckpointLimit(int count) {
+    return 'ตัวเลือกที่ตรวจทานล่าสุดที่เก็บในอุปกรณ์นี้: สูงสุด $count';
+  }
+
+  @override
+  String get scanSelectLoaded => 'เลือกตัวอย่างที่โหลดแล้ว';
+
+  @override
+  String get homePhotoScopeChanged =>
+      'สิทธิ์เข้าถึงรูปอาจเปลี่ยนไป สแกนอีกครั้งเพื่ออัปเดตรูปที่เข้าถึงได้';
 }
