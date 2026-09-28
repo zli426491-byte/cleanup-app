@@ -24,6 +24,12 @@ void main() {
   Completer<List<String>>? deletionResponse;
   Completer<Map<String, Object>>? resourceResponse;
   Completer<Map<String, Object>>? pageResponse;
+  Future<Map<String, Object>> Function(
+    int start,
+    int end,
+    List<Map<String, Object>> ordered,
+  )?
+  pageHandler;
   late Map<String, Map<String, Object>> nativeResults;
   late List<String> resourceRequests;
   late List<Map> resourceArguments;
@@ -100,6 +106,7 @@ void main() {
     deletionResponse = null;
     resourceResponse = null;
     pageResponse = null;
+    pageHandler = null;
     nativeResults = {};
     resourceRequests = [];
     resourceArguments = [];
@@ -151,7 +158,12 @@ void main() {
       expectSync(call.method, 'inspectAsset');
       expectSync(args['includeThumbnail'], false);
       expectSync(args['resourceTimeoutMs'], 4000);
-      expectSync(args['maxBytes'], 64 * 1024 * 1024);
+      expectSync(
+        args['maxBytes'],
+        args['includeHash'] == true
+            ? 512 * 1024 * 1024
+            : 8 * 1024 * 1024 * 1024,
+      );
       final id = args['assetId'] as String;
       resourceRequests.add(id);
       resourceArguments.add(Map.of(args));
@@ -204,9 +216,9 @@ void main() {
               (a, b) => (b['createDt'] as int).compareTo(a['createDt'] as int),
             );
           }
-          return pageResponse == null
-              ? {'data': ordered.sublist(start, end)}
-              : pageResponse!.future;
+          if (pageResponse != null) return pageResponse!.future;
+          if (pageHandler != null) return pageHandler!(start, end, ordered);
+          return {'data': ordered.sublist(start, end)};
         case 'deleteWithIds':
           deletionRequests.add(
             List<String>.from((call.arguments as Map)['ids'] as List),
@@ -1482,6 +1494,138 @@ void main() {
   );
 
   test(
+    'in-place preview rounds preserve measured sizes and exact SHA groups',
+    () async {
+      scanner.dispose();
+      scanner = PhotoScannerService(
+        supportsNativeResources: true,
+        continuousPreviewRoundBudget: const Duration(milliseconds: 500),
+        continuousScanBudget: const Duration(seconds: 10),
+      );
+      library = List.generate(200, (i) => photo('asset-$i'));
+      nativeResults = {
+        'asset-0': inspected('identical-originals', size: 70 * 1024 * 1024),
+        'asset-1': inspected('identical-originals', size: 70 * 1024 * 1024),
+      };
+      await scanner.verifyOriginals(
+        target: OriginalVerificationTarget.exactPhotos,
+      );
+      expect(scanner.verifiedHashAssetCount, 2);
+      expect(scanner.scanResult.duplicateGroups, hasLength(1));
+      previewHandler = (ids) async {
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        return {
+          'assets': ids
+              .map((id) => {'assetId': id, 'status': 'not_local'})
+              .toList(),
+        };
+      };
+      var hadResults = false;
+      var blanked = false;
+      var continued = false;
+      scanner.addListener(() {
+        hadResults |=
+            scanner.attemptedAnalysisCount > 0 &&
+            scanner.scanResult.allAssets.length == 200;
+        if (hadResults && scanner.scanResult.allAssets.isEmpty) blanked = true;
+        if (!continued && isInPlaceContinuation()) {
+          continued = true;
+          expect(scanner.knownSizeAssetCount, 2);
+          expect(scanner.verifiedHashAssetCount, 2);
+          expect(scanner.scanResult.duplicateGroups, hasLength(1));
+          expect(scanner.scanResult.allAssets, hasLength(200));
+          scanner.cancelScan();
+        }
+      });
+      await scanner.startContinuousScan(resume: true);
+      expect(continued, isTrue);
+      expect(blanked, isFalse);
+      expect(
+        albumFilters,
+        hasLength(1),
+        reason: 'Validated in-place rounds retain the original index.',
+      );
+      expect(scanner.scanResult.duplicateGroups, hasLength(1));
+    },
+  );
+
+  test(
+    'same-count replacement is rejected before in-place preview reuse',
+    () async {
+      scanner.dispose();
+      scanner = PhotoScannerService(
+        supportsNativeResources: true,
+        continuousPreviewRoundBudget: const Duration(milliseconds: 500),
+        continuousScanBudget: const Duration(seconds: 10),
+      );
+      library = List.generate(104, (i) => photo('asset-$i'));
+      previewHandler = (ids) async {
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        return {
+          'assets': ids
+              .map((id) => {'assetId': id, 'status': 'not_local'})
+              .toList(),
+        };
+      };
+      var replaced = false;
+      scanner.addListener(() {
+        if (!replaced &&
+            scanner.isContinuousScanning &&
+            scanner.currentPhase == ScanPhase.done &&
+            scanner.attemptedAnalysisCount > 0) {
+          replaced = true;
+          library[0] = photo('replacement');
+        }
+      });
+      await scanner.startContinuousScan();
+      expect(replaced, isTrue);
+      expect(
+        scanner.scanResult.allAssets.map((a) => a.id),
+        contains('replacement'),
+      );
+      expect(
+        scanner.scanResult.allAssets.map((a) => a.id),
+        isNot(contains('asset-0')),
+      );
+      expect(
+        albumFilters.length,
+        greaterThanOrEqualTo(2),
+        reason: 'A changed range must trigger a safe full re-index.',
+      );
+    },
+  );
+
+  test(
+    'a short nonempty Photos page retries with a new count instead of completing a partial index',
+    () async {
+      library = List.generate(250, (i) => photo('asset-$i'));
+      var shortened = false;
+      pageHandler = (start, end, ordered) async {
+        if (!shortened && start == 120) {
+          shortened = true;
+          library.removeLast();
+          return {'data': ordered.sublist(start, end - 1)};
+        }
+        return {'data': ordered.sublist(start, end)};
+      };
+      await scanner.startContinuousScan();
+      expect(shortened, isTrue);
+      expect(scanner.hasCompletedScan, isTrue);
+      expect(scanner.availableAssetCount, 249);
+      expect(scanner.scannedAssetCount, 249);
+      expect(
+        scanner.scanResult.allAssets.map((a) => a.id),
+        isNot(contains('asset-249')),
+      );
+      expect(
+        albumFilters.length,
+        greaterThanOrEqualTo(2),
+        reason: 'The second attempt must fetch the changed Photos scope.',
+      );
+    },
+  );
+
+  test(
     'an edit during an in-place round is re-indexed before continuous scan ends',
     () async {
       scanner.dispose();
@@ -1978,6 +2122,52 @@ void main() {
       expect(scanner.scanResult.duplicateGroups, isEmpty);
     },
   );
+
+  test(
+    'size-only verification accepts a complete photo above 64 MiB',
+    () async {
+      library = [photo('large-raw')];
+      nativeResults = {
+        'large-raw': {
+          'sizeKnown': true,
+          'sizeComplete': true,
+          'size': 120 * 1024 * 1024,
+          'complete': true,
+        },
+      };
+      await scanner.verifyOriginals(
+        target: OriginalVerificationTarget.fileSizes,
+      );
+      expect(resourceArguments.single['includeHash'], isFalse);
+      expect(resourceArguments.single['maxBytes'], 8 * 1024 * 1024 * 1024);
+      expect(scanner.knownSizeAssetCount, 1);
+      expect(scanner.scanResult.largeFiles.single.id, 'large-raw');
+      expect(scanner.scanResult.largeFiles.single.size, 120 * 1024 * 1024);
+      expect(scanner.verifiedHashAssetCount, 0);
+    },
+  );
+
+  test('exact verification accepts complete originals above 64 MiB', () async {
+    library = [photo('raw-a'), photo('raw-b')];
+    nativeResults = {
+      'raw-a': inspected('same-large-original', size: 120 * 1024 * 1024),
+      'raw-b': inspected('same-large-original', size: 120 * 1024 * 1024),
+    };
+    await scanner.verifyOriginals(
+      target: OriginalVerificationTarget.exactPhotos,
+    );
+    expect(resourceArguments, hasLength(2));
+    expect(
+      resourceArguments.every(
+        (args) =>
+            args['includeHash'] == true &&
+            args['maxBytes'] == 512 * 1024 * 1024,
+      ),
+      isTrue,
+    );
+    expect(scanner.scanResult.duplicateGroups.single.assets, hasLength(2));
+    expect(scanner.knownSizeAssetCount, 2);
+  });
 
   test(
     'verified SHA requires hash completeness while legacy full results stay compatible',

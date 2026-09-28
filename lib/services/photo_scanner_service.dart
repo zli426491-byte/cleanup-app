@@ -232,6 +232,7 @@ class _RoundBudgetExpired implements Exception {}
 
 class PhotoScannerService extends ChangeNotifier {
   static const _assetPageSize = 120;
+  static const _scopeCheckPageSize = 960;
   // Keep the first preview small so the home screen becomes useful quickly,
   // then amortize PhotoKit/Flutter channel overhead across a larger batch.
   // Native preview requests are concurrent and bounded independently.
@@ -433,7 +434,13 @@ class PhotoScannerService extends ChangeNotifier {
         }
         final indexed = _nextAssetOffset;
         final attempted = _attemptedCount;
-        if (_hasCompletedScan || attempted >= totalPhotoCount) break;
+        final indexedAll =
+            _availableAssetCount != null &&
+            _nextAssetOffset == _availableAssetCount &&
+            _assets.length == _availableAssetCount;
+        if (_hasCompletedScan || (indexedAll && attempted >= totalPhotoCount)) {
+          break;
+        }
         if (indexed <= previousIndexed && attempted <= previousAttempted) {
           // A permanently failing page or native callback cannot spin forever.
           break;
@@ -487,9 +494,7 @@ class PhotoScannerService extends ChangeNotifier {
         _availableAssetCount == null ||
         _nextAssetOffset != _availableAssetCount ||
         _photoPermission?.hasAccess != true ||
-        _hasLimitedAccess ||
-        _knownSizeCount != 0 ||
-        _verifiedHashCount != 0) {
+        _assets.length != _availableAssetCount) {
       return false;
     }
     try {
@@ -500,11 +505,67 @@ class PhotoScannerService extends ChangeNotifier {
       final count = await _album!.assetCountAsync.timeout(
         const Duration(seconds: 5),
       );
-      return !_continuousStopRequested && count == _availableAssetCount;
+      return !_continuousStopRequested &&
+          count == _availableAssetCount &&
+          await _previewIndexMatchesLibrary();
     } catch (_) {
       return false;
     }
   }
+
+  /// An unchanged count alone does not validate a Photos scope: an edit or a
+  /// remove/add pair can preserve it. Check every accessible ID and version
+  /// before retaining visible groups and original-resource results in place.
+  Future<bool> _previewIndexMatchesLibrary() async {
+    final album = _album;
+    final count = _availableAssetCount;
+    if (album == null || count == null || _assets.length != count) return false;
+    final remaining = _assets.keys.toSet();
+    try {
+      for (var start = 0; start < count; start += _scopeCheckPageSize) {
+        if (_disposed ||
+            _continuousStopRequested ||
+            _photoAccessRefreshPending) {
+          return false;
+        }
+        final end = math.min(start + _scopeCheckPageSize, count);
+        final page = await album
+            .getAssetListRange(start: start, end: end)
+            .timeout(const Duration(seconds: 5));
+        if (page.length != end - start) return false;
+        for (final entity in page) {
+          final cached = _assets[entity.id];
+          if (cached == null ||
+              !remaining.remove(entity.id) ||
+              !_sameEntityVersion(cached, entity)) {
+            return false;
+          }
+        }
+      }
+      if (remaining.isNotEmpty ||
+          _disposed ||
+          _continuousStopRequested ||
+          _photoAccessRefreshPending) {
+        return false;
+      }
+      final finalCount = await album.assetCountAsync.timeout(
+        const Duration(seconds: 5),
+      );
+      return !_continuousStopRequested && finalCount == count;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  bool _sameEntityVersion(PhotoAsset cached, AssetEntity entity) =>
+      cached.modifiedDate == entity.modifiedDateTime &&
+      cached.createDate == entity.createDateTime &&
+      cached.width == entity.width &&
+      cached.height == entity.height &&
+      cached.durationSeconds == entity.duration &&
+      cached.type == entity.type &&
+      cached.isScreenshot == _isScreenshot(entity) &&
+      cached.title == entity.title;
 
   Future<bool> _continuousSnapshotMatchesLibrary() async {
     if (_disposed || _continuousStopRequested || _photoAccessRefreshPending) {
@@ -689,11 +750,7 @@ class PhotoScannerService extends ChangeNotifier {
         if (!seen.add(entity.id)) return false;
         final current = indexed[entity.id];
         if (current == null) continue;
-        if (current.modifiedDate != entity.modifiedDateTime ||
-            current.createDate != entity.createDateTime ||
-            current.width != entity.width ||
-            current.height != entity.height ||
-            current.type != entity.type) {
+        if (!_sameEntityVersion(current, entity)) {
           return false;
         }
         remaining.remove(entity.id);
@@ -905,20 +962,19 @@ class PhotoScannerService extends ChangeNotifier {
           timeout: _pageTimeout,
         );
         _checkRun(runId);
-        if (page.isEmpty) {
+        if (page.length != end - _nextAssetOffset) {
           throw StateError('The album changed or a page could not be read.');
         }
         for (final entity in page) {
           _entities[entity.id] = entity;
           _checkpointEntities[entity.id] = entity;
           final previous = priorEntities[entity.id];
+          final cached = priorAssets[entity.id];
           if (previous != null &&
               previous.modifiedDateTime == entity.modifiedDateTime &&
-              previous.width == entity.width &&
-              previous.height == entity.height &&
-              previous.type == entity.type) {
-            final cached = priorAssets[entity.id];
-            if (cached != null) _setAsset(cached);
+              cached != null &&
+              _sameEntityVersion(cached, entity)) {
+            _setAsset(cached);
             final signature = priorSignatures[entity.id];
             if (signature != null) _signatures[entity.id] = signature;
           }
@@ -1391,7 +1447,11 @@ class PhotoScannerService extends ChangeNotifier {
             'includeHash': includeHash,
             'includeThumbnail': false,
             'resourceTimeoutMs': 4000,
-            'maxBytes': 64 * 1024 * 1024,
+            // Size-only streams count bytes with constant memory. They still
+            // have a finite byte ceiling and the native four-second deadline.
+            'maxBytes': includeHash
+                ? 512 * 1024 * 1024
+                : 8 * 1024 * 1024 * 1024,
           }),
           runId,
           timeout: _resourceTimeout,

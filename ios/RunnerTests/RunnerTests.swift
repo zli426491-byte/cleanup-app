@@ -1162,6 +1162,48 @@ final class RunnerTests: XCTestCase {
     io.settle()
   }
 
+  func testSizeOnlyStreamCountsMoreThan64MiBWithoutHash() throws {
+    let identifier = try simulatorPhoto()
+    let asset = try XCTUnwrap(PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil).firstObject)
+    let resourceCount = PHAssetResource.assetResources(for: asset).count
+    XCTAssertGreaterThan(resourceCount, 0)
+    let io = ControlledResourceIO()
+    let started = expectation(description: "Every resource starts")
+    started.expectedFulfillmentCount = resourceCount
+    let replied = expectation(description: "Complete large photo size is returned")
+    let chunk = Data(repeating: 0x42, count: 1024 * 1024)
+    var requests = 0
+    io.onRequest = {
+      requests += 1; started.fulfill()
+      if requests == 1 { for _ in 0..<70 { io.send(chunk) } }
+      else { io.send(Data([0x42])) }
+      io.settle()
+    }
+    var response: [String: Any]?
+    let job = PhotoResourceInspection(assetId: identifier, includeHash: false,
+      includeThumbnail: false, timeoutSeconds: 4,
+      maximumBytes: Int64(8 * 1024 * 1024 * 1024), io: io) {
+      response = $0; replied.fulfill()
+    }
+    job.start(); wait(for: [started, replied], timeout: 4)
+    XCTAssertEqual((response?["size"] as? NSNumber)?.int64Value,
+      Int64(70 * 1024 * 1024 + resourceCount - 1))
+    XCTAssertEqual(response?["sizeKnown"] as? Bool, true)
+    XCTAssertEqual(response?["sizeComplete"] as? Bool, true)
+    XCTAssertEqual(response?["complete"] as? Bool, true)
+    XCTAssertEqual(response?["hashComplete"] as? Bool, false)
+    XCTAssertNil(response?["hash"])
+  }
+
+  func testBoundedSHAStreamCanHashMoreThan64MiB() {
+    let chunk = Data(repeating: 0x42, count: 1024 * 1024)
+    let stream = NativeResourceAccumulator(maximumBytes: 512 * 1024 * 1024, includeHash: true)
+    for _ in 0..<70 { XCTAssertTrue(stream.append(chunk)) }
+    let result = stream.snapshot()
+    XCTAssertEqual(result.bytes, Int64(70 * 1024 * 1024))
+    XCTAssertEqual(result.digest?.count, 64)
+  }
+
   func testCancellationCanWaitForCallbackWithoutDeadlockingFlutterResult() throws {
     let identifier = try simulatorPhoto()
     let io = ControlledResourceIO()

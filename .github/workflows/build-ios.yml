@@ -6,6 +6,8 @@ name: Build iOS
 on:
   push:
     branches: [master, main]
+  pull_request:
+    branches: [master, main]
   workflow_dispatch: # Manual trigger
     inputs:
       native_verification_only:
@@ -16,7 +18,7 @@ on:
 
 jobs:
   build-ios:
-    if: ${{ inputs.native_verification_only != true }}
+    if: ${{ github.event_name != 'pull_request' && inputs.native_verification_only != true }}
     runs-on: macos-15
     timeout-minutes: 30
 
@@ -61,7 +63,7 @@ jobs:
             build/ios/ipa-verification.json
 
   build-android:
-    if: ${{ inputs.native_verification_only != true }}
+    if: ${{ github.event_name != 'pull_request' && inputs.native_verification_only != true }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -97,17 +99,17 @@ jobs:
       - name: Run tests
         run: flutter test
 
-      - name: Build Android APK
-        run: flutter build apk --release --dart-define=REVENUECAT_ANDROID_API_KEY=${{ secrets.REVENUECAT_ANDROID_API_KEY }}
+      - name: Build Android debug APK for unsigned validation
+        run: flutter build apk --debug
 
-      - name: Upload APK artifact
+      - name: Upload debug APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: android-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: android-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
 
   verify-ios:
-    if: ${{ inputs.native_verification_only == true }}
+    if: ${{ github.event_name == 'pull_request' || inputs.native_verification_only == true }}
     permissions:
       contents: read
     runs-on: macos-26

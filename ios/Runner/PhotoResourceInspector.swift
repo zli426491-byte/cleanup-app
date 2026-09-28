@@ -153,10 +153,15 @@ final class PhotoResourceInspector: NSObject, FlutterPlugin {
         }
         let milliseconds = (args["resourceTimeoutMs"] as? NSNumber)?.doubleValue ?? 4000
         let seconds = min(10, max(0.1, milliseconds / 1000))
-        let bytes = min(Int64(128 * 1024 * 1024), max(1,
-          (args["maxBytes"] as? NSNumber)?.int64Value ?? Int64(64 * 1024 * 1024)))
+        let includeHash = args["includeHash"] as? Bool ?? false
+        // Counting a size-only stream uses constant memory. Its higher finite
+        // ceiling lets large local RAW and edited multi-resource media finish;
+        // the independent deadline still rejects a slow or incomplete read.
+        let byteCeiling = includeHash ? Int64(512 * 1024 * 1024) : Int64(8 * 1024 * 1024 * 1024)
+        let bytes = min(byteCeiling, max(1,
+          (args["maxBytes"] as? NSNumber)?.int64Value ?? byteCeiling))
         job = PhotoResourceInspection(assetId: assetId,
-          includeHash: args["includeHash"] as? Bool ?? false,
+          includeHash: includeHash,
           includeThumbnail: args["includeThumbnail"] as? Bool ?? false,
           timeoutSeconds: seconds, maximumBytes: bytes, completion: completion)
       }
