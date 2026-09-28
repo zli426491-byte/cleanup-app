@@ -213,12 +213,12 @@ void main() {
       find.text(
         'The library is still being indexed. This category will update as indexing progresses.',
       ),
-      findsNWidgets(2),
+      findsNWidgets(3),
     );
     await tester.pumpWidget(const SizedBox());
     await _mount(tester, const HomeView());
     // Photos have not been measured, so large files must remain pending.
-    expect(find.text('Done ✓'), findsNWidgets(3));
+    expect(find.text('Done ✓'), findsNWidgets(4));
     await tester.pumpWidget(const SizedBox());
   });
 
