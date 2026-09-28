@@ -174,7 +174,10 @@ class _AssetThumbnailState extends State<AssetThumbnail> {
             fit: widget.fullImage ? BoxFit.contain : BoxFit.cover,
             excludeFromSemantics: true,
             frameBuilder: (context, child, frame, synchronous) {
-              _reportReady(frame != null);
+              // An undecoded first frame is still loading, not a failed
+              // preview. Keep a previously reviewed full-size preview valid
+              // while this thumbnail is rendered in the delete dialog.
+              if (frame != null) _reportReady(true);
               return child;
             },
             errorBuilder: (_, _, _) {
@@ -183,7 +186,9 @@ class _AssetThumbnailState extends State<AssetThumbnail> {
             },
           );
         }
-        _reportReady(false);
+        if (snapshot.connectionState == ConnectionState.done) {
+          _reportReady(false);
+        }
         return Container(
           color: Colors.grey[100],
           child: snapshot.connectionState != ConnectionState.done

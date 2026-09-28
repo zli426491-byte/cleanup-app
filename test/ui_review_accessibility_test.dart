@@ -351,9 +351,10 @@ void main() {
           _app(AssetThumbnail(asset: _photo(id), onPreviewReady: states.add));
       await tester.pumpWidget(subject('preview-late'));
       await tester.pump();
-      expect(states, [false]);
+      expect(states, isEmpty, reason: 'Loading is not a failed preview.');
       await tester.pumpWidget(subject('preview-corrupt'));
       await tester.pumpAndSettle();
+      expect(states, contains(false));
       expect(states.where((ready) => ready), isEmpty);
       pending!.complete(_pixel);
       await tester.pumpAndSettle();

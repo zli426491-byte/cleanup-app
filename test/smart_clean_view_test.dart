@@ -239,6 +239,9 @@ void main() {
   testWidgets('swipe deletion clears matching grid selection when returning', (
     tester,
   ) async {
+    SharedPreferences.setMockInitialValues({
+      'cleanup.swipe.first_use_guide.v1': true,
+    });
     const channel = MethodChannel('com.fluttercandies/photo_manager');
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
@@ -306,41 +309,66 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
-    await tester.pumpAndSettle();
-    final previews = tester
-        .widgetList<Image>(
-          find.descendant(
-            of: find.byType(SwipeCleanView),
-            matching: find.byType(Image),
-          ),
-        )
-        .toList();
-    final previewContext = tester.element(find.byType(SwipeCleanView));
-    await tester.runAsync(() async {
-      for (final preview in previews) {
-        await precacheImage(preview.image, previewContext);
-      }
-    });
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400));
     final continueReview = find.widgetWithText(FilledButton, '繼續審核');
     if (continueReview.evaluate().isNotEmpty) {
+      await tester.ensureVisible(continueReview);
+      await tester.pump(const Duration(milliseconds: 400));
       await tester.tap(continueReview);
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 400));
     }
-    await tester.ensureVisible(find.byIcon(Icons.close_rounded).first);
-    await tester.tap(find.byIcon(Icons.close_rounded).first);
+    final swipeDelete = find.byTooltip('刪除');
+    final deleteInk = find.descendant(
+      of: swipeDelete,
+      matching: find.byType(InkWell),
+    );
+    for (
+      var i = 0;
+      i < 20 && tester.widget<InkWell>(deleteInk).onTap == null;
+      i++
+    ) {
+      final previews = tester
+          .widgetList<Image>(
+            find.descendant(
+              of: find.byType(SwipeCleanView),
+              matching: find.byType(Image),
+            ),
+          )
+          .toList();
+      final previewContext = tester.element(find.byType(SwipeCleanView));
+      await tester.runAsync(() async {
+        for (final preview in previews) {
+          await precacheImage(preview.image, previewContext);
+        }
+      });
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(tester.widget<InkWell>(deleteInk).onTap, isNotNull);
+    await tester.ensureVisible(swipeDelete);
+    await tester.tap(swipeDelete);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
-    await tester.ensureVisible(find.byIcon(Icons.bookmark_rounded).last);
-    await tester.tap(find.byIcon(Icons.bookmark_rounded).last);
+    final swipeKeep = find.byTooltip('保留');
+    await tester.ensureVisible(swipeKeep);
+    await tester.tap(swipeKeep);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.text('刪除 1 張照片'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(find.byType(DeleteReview), findsOneWidget);
+    final confirm = find.widgetWithText(
+      FilledButton,
+      appStringsOf().reviewConfirmCount(1),
+    );
+    expect(tester.widget<FilledButton>(confirm).onPressed, isNotNull);
     await tester.tap(find.text(appStringsOf().reviewConfirmCount(1)));
-    await tester.pumpAndSettle();
-    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(milliseconds: 400));
+    for (var i = 0; i < 30 && scanner.assets.length != 1; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+    }
     expect(scanner.assets.single.id, 'grid-1');
     expect(find.text('已選擇 1 個項目'), findsNothing);
     expect(find.text('預覽並刪除 1 個項目'), findsNothing);
