@@ -1213,6 +1213,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Vérifiez le contenu et la taille des fichiers pour trouver les doublons exacts et les gros fichiers. Les éléments dans le cloud peuvent attendre.';
 
   @override
+  String get scanOriginalsAfterPreview =>
+      'Les doublons exacts et les fichiers volumineux seront vérifiés après l\'analyse des aperçus. Vous pouvez mettre en pause pour examiner les éléments trouvés.';
+
+  @override
   String get scanVerifyNow => 'Vérifier doublons et gros fichiers';
 
   @override
@@ -1226,7 +1230,12 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get scanKeepOneSelectOthers =>
-      'Garder cette photo, sélectionner les autres';
+      'Garder cette photo et sélectionner les autres aperçus chargés';
+
+  @override
+  String scanGroupReadyOthers(int ready, int total) {
+    return 'Autres photos de ce groupe prêtes à sélectionner : $ready sur $total';
+  }
 
   @override
   String get scanSelectOthersHint =>
@@ -1249,6 +1258,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get swipeMultiSelectTitle => 'Sélectionner plusieurs éléments';
+
+  @override
+  String get swipeDragSelectHint =>
+      'Maintenez le doigt puis glissez sur les miniatures pour sélectionner les aperçus chargés.';
 
   @override
   String swipeMarkSelectedForDeletion(int count) {

@@ -1065,6 +1065,10 @@ class AppLocalizationsJa extends AppLocalizations {
       'ファイルの内容とサイズを確認すると、完全に同じ写真と大きなファイルが表示されます。クラウドの項目は後で処理できます。';
 
   @override
+  String get scanOriginalsAfterPreview =>
+      '写真のプレビューのスキャン後に、完全な重複と大きなファイルの元データを確認します。一時停止して、見つかった項目を先に確認できます。';
+
+  @override
   String get scanVerifyNow => '重複と大きなファイルを確認';
 
   @override
@@ -1077,7 +1081,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get scanClearSelection => '選択を解除';
 
   @override
-  String get scanKeepOneSelectOthers => 'この写真を残して他を選択';
+  String get scanKeepOneSelectOthers => 'この写真を残し、プレビューを読み込んだ他の写真を選択';
+
+  @override
+  String scanGroupReadyOthers(int ready, int total) {
+    return 'このグループで選択できる他の写真: $ready / $total枚';
+  }
 
   @override
   String get scanSelectOthersHint => '残す候補の写真をプレビューしてから、グループの他の写真をまとめて選択します。';
@@ -1092,6 +1101,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get swipeMultiSelectTitle => '複数の項目を選択';
+
+  @override
+  String get swipeDragSelectHint => 'サムネイルを長押ししてなぞると、読み込み済みの写真をまとめて選択できます。';
 
   @override
   String swipeMarkSelectedForDeletion(int count) {

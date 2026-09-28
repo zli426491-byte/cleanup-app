@@ -1105,6 +1105,10 @@ class AppLocalizationsTh extends AppLocalizations {
       'ตรวจเนื้อหาและขนาดไฟล์ก่อนเพื่อค้นหารูปซ้ำที่เหมือนกันทุกประการและไฟล์ขนาดใหญ่ รายการบนคลาวด์จัดการทีหลังได้';
 
   @override
+  String get scanOriginalsAfterPreview =>
+      'ระบบจะตรวจสอบไฟล์ต้นฉบับเพื่อหาภาพซ้ำจริงและไฟล์ขนาดใหญ่หลังสแกนภาพตัวอย่างเสร็จ คุณสามารถพักการสแกนเพื่อดูรายการที่พบก่อน';
+
+  @override
   String get scanVerifyNow => 'ตรวจรูปซ้ำและไฟล์ขนาดใหญ่';
 
   @override
@@ -1117,7 +1121,13 @@ class AppLocalizationsTh extends AppLocalizations {
   String get scanClearSelection => 'ล้างการเลือก';
 
   @override
-  String get scanKeepOneSelectOthers => 'เก็บรูปนี้ เลือกรูปอื่น';
+  String get scanKeepOneSelectOthers =>
+      'เก็บรูปนี้และเลือกรูปอื่นที่โหลดภาพตัวอย่างแล้ว';
+
+  @override
+  String scanGroupReadyOthers(int ready, int total) {
+    return 'รูปอื่นในกลุ่มที่พร้อมให้เลือก: $ready จาก $total';
+  }
 
   @override
   String get scanSelectOthersHint =>
@@ -1133,6 +1143,10 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get swipeMultiSelectTitle => 'เลือกหลายรายการ';
+
+  @override
+  String get swipeDragSelectHint =>
+      'แตะค้างแล้วลากผ่านภาพย่อเพื่อเลือกภาพตัวอย่างที่โหลดแล้ว';
 
   @override
   String swipeMarkSelectedForDeletion(int count) {

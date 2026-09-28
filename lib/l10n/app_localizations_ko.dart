@@ -1076,6 +1076,10 @@ class AppLocalizationsKo extends AppLocalizations {
       '파일 내용과 크기를 먼저 확인해야 완전히 같은 사진과 큰 파일을 볼 수 있습니다. 클라우드 항목은 나중에 처리해도 됩니다.';
 
   @override
+  String get scanOriginalsAfterPreview =>
+      '사진 미리보기 스캔이 끝나면 정확한 중복 사진과 큰 파일의 원본을 확인합니다. 일시 중지하고 찾은 항목을 먼저 검토할 수 있습니다.';
+
+  @override
   String get scanVerifyNow => '중복 및 큰 파일 확인';
 
   @override
@@ -1088,7 +1092,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get scanClearSelection => '선택 해제';
 
   @override
-  String get scanKeepOneSelectOthers => '이 사진은 보관하고 나머지 선택';
+  String get scanKeepOneSelectOthers => '이 사진을 보관하고 미리보기가 로드된 다른 사진 선택';
+
+  @override
+  String scanGroupReadyOthers(int ready, int total) {
+    return '이 그룹에서 선택할 수 있는 다른 사진: $ready/$total장';
+  }
 
   @override
   String get scanSelectOthersHint =>
@@ -1104,6 +1113,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get swipeMultiSelectTitle => '여러 항목 선택';
+
+  @override
+  String get swipeDragSelectHint => '썸네일을 길게 누른 채 끌어 로드된 미리보기를 한 번에 선택하세요.';
 
   @override
   String swipeMarkSelectedForDeletion(int count) {

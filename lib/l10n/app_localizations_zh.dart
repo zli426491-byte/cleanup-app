@@ -1038,6 +1038,10 @@ class AppLocalizationsZh extends AppLocalizations {
       '先检查文件内容与大小，才能显示真正重复和大文件。云端项目可稍后再处理。';
 
   @override
+  String get scanOriginalsAfterPreview =>
+      '照片预览扫描完成后，才会检查完全重复和大文件的原始素材；也可先暂停，整理已找到的项目。';
+
+  @override
   String get scanVerifyNow => '检查真正重复与大文件';
 
   @override
@@ -1050,7 +1054,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get scanClearSelection => '清除选择';
 
   @override
-  String get scanKeepOneSelectOthers => '保留这张，选择其他';
+  String get scanKeepOneSelectOthers => '保留这张，选择其他已载入预览的照片';
+
+  @override
+  String scanGroupReadyOthers(int ready, int total) {
+    return '本组其他照片已载入预览 $ready/$total 张';
+  }
 
   @override
   String get scanSelectOthersHint => '先预览建议保留的照片，再一次选中这组其他照片。';
@@ -1065,6 +1074,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get swipeMultiSelectTitle => '批量选择项目';
+
+  @override
+  String get swipeDragSelectHint => '长按并滑过缩略图，可批量选择已载入预览的照片。';
 
   @override
   String swipeMarkSelectedForDeletion(int count) {
@@ -2312,6 +2324,10 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
       '先检查文件内容与大小，才能显示真正重复和大文件。云端项目可稍后再处理。';
 
   @override
+  String get scanOriginalsAfterPreview =>
+      '照片预览扫描完成后，才会检查完全重复和大文件的原始素材；也可先暂停，整理已找到的项目。';
+
+  @override
   String get scanVerifyNow => '检查真正重复与大文件';
 
   @override
@@ -2324,7 +2340,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get scanClearSelection => '清除选择';
 
   @override
-  String get scanKeepOneSelectOthers => '保留这张，选择其他';
+  String get scanKeepOneSelectOthers => '保留这张，选择其他已载入预览的照片';
+
+  @override
+  String scanGroupReadyOthers(int ready, int total) {
+    return '本组其他照片已载入预览 $ready/$total 张';
+  }
 
   @override
   String get scanSelectOthersHint => '先预览建议保留的照片，再一次选中这组其他照片。';
@@ -2339,6 +2360,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get swipeMultiSelectTitle => '批量选择项目';
+
+  @override
+  String get swipeDragSelectHint => '长按并滑过缩略图，可批量选择已载入预览的照片。';
 
   @override
   String swipeMarkSelectedForDeletion(int count) {
@@ -3549,6 +3573,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get scanVerificationExplanation => '先檢查檔案內容與容量，才能顯示真重複和大檔。雲端項目可稍後再處理。';
 
   @override
+  String get scanOriginalsAfterPreview =>
+      '照片預覽掃描完成後，才會檢查真重複與大檔原始素材；也可先暫停，整理已找到的項目。';
+
+  @override
   String get scanVerifyNow => '檢查真重複與大檔';
 
   @override
@@ -3561,7 +3589,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get scanClearSelection => '清除選取';
 
   @override
-  String get scanKeepOneSelectOthers => '保留這張，選取其他';
+  String get scanKeepOneSelectOthers => '保留這張，選取其他已載入預覽的照片';
+
+  @override
+  String scanGroupReadyOthers(int ready, int total) {
+    return '本組其他照片已載入預覽 $ready／$total 張';
+  }
 
   @override
   String get scanSelectOthersHint => '先預覽建議保留的照片，再一次選取這組其他照片。';
@@ -3576,6 +3609,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get swipeMultiSelectTitle => '批量選取項目';
+
+  @override
+  String get swipeDragSelectHint => '長按並滑過縮圖，可批量選取已載入預覽的照片。';
 
   @override
   String swipeMarkSelectedForDeletion(int count) {

@@ -1115,6 +1115,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Kiểm tra nội dung và dung lượng tệp trước để tìm bản trùng hoàn toàn và tệp lớn. Các mục trên đám mây có thể xử lý sau.';
 
   @override
+  String get scanOriginalsAfterPreview =>
+      'Ảnh trùng hoàn toàn và tệp lớn sẽ được kiểm tra sau khi quét ảnh xem trước. Bạn có thể tạm dừng để xem các mục đã tìm thấy.';
+
+  @override
   String get scanVerifyNow => 'Kiểm tra bản trùng và tệp lớn';
 
   @override
@@ -1127,7 +1131,13 @@ class AppLocalizationsVi extends AppLocalizations {
   String get scanClearSelection => 'Bỏ chọn tất cả';
 
   @override
-  String get scanKeepOneSelectOthers => 'Giữ ảnh này, chọn các ảnh khác';
+  String get scanKeepOneSelectOthers =>
+      'Giữ ảnh này, chọn các ảnh khác đã tải bản xem trước';
+
+  @override
+  String scanGroupReadyOthers(int ready, int total) {
+    return 'Ảnh khác trong nhóm đã sẵn sàng để chọn: $ready/$total';
+  }
 
   @override
   String get scanSelectOthersHint =>
@@ -1143,6 +1153,10 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get swipeMultiSelectTitle => 'Chọn nhiều mục';
+
+  @override
+  String get swipeDragSelectHint =>
+      'Nhấn giữ rồi kéo qua hình thu nhỏ để chọn các bản xem trước đã tải.';
 
   @override
   String swipeMarkSelectedForDeletion(int count) {

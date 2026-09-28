@@ -342,7 +342,7 @@ void main() {
         tester.element(find.byType(SmartCleanView)),
       );
       expect(find.text('Exact duplicates: 3 photos'), findsOneWidget);
-      expect(find.text(strings.scanSelectOthersHint), findsOneWidget);
+      expect(find.text(strings.scanGroupReadyOthers(2, 2)), findsOneWidget);
       expect(
         find.byKey(const ValueKey('resource-pending-state')),
         findsNothing,

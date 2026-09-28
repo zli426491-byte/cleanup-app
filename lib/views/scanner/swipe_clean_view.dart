@@ -313,6 +313,9 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
         !_canBulkSelect) {
       return;
     }
+    final scanner = context.read<PhotoScannerService>();
+    if (scanner.isScanning || scanner.isDeleting) return;
+    final scanSnapshot = scanner.scanResult;
     final remaining = _sessionAssets.skip(_currentIndex).toList();
     final picked = await showModalBottomSheet<List<PhotoAsset>>(
       context: context,
@@ -321,6 +324,12 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
       builder: (context) => _MultiSelectSheet(assets: remaining),
     );
     if (!mounted || picked == null || picked.isEmpty || _isDone) return;
+    if (scanner.isScanning ||
+        scanner.isDeleting ||
+        !identical(scanner.scanResult, scanSnapshot)) {
+      _reviewChanged();
+      return;
+    }
 
     // The sheet can only return decoded previews from the current review.
     final pickedIds = picked.map((asset) => asset.id).toSet();
@@ -339,6 +348,10 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
       ];
       for (var i = 0; i < selectedAssets.length; i++) {
         final asset = selectedAssets[i];
+        // The bulk sheet has already decoded these previews. Preserve that
+        // proof when its lazily built tiles leave the tree, so offscreen
+        // selections remain eligible for the final deletion review.
+        _previewReadyIds.add(asset.id);
         _toDelete.add(asset);
         _reviewHistory.add(reviewedCount + i);
         _persistChoice(asset, 'delete');
@@ -1428,6 +1441,76 @@ class _MultiSelectSheet extends StatefulWidget {
 class _MultiSelectSheetState extends State<_MultiSelectSheet> {
   final Set<String> _readyIds = {};
   final Set<String> _selectedIds = {};
+  final GlobalKey _viewportKey = GlobalKey();
+  final Map<String, BuildContext> _mountedTiles = {};
+  Offset? _lastPaintPosition;
+
+  void _registerTile(String id, BuildContext context) {
+    _mountedTiles[id] = context;
+  }
+
+  void _unregisterTile(String id, BuildContext context) {
+    if (identical(_mountedTiles[id], context)) _mountedTiles.remove(id);
+  }
+
+  Rect? _globalRect(BuildContext? context) {
+    if (context == null || !context.mounted) return null;
+    final object = context.findRenderObject();
+    if (object is! RenderBox || !object.attached || !object.hasSize) {
+      return null;
+    }
+    return object.localToGlobal(Offset.zero) & object.size;
+  }
+
+  bool _segmentCrossesRect(Offset from, Offset to, Rect rect) {
+    final dx = to.dx - from.dx;
+    final dy = to.dy - from.dy;
+    var first = 0.0;
+    var last = 1.0;
+    bool clip(double direction, double distance) {
+      if (direction == 0) return distance >= 0;
+      final boundary = distance / direction;
+      if (direction < 0) {
+        if (boundary > last) return false;
+        if (boundary > first) first = boundary;
+      } else {
+        if (boundary < first) return false;
+        if (boundary < last) last = boundary;
+      }
+      return true;
+    }
+
+    return clip(-dx, from.dx - rect.left) &&
+        clip(dx, rect.right - from.dx) &&
+        clip(-dy, from.dy - rect.top) &&
+        clip(dy, rect.bottom - from.dy);
+  }
+
+  void _startPaint(Offset position) {
+    _lastPaintPosition = position;
+    _paintTo(position);
+  }
+
+  // Only decoded thumbnails crossed inside the visible scroll viewport can
+  // enter the selection. A fast drag still covers tiles between touch events.
+  void _paintTo(Offset position) {
+    final from = _lastPaintPosition ?? position;
+    _lastPaintPosition = position;
+    final viewport = _globalRect(_viewportKey.currentContext);
+    if (viewport == null) return;
+    final added = <String>[];
+    for (final entry in _mountedTiles.entries) {
+      if (!_readyIds.contains(entry.key) || _selectedIds.contains(entry.key)) {
+        continue;
+      }
+      final tile = _globalRect(entry.value);
+      if (tile == null) continue;
+      final visible = tile.intersect(viewport);
+      if (visible.width <= 0 || visible.height <= 0) continue;
+      if (_segmentCrossesRect(from, position, visible)) added.add(entry.key);
+    }
+    if (added.isNotEmpty) setState(() => _selectedIds.addAll(added));
+  }
 
   void _setReady(String id, bool ready) {
     if (!mounted || !ready) return;
@@ -1446,49 +1529,65 @@ class _MultiSelectSheetState extends State<_MultiSelectSheet> {
   Widget _tile(BuildContext context, PhotoAsset asset) {
     final ready = _readyIds.contains(asset.id);
     final selected = _selectedIds.contains(asset.id);
-    return Material(
-      color: AppTheme.cardBg,
-      borderRadius: BorderRadius.circular(12),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        key: ValueKey('swipe-batch-${asset.id}'),
-        onTap: ready ? () => _toggle(asset.id) : null,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: AssetThumbnail(
-                key: ValueKey('swipe-batch-preview-${asset.id}'),
-                asset: asset,
-                previewSize: 300,
-                onPreviewReady: (value) => _setReady(asset.id, value),
-              ),
-            ),
-            Positioned.directional(
-              textDirection: Directionality.of(context),
-              top: 4,
-              start: 4,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.92),
-                  borderRadius: BorderRadius.circular(12),
+    return _MountedReviewTile(
+      key: ValueKey('swipe-batch-tile-${asset.id}'),
+      id: asset.id,
+      onMount: _registerTile,
+      onUnmount: _unregisterTile,
+      child: Material(
+        color: AppTheme.cardBg,
+        borderRadius: BorderRadius.circular(12),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          key: ValueKey('swipe-batch-${asset.id}'),
+          onTap: ready ? () => _toggle(asset.id) : null,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  excludeFromSemantics: true,
+                  onLongPressStart: (details) =>
+                      _startPaint(details.globalPosition),
+                  onLongPressMoveUpdate: (details) =>
+                      _paintTo(details.globalPosition),
+                  onLongPressEnd: (_) => _lastPaintPosition = null,
+                  onLongPressCancel: () => _lastPaintPosition = null,
+                  child: AssetThumbnail(
+                    key: ValueKey('swipe-batch-preview-${asset.id}'),
+                    asset: asset,
+                    previewSize: 300,
+                    onPreviewReady: (value) => _setReady(asset.id, value),
+                  ),
                 ),
-                child: Checkbox(
-                  value: selected,
-                  onChanged: ready ? (_) => _toggle(asset.id) : null,
+              ),
+              Positioned.directional(
+                textDirection: Directionality.of(context),
+                top: 4,
+                start: 4,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Checkbox(
+                    value: selected,
+                    onChanged: ready ? (_) => _toggle(asset.id) : null,
+                  ),
                 ),
               ),
-            ),
-            Positioned.directional(
-              textDirection: Directionality.of(context),
-              bottom: 4,
-              end: 4,
-              child: IconButton.filledTonal(
-                tooltip: context.l10n.scanZoomPreview,
-                icon: const Icon(Icons.zoom_in_rounded),
-                onPressed: () => showAssetPreview(context, asset),
+              Positioned.directional(
+                textDirection: Directionality.of(context),
+                bottom: 4,
+                end: 4,
+                child: IconButton.filledTonal(
+                  tooltip: context.l10n.scanZoomPreview,
+                  icon: const Icon(Icons.zoom_in_rounded),
+                  onPressed: () => showAssetPreview(context, asset),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1504,82 +1603,100 @@ class _MultiSelectSheetState extends State<_MultiSelectSheet> {
           children: [
             Expanded(
               child: LayoutBuilder(
-                builder: (context, constraints) => CustomScrollView(
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    strings.swipeMultiSelectTitle,
-                                    style: AppTheme.heading3,
+                builder: (context, constraints) => ClipRect(
+                  key: _viewportKey,
+                  child: CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      strings.swipeMultiSelectTitle,
+                                      style: AppTheme.heading3,
+                                    ),
                                   ),
-                                ),
-                                IconButton(
-                                  tooltip: strings.swipeCancel,
-                                  icon: const Icon(Icons.close_rounded),
-                                  onPressed: () => Navigator.pop(context),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              strings.swipeGestureSafety,
-                              style: AppTheme.caption,
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: Wrap(
-                              alignment: WrapAlignment.spaceBetween,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              spacing: 8,
-                              children: [
-                                Text(
-                                  strings.scanSelectedCount(
-                                    _selectedIds.length,
+                                  IconButton(
+                                    tooltip: strings.swipeCancel,
+                                    icon: const Icon(Icons.close_rounded),
+                                    onPressed: () => Navigator.pop(context),
                                   ),
-                                ),
-                                TextButton.icon(
-                                  key: const ValueKey('swipe-select-loaded'),
-                                  onPressed: _readyIds.isEmpty
-                                      ? null
-                                      : () => setState(
-                                          () => _selectedIds.addAll(_readyIds),
-                                        ),
-                                  icon: const Icon(Icons.select_all_rounded),
-                                  label: Text(strings.scanSelectLoaded),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              child: Text(
+                                strings.swipeGestureSafety,
+                                style: AppTheme.caption,
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                              child: Text(
+                                strings.swipeDragSelectHint,
+                                style: AppTheme.caption,
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              child: Wrap(
+                                alignment: WrapAlignment.spaceBetween,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 8,
+                                children: [
+                                  Text(
+                                    strings.scanSelectedCount(
+                                      _selectedIds.length,
+                                    ),
+                                  ),
+                                  TextButton.icon(
+                                    key: const ValueKey('swipe-select-loaded'),
+                                    onPressed: _readyIds.isEmpty
+                                        ? null
+                                        : () => setState(
+                                            () =>
+                                                _selectedIds.addAll(_readyIds),
+                                          ),
+                                    icon: const Icon(Icons.select_all_rounded),
+                                    label: Text(strings.scanSelectLoaded),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                        sliver: SliverGrid(
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: constraints.maxWidth >= 600
+                                    ? 5
+                                    : 3,
+                                crossAxisSpacing: 8,
+                                mainAxisSpacing: 8,
+                                childAspectRatio: 0.8,
+                              ),
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) =>
+                                _tile(context, widget.assets[index]),
+                            childCount: widget.assets.length,
                           ),
-                        ],
-                      ),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-                      sliver: SliverGrid(
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: constraints.maxWidth >= 600 ? 5 : 3,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
-                          childAspectRatio: 0.8,
-                        ),
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) =>
-                              _tile(context, widget.assets[index]),
-                          childCount: widget.assets.length,
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -1613,4 +1730,55 @@ class _MultiSelectSheetState extends State<_MultiSelectSheet> {
       ),
     );
   }
+}
+
+/// Keeps only laid-out sliver tiles in the drag hit-test registry.
+class _MountedReviewTile extends StatefulWidget {
+  const _MountedReviewTile({
+    super.key,
+    required this.id,
+    required this.child,
+    required this.onMount,
+    required this.onUnmount,
+  });
+
+  final String id;
+  final Widget child;
+  final void Function(String, BuildContext) onMount;
+  final void Function(String, BuildContext) onUnmount;
+
+  @override
+  State<_MountedReviewTile> createState() => _MountedReviewTileState();
+}
+
+class _MountedReviewTileState extends State<_MountedReviewTile> {
+  @override
+  void initState() {
+    super.initState();
+    _registerAfterLayout();
+  }
+
+  @override
+  void didUpdateWidget(_MountedReviewTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.id != widget.id) {
+      oldWidget.onUnmount(oldWidget.id, context);
+      _registerAfterLayout();
+    }
+  }
+
+  void _registerAfterLayout() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onMount(widget.id, context);
+    });
+  }
+
+  @override
+  void dispose() {
+    widget.onUnmount(widget.id, context);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }

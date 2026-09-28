@@ -1890,6 +1890,12 @@ abstract class AppLocalizations {
   /// **'Check file contents and sizes first to find exact duplicates and large files. Cloud items can wait.'**
   String get scanVerificationExplanation;
 
+  /// No description provided for @scanOriginalsAfterPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Exact duplicates and large files are checked after the photo preview scan. Pause now to review found items.'**
+  String get scanOriginalsAfterPreview;
+
   /// No description provided for @scanVerifyNow.
   ///
   /// In en, this message translates to:
@@ -1917,8 +1923,14 @@ abstract class AppLocalizations {
   /// No description provided for @scanKeepOneSelectOthers.
   ///
   /// In en, this message translates to:
-  /// **'Keep this photo, select the others'**
+  /// **'Keep this, select other photos with loaded previews'**
   String get scanKeepOneSelectOthers;
+
+  /// No description provided for @scanGroupReadyOthers.
+  ///
+  /// In en, this message translates to:
+  /// **'Other photos ready to select: {ready} of {total}'**
+  String scanGroupReadyOthers(int ready, int total);
 
   /// No description provided for @scanSelectOthersHint.
   ///
@@ -1943,6 +1955,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select multiple items'**
   String get swipeMultiSelectTitle;
+
+  /// No description provided for @swipeDragSelectHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold and drag across thumbnails to select loaded previews.'**
+  String get swipeDragSelectHint;
 
   /// No description provided for @swipeMarkSelectedForDeletion.
   ///

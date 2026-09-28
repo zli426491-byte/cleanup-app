@@ -150,6 +150,17 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     );
   }
 
+  void _pauseScanForReview(PhotoScannerService scanner) {
+    if (!scanner.isScanning) return;
+    // Pausing a preview scan is an explicit choice to review its partial
+    // snapshot. Do not immediately start the category's automatic original
+    // verification and make that snapshot unselectable again.
+    if (_isResourceCategory && !scanner.isVerifyingOriginals) {
+      _autoVerificationAttempted.add(_selectedCategory);
+    }
+    scanner.cancelScan();
+  }
+
   Future<void> _runKeepingCategoryVisible(
     Future<void> Function() action,
   ) async {
@@ -248,7 +259,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
               IconButton(
                 tooltip: context.l10n.scanCancelKeepProgress,
                 icon: const Icon(Icons.stop_circle_outlined),
-                onPressed: scanner.cancelScan,
+                onPressed: () => _pauseScanForReview(scanner),
               ),
           ],
         ),
@@ -568,6 +579,34 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     child: ScanProgressPanel(scanner: scanner),
   );
 
+  Widget _pauseAndReviewCard(PhotoScannerService scanner) => Container(
+    key: const ValueKey('scan-pause-review-card'),
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: AppTheme.primaryLight,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: AppTheme.primary.withValues(alpha: 0.16)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(context.l10n.scanPreviewWhileRunning, style: AppTheme.body),
+        if (_isResourceCategory && !scanner.isVerifyingOriginals) ...[
+          const SizedBox(height: 6),
+          Text(context.l10n.scanOriginalsAfterPreview, style: AppTheme.caption),
+        ],
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          key: const ValueKey('scan-pause-review-action'),
+          onPressed: () => _pauseScanForReview(scanner),
+          icon: const Icon(Icons.pause_circle_outline_rounded),
+          label: Text(context.l10n.scanPauseReview),
+        ),
+      ],
+    ),
+  );
+
   Widget _content(PhotoScannerService scanner) {
     final groups = _groupsFor(_selectedCategory, scanner);
     final assets = _assetsFor(_selectedCategory, scanner);
@@ -589,6 +628,10 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    if (scanner.isScanning) ...[
+                      _pauseAndReviewCard(scanner),
+                      const SizedBox(height: 12),
+                    ],
                     if (_isSwipeCategory && assets.isNotEmpty)
                       _swipeCard(scanner),
                     if (_isResourceCategory && _pendingChecks(scanner) > 0) ...[
@@ -611,13 +654,6 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                           style: AppTheme.caption,
                         ),
                       ),
-                      if (!_isResourceCategory ||
-                          (groups.isEmpty && assets.isEmpty))
-                        TextButton.icon(
-                          onPressed: scanner.cancelScan,
-                          icon: const Icon(Icons.pause_circle_outline),
-                          label: Text(context.l10n.scanPauseReview),
-                        ),
                     ],
                     if (!_isResourceCategory &&
                         !scanner.isScanning &&
@@ -635,9 +671,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                     _scanDetails(scanner),
                     if (hasResults)
                       Text(
-                        groups.isNotEmpty
-                            ? context.l10n.scanSelectOthersHint
-                            : context.l10n.scanSelectionHint,
+                        context.l10n.scanSelectionHint,
                         style: AppTheme.caption,
                       ),
                     if (assets.isNotEmpty || _selectedIds.isNotEmpty)
@@ -1147,6 +1181,10 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     }
     final other = group.assets.where((asset) => asset.id != keepId).toList();
     final ready = other.where(_previewReady).toList();
+    if (ready.isEmpty) {
+      _reportExcluded(other.length);
+      return;
+    }
     _changeSelection(() {
       _selectedIds.removeAll(group.assets.map((asset) => asset.id));
       _selectedIds.addAll(ready.map((asset) => asset.id));
@@ -1154,11 +1192,17 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     _reportExcluded(other.length - ready.length);
   }
 
-  String _keeperActionLabel(PhotoAsset asset, int index) => [
+  String _keeperActionLabel(
+    PhotoAsset asset,
+    int index,
+    int readyOthers,
+    int totalOthers,
+  ) => [
     context.l10n.scanCategoryPhotos,
     index.toString(),
     if (asset.title?.trim().isNotEmpty == true) asset.title!.trim(),
     context.l10n.scanKeepOneSelectOthers,
+    context.l10n.scanGroupReadyOthers(readyOthers, totalOthers),
   ].join(' · ');
 
   Widget _groupRow(_ReviewGroup group) {
@@ -1170,6 +1214,9 @@ class _SmartCleanViewState extends State<SmartCleanView> {
         ? group.bestAssetId
         : null;
     final textScale = MediaQuery.textScalerOf(context).scale(12) / 12;
+    final readyCount = group.assets.where(_previewReady).length;
+    final totalOthers = group.assets.length - 1;
+    final readyOthers = (readyCount - 1).clamp(0, totalOthers);
     final tileWidth = ((MediaQuery.sizeOf(context).width - 60) / 2).clamp(
       132.0,
       240.0,
@@ -1229,6 +1276,10 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                 ),
             ],
           ),
+          Text(
+            context.l10n.scanGroupReadyOthers(readyOthers, totalOthers),
+            style: AppTheme.caption,
+          ),
           const SizedBox(height: 8),
           SizedBox(
             height: tileHeight,
@@ -1251,13 +1302,19 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                       ),
                       TextButton.icon(
                         key: ValueKey('keep-group-${asset.id}'),
-                        onPressed: busy || !_previewReady(asset)
+                        onPressed:
+                            busy || !_previewReady(asset) || readyOthers == 0
                             ? null
                             : () => _selectGroupOthers(group, asset.id),
                         icon: const Icon(Icons.bookmark_outline, size: 18),
                         label: Text(
                           context.l10n.scanKeepThis,
-                          semanticsLabel: _keeperActionLabel(asset, index + 1),
+                          semanticsLabel: _keeperActionLabel(
+                            asset,
+                            index + 1,
+                            readyOthers,
+                            totalOthers,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -1272,6 +1329,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
               key: ValueKey('keep-suggested-${group.key}'),
               onPressed:
                   busy ||
+                      readyOthers == 0 ||
                       !_previewReady(
                         group.assets.firstWhere(
                           (asset) => asset.id == suggested,
@@ -1285,6 +1343,8 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                 semanticsLabel: _keeperActionLabel(
                   group.assets.firstWhere((asset) => asset.id == suggested),
                   group.assets.indexWhere((asset) => asset.id == suggested) + 1,
+                  readyOthers,
+                  totalOthers,
                 ),
               ),
             ),

@@ -304,10 +304,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('scan-details-1')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      expect(
-        find.text(appStringsOf().scanRoundProgress(20, 42682)),
-        findsOneWidget,
-      );
+      expect(find.text('已處理 20 / 42682'), findsOneWidget);
       expect(find.text(appStringsOf().scanCheckingExactTitle), findsOneWidget);
       expect(find.text('原始素材已驗證 0 個'), findsOneWidget);
       expect(find.textContaining('才能顯示真重複和大檔'), findsOneWidget);

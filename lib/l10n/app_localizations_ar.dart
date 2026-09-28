@@ -1128,6 +1128,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'افحص محتوى الملفات وأحجامها أولًا للعثور على التطابق التام والملفات الكبيرة. يمكن تأجيل عناصر السحابة.';
 
   @override
+  String get scanOriginalsAfterPreview =>
+      'سيبدأ فحص الملفات الأصلية لاكتشاف النسخ المتطابقة والملفات الكبيرة بعد اكتمال مسح معاينات الصور. يمكنك الإيقاف مؤقتًا لمراجعة العناصر التي عُثر عليها.';
+
+  @override
   String get scanVerifyNow => 'افحص الصور المتطابقة والملفات الكبيرة';
 
   @override
@@ -1140,7 +1144,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get scanClearSelection => 'امسح التحديد';
 
   @override
-  String get scanKeepOneSelectOthers => 'احتفظ بهذه الصورة وحدّد البقية';
+  String get scanKeepOneSelectOthers =>
+      'احتفظ بهذه الصورة وحدد الصور الأخرى التي تم تحميل معايناتها';
+
+  @override
+  String scanGroupReadyOthers(int ready, int total) {
+    return 'الصور الأخرى الجاهزة للاختيار في هذه المجموعة: $ready من $total';
+  }
 
   @override
   String get scanSelectOthersHint =>
@@ -1166,6 +1176,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get swipeMultiSelectTitle => 'تحديد عناصر متعددة';
+
+  @override
+  String get swipeDragSelectHint =>
+      'اضغط مطولًا واسحب فوق الصور المصغّرة لتحديد المعاينات المحمّلة.';
 
   @override
   String swipeMarkSelectedForDeletion(int count) {

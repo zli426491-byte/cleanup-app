@@ -481,6 +481,44 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     builder: (context, _) {
       final total = scanner.availableAssetCount;
       final indexed = scanner.scannedAssetCount;
+      final indexing = scanner.currentPhase == ScanPhase.fetchingAssets;
+      final verifying = !indexing && scanner.isVerifyingOriginals;
+      final stageTotal = indexing
+          ? total
+          : verifying
+          ? scanner.originalRoundTotal
+          : scanner.totalPhotoCount;
+      final stageDone = indexing
+          ? indexed
+          : verifying
+          ? scanner.originalRoundProcessed
+          : scanner.attemptedAnalysisCount;
+      final stageProgress = stageTotal == null || stageTotal == 0
+          ? null
+          : (stageDone / stageTotal).clamp(0.0, 1.0);
+      final stageTitle = indexing
+          ? context.l10n.scanIndexingTitle
+          : verifying
+          ? switch (scanner.originalVerificationTarget) {
+              OriginalVerificationTarget.exactPhotos =>
+                context.l10n.scanCheckingExactTitle,
+              OriginalVerificationTarget.fileSizes =>
+                context.l10n.scanCheckingSizesTitle,
+              _ => context.l10n.scanVerifyingTitle,
+            }
+          : context.l10n.scanAnalyzingTitle;
+      final stageCount = indexing
+          ? total == null
+                ? context.l10n.homeIndexedCount(indexed)
+                : context.l10n.scanIndexedCount(indexed, total.toString())
+          : verifying
+          ? stageTotal == null
+                ? context.l10n.scanCountConfirming
+                : context.l10n.scanRoundProgress(stageTotal, stageDone)
+          : context.l10n.scanPreviewAttemptCount(
+              stageDone,
+              scanner.totalPhotoCount,
+            );
       return Container(
         key: const ValueKey('home-scan-progress'),
         width: double.infinity,
@@ -500,19 +538,35 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
             ),
             const SizedBox(height: AppTheme.s6),
             if (scanner.isScanning) ...[
+              Text(
+                stageTitle,
+                style: AppTheme.caption.copyWith(
+                  color: AppTheme.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(stageCount, style: AppTheme.caption),
+              const SizedBox(height: AppTheme.s6),
               LinearProgressIndicator(
-                value: scanner.scanProgress.clamp(0.0, 1.0),
+                value: stageProgress,
                 minHeight: 4,
                 backgroundColor: AppTheme.cardBg,
                 color: AppTheme.primary,
                 borderRadius: BorderRadius.circular(AppTheme.r8),
               ),
               const SizedBox(height: AppTheme.s6),
+              if (scanner.currentOperation != null)
+                Text(
+                  context.l10n.scanOperationWait(
+                    context.localizeServiceMessage(scanner.currentOperation!),
+                    scanner.currentWaitSeconds,
+                  ),
+                  style: AppTheme.caption,
+                ),
               Wrap(
                 spacing: AppTheme.s8,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Text(context.l10n.homeScanning, style: AppTheme.caption),
                   TextButton(
                     onPressed: scanner.cancelScan,
                     child: Text(context.l10n.scanCancelKeepProgress),
@@ -534,8 +588,29 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   );
 
   Widget _buildPhotoHero(PhotoScannerService scanner) {
-    final preview = _photoPreviews;
+    var preview = _photoPreviews;
+    var category = 'photos';
+    var title = context.l10n.scanCategoryPhotos;
+    var count = _photoCount;
+    final previewHeight = min(
+      172.0,
+      max(112.0, MediaQuery.sizeOf(context).height * 0.19),
+    );
+    if (scanner.scanResult.duplicateGroups.isNotEmpty) {
+      final group = scanner.scanResult.duplicateGroups.first;
+      preview = group.assets.take(2).toList();
+      category = 'duplicates';
+      title = context.l10n.homeExactDuplicates;
+      count = group.assets.length;
+    } else if (scanner.scanResult.similarGroups.isNotEmpty) {
+      final group = scanner.scanResult.similarGroups.first;
+      preview = group.assets.take(2).toList();
+      category = 'similar';
+      title = context.l10n.homeSimilarPhotos;
+      count = group.assets.length;
+    }
     return Container(
+      key: ValueKey('home-photo-hero-$category'),
       width: double.infinity,
       padding: const EdgeInsets.all(AppTheme.s14),
       decoration: BoxDecoration(
@@ -549,14 +624,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  context.l10n.scanCategoryPhotos,
-                  style: AppTheme.heading2,
-                ),
-              ),
+              Expanded(child: Text(title, style: AppTheme.heading2)),
               Text(
-                context.l10n.homePhotoCount(_photoCount),
+                context.l10n.homePhotoCount(count),
                 style: AppTheme.caption.copyWith(color: AppTheme.primary),
               ),
             ],
@@ -570,7 +640,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(AppTheme.r12),
                     child: SizedBox(
-                      height: 112,
+                      height: previewHeight,
                       child: AssetThumbnail(
                         key: ValueKey('home-photo-preview-${preview[i].id}'),
                         asset: preview[i],
@@ -586,7 +656,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: scanner.isDeleting ? null : _openReview,
+              onPressed: scanner.isDeleting
+                  ? null
+                  : () => _openReview(category),
               icon: const Icon(Icons.arrow_forward_rounded),
               label: Text(context.l10n.homeReviewReady),
             ),

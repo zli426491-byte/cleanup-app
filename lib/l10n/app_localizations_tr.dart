@@ -1127,6 +1127,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Tam kopyaları ve büyük dosyaları bulmak için önce dosya içeriklerini ve boyutlarını kontrol edin. Buluttaki öğeler bekleyebilir.';
 
   @override
+  String get scanOriginalsAfterPreview =>
+      'Tam kopyalar ve büyük dosyalar, fotoğraf önizlemeleri tarandıktan sonra denetlenir. Bulunan öğeleri incelemek için taramayı duraklatabilirsiniz.';
+
+  @override
   String get scanVerifyNow => 'Kopyaları ve büyük dosyaları kontrol et';
 
   @override
@@ -1139,7 +1143,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get scanClearSelection => 'Seçimi temizle';
 
   @override
-  String get scanKeepOneSelectOthers => 'Bu fotoğrafı sakla, diğerlerini seç';
+  String get scanKeepOneSelectOthers =>
+      'Bu fotoğrafı tut, önizlemesi yüklenen diğerlerini seç';
+
+  @override
+  String scanGroupReadyOthers(int ready, int total) {
+    return 'Bu grupta seçime hazır diğer fotoğraflar: $ready/$total';
+  }
 
   @override
   String get scanSelectOthersHint =>
@@ -1155,6 +1165,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get swipeMultiSelectTitle => 'Birden fazla öğe seç';
+
+  @override
+  String get swipeDragSelectHint =>
+      'Yüklenen önizlemeleri seçmek için küçük resimlere basılı tutup sürükleyin.';
 
   @override
   String swipeMarkSelectedForDeletion(int count) {

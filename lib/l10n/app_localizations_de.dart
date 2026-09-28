@@ -1191,6 +1191,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Prüfe zuerst Inhalt und Größe der Dateien, um exakte Duplikate und große Dateien zu finden. Cloud-Inhalte können warten.';
 
   @override
+  String get scanOriginalsAfterPreview =>
+      'Exakte Duplikate und große Dateien werden nach dem Scan der Fotovorschauen geprüft. Pausiere, um gefundene Elemente zu prüfen.';
+
+  @override
   String get scanVerifyNow => 'Duplikate und große Dateien prüfen';
 
   @override
@@ -1204,7 +1208,12 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get scanKeepOneSelectOthers =>
-      'Dieses Foto behalten, andere auswählen';
+      'Dieses Foto behalten, andere Fotos mit geladener Vorschau auswählen';
+
+  @override
+  String scanGroupReadyOthers(int ready, int total) {
+    return 'Weitere Fotos dieser Gruppe zur Auswahl bereit: $ready von $total';
+  }
 
   @override
   String get scanSelectOthersHint =>
@@ -1226,6 +1235,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get swipeMultiSelectTitle => 'Mehrere Elemente auswählen';
+
+  @override
+  String get swipeDragSelectHint =>
+      'Halte gedrückt und ziehe über Miniaturen, um geladene Vorschauen auszuwählen.';
 
   @override
   String swipeMarkSelectedForDeletion(int count) {

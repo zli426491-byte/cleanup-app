@@ -1210,6 +1210,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Verifique primeiro o conteúdo e o tamanho dos ficheiros para encontrar duplicados exatos e ficheiros grandes. Os itens na nuvem podem esperar.';
 
   @override
+  String get scanOriginalsAfterPreview =>
+      'As duplicatas exatas e os arquivos grandes serão verificados após a análise das prévias. Você pode pausar para revisar os itens encontrados.';
+
+  @override
   String get scanVerifyNow => 'Verificar duplicados e ficheiros grandes';
 
   @override
@@ -1223,7 +1227,12 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get scanKeepOneSelectOthers =>
-      'Manter esta foto, selecionar as outras';
+      'Manter esta foto e selecionar outras com prévia carregada';
+
+  @override
+  String scanGroupReadyOthers(int ready, int total) {
+    return 'Outras fotos do grupo prontas para seleção: $ready de $total';
+  }
 
   @override
   String get scanSelectOthersHint =>
@@ -1246,6 +1255,10 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get swipeMultiSelectTitle => 'Selecionar vários itens';
+
+  @override
+  String get swipeDragSelectHint =>
+      'Toque e segure, depois arraste pelas miniaturas para selecionar prévias carregadas.';
 
   @override
   String swipeMarkSelectedForDeletion(int count) {

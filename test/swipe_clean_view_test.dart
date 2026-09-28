@@ -651,6 +651,186 @@ void main() {
     },
   );
 
+  testWidgets(
+    'one long drag marks only visible decoded photos and still requires review',
+    (tester) async {
+      final photos = List.generate(
+        4,
+        (index) => PhotoAsset(
+          id: 'paint-$index',
+          width: 100,
+          height: 100,
+          size: 0,
+          createDate: DateTime(2026),
+          type: AssetType.image,
+          thumbnail: index == 2 ? null : asset.thumbnail,
+        ),
+      );
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(
+        const MethodChannel('com.fluttercandies/photo_manager'),
+        (call) async {
+          final args = call.arguments as Map;
+          if (call.method == 'fetchEntityProperties') {
+            return {'id': args['id'], 'type': 1, 'width': 100, 'height': 100};
+          }
+          if (call.method == 'getThumb' && args['id'] == 'paint-2') {
+            return null;
+          }
+          return asset.thumbnail;
+        },
+      );
+      await mountReview(tester, photos, reduceMotion: true);
+      await tester.tap(find.byKey(const ValueKey('swipe-select-many')));
+      await tester.pumpAndSettle();
+      await waitForDecodedPreview(tester);
+      expect(find.text(appStringsOf().swipeDragSelectHint), findsOneWidget);
+
+      Offset center(int index) => tester.getCenter(
+        find.byKey(ValueKey('swipe-batch-preview-paint-$index')),
+      );
+      final gesture = await tester.startGesture(center(0));
+      await tester.pump(const Duration(milliseconds: 600));
+      // One pointer update skips two tile centres. Both crossed thumbnails
+      // must be considered, but the failed preview in between stays excluded.
+      await gesture.moveTo(center(3));
+      await tester.pump();
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(find.text(appStringsOf().scanSelectedCount(3)), findsOneWidget);
+      expect(scanner.deletionRequests, 0);
+
+      await tester.tap(find.byKey(const ValueKey('swipe-mark-selected')));
+      await tester.pumpAndSettle();
+      expect(find.text(appStringsOf().swipeDeleteCount(3)), findsOneWidget);
+      expect(scanner.deletionRequests, 0);
+      await tester.tap(find.text(appStringsOf().swipeDoneCount(3)));
+      await tester.pumpAndSettle();
+      expect(find.text(appStringsOf().swipeSkipRemainingTitle), findsOneWidget);
+      await tester.tap(
+        find.widgetWithText(TextButton, appStringsOf().swipeDone).last,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(appStringsOf().swipeDeletePhotos(3)));
+      await tester.pumpAndSettle();
+      expect(find.text(appStringsOf().reviewConfirmCount(3)), findsOneWidget);
+      expect(scanner.deletionRequests, 0);
+    },
+  );
+
+  testWidgets('ordinary vertical drag still scrolls the bulk grid', (
+    tester,
+  ) async {
+    final photos = List.generate(
+      45,
+      (index) => PhotoAsset(
+        id: 'scroll-paint-$index',
+        width: 100,
+        height: 100,
+        size: 0,
+        createDate: DateTime(2026),
+        type: AssetType.image,
+        thumbnail: asset.thumbnail,
+      ),
+    );
+    await mountReview(tester, photos, reduceMotion: true);
+    await tester.tap(find.byKey(const ValueKey('swipe-select-many')));
+    await tester.pumpAndSettle();
+    await waitForDecodedPreview(tester);
+    final scrollable = tester.state<ScrollableState>(
+      find.byType(Scrollable).last,
+    );
+    expect(scrollable.position.pixels, 0);
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -240));
+    await tester.pumpAndSettle();
+    expect(scrollable.position.pixels, greaterThan(0));
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const ValueKey('swipe-mark-selected')),
+          )
+          .onPressed,
+      isNull,
+    );
+  });
+
+  testWidgets(
+    'offscreen bulk selections stay ready in the final deletion review',
+    (tester) async {
+      final photos = List.generate(
+        30,
+        (index) => PhotoAsset(
+          id: 'bulk-$index',
+          width: 100,
+          height: 100,
+          size: 0,
+          createDate: DateTime(2026),
+          type: AssetType.image,
+          thumbnail: asset.thumbnail,
+        ),
+      );
+      await mountReview(tester, photos, reduceMotion: true);
+      await tester.tap(find.byKey(const ValueKey('swipe-select-many')));
+      await tester.pumpAndSettle();
+
+      final grid = find.byType(CustomScrollView);
+      for (var index = 0; index < 6; index++) {
+        await waitForDecodedPreview(tester);
+        await tester.drag(grid, const Offset(0, -180));
+        await tester.pumpAndSettle();
+      }
+      await waitForDecodedPreview(tester);
+      await tester.drag(grid, const Offset(0, 1500));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('swipe-select-loaded')));
+      await tester.pumpAndSettle();
+      expect(find.text(appStringsOf().scanSelectedCount(30)), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('swipe-mark-selected')));
+      await tester.pumpAndSettle();
+      expect(find.text(appStringsOf().swipeDeletePhotos(30)), findsOneWidget);
+      expect(scanner.deletionRequests, 0);
+
+      await tester.tap(find.text(appStringsOf().swipeDeletePhotos(30)));
+      await tester.pumpAndSettle();
+      expect(find.text(appStringsOf().reviewConfirmCount(30)), findsOneWidget);
+      expect(find.text(appStringsOf().reviewUnseenCount(29)), findsNothing);
+      expect(scanner.deletionRequests, 0);
+    },
+  );
+
+  testWidgets('bulk choices are discarded if the library changes mid-review', (
+    tester,
+  ) async {
+    final photos = [
+      asset,
+      PhotoAsset(
+        id: 'another-bulk-photo',
+        width: 100,
+        height: 100,
+        size: 0,
+        createDate: DateTime(2026),
+        type: AssetType.image,
+        thumbnail: asset.thumbnail,
+      ),
+    ];
+    await mountReview(tester, photos, reduceMotion: true);
+    await tester.tap(find.byKey(const ValueKey('swipe-select-many')));
+    await tester.pumpAndSettle();
+    await waitForDecodedPreview(tester);
+    await tester.tap(find.byKey(const ValueKey('swipe-select-loaded')));
+    await tester.pumpAndSettle();
+
+    scanner.setAssets([photos.first]);
+    await tester.tap(find.byKey(const ValueKey('swipe-mark-selected')));
+    await tester.pumpAndSettle();
+
+    expect(find.text(appStringsOf().swipeDeleteCount(0)), findsOneWidget);
+    expect(find.text(appStringsOf().scanReviewChanged), findsOneWidget);
+    expect(scanner.deletionRequests, 0);
+  });
+
   testWidgets('group reviews do not offer unsafe select-all deletion', (
     tester,
   ) async {

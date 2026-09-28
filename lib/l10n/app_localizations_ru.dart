@@ -1149,6 +1149,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Сначала проверьте содержимое и размер файлов, чтобы найти точные копии и большие файлы. Объекты в облаке можно проверить позже.';
 
   @override
+  String get scanOriginalsAfterPreview =>
+      'Точные дубликаты и большие файлы будут проверены после сканирования миниатюр. Можно приостановить сканирование и просмотреть найденное.';
+
+  @override
   String get scanVerifyNow => 'Проверить копии и большие файлы';
 
   @override
@@ -1161,7 +1165,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get scanClearSelection => 'Снять выделение';
 
   @override
-  String get scanKeepOneSelectOthers => 'Сохранить это фото, выбрать остальные';
+  String get scanKeepOneSelectOthers =>
+      'Оставить это фото и выбрать другие с загруженным предпросмотром';
+
+  @override
+  String scanGroupReadyOthers(int ready, int total) {
+    return 'Другие фото группы, готовые к выбору: $ready из $total';
+  }
 
   @override
   String get scanSelectOthersHint =>
@@ -1185,6 +1195,10 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get swipeMultiSelectTitle => 'Выбрать несколько элементов';
+
+  @override
+  String get swipeDragSelectHint =>
+      'Удерживайте и проведите по миниатюрам, чтобы выбрать загруженные превью.';
 
   @override
   String swipeMarkSelectedForDeletion(int count) {

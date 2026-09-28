@@ -174,6 +174,13 @@ void main() {
       expect(inspections.every((args) => args['includeHash'] == true), isTrue);
       expect(scanner.verifiedHashAssetCount, 2);
       expect(find.text('Exact duplicates: 2 photos'), findsOneWidget);
+      final coverage = tester.widget<Text>(
+        find.textContaining('Other photos ready to select:'),
+      );
+      expect(
+        coverage.data,
+        matches(RegExp(r'^Other photos ready to select: [01] of 1$')),
+      );
       expect(
         find.byKey(ValueKey('keep-suggested-duplicate:$digest')),
         findsOneWidget,

@@ -90,7 +90,7 @@ class ScanProgressPanel extends StatelessWidget {
             Text(
               roundTotal == null
                   ? context.l10n.scanCountConfirming
-                  : context.l10n.scanRoundProgress(roundProcessed, roundTotal),
+                  : context.l10n.scanRoundProgress(roundTotal, roundProcessed),
             ),
           Wrap(
             spacing: 16,

@@ -1147,6 +1147,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Verifică mai întâi conținutul și dimensiunea fișierelor pentru a găsi duplicate identice și fișiere mari. Elementele din cloud pot aștepta.';
 
   @override
+  String get scanOriginalsAfterPreview =>
+      'Dublurile exacte și fișierele mari vor fi verificate după scanarea previzualizărilor. Poți întrerupe scanarea pentru a verifica elementele găsite.';
+
+  @override
   String get scanVerifyNow => 'Verifică duplicatele și fișierele mari';
 
   @override
@@ -1160,7 +1164,12 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get scanKeepOneSelectOthers =>
-      'Păstrează această fotografie, selectează restul';
+      'Păstrează această fotografie și selectează altele cu previzualizare încărcată';
+
+  @override
+  String scanGroupReadyOthers(int ready, int total) {
+    return 'Alte fotografii din grup gata de selectat: $ready din $total';
+  }
 
   @override
   String get scanSelectOthersHint =>
@@ -1183,6 +1192,10 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get swipeMultiSelectTitle => 'Selectează mai multe elemente';
+
+  @override
+  String get swipeDragSelectHint =>
+      'Ține apăsat și glisează peste miniaturi pentru a selecta previzualizările încărcate.';
 
   @override
   String swipeMarkSelectedForDeletion(int count) {

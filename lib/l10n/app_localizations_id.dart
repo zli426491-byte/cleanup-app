@@ -1123,6 +1123,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Periksa isi dan ukuran file dahulu untuk menemukan duplikat persis dan file besar. Item di cloud bisa ditangani nanti.';
 
   @override
+  String get scanOriginalsAfterPreview =>
+      'Duplikat identik dan file besar diperiksa setelah pemindaian pratinjau foto selesai. Jeda sekarang untuk meninjau item yang ditemukan.';
+
+  @override
   String get scanVerifyNow => 'Periksa duplikat dan file besar';
 
   @override
@@ -1135,7 +1139,13 @@ class AppLocalizationsId extends AppLocalizations {
   String get scanClearSelection => 'Hapus pilihan';
 
   @override
-  String get scanKeepOneSelectOthers => 'Simpan foto ini, pilih yang lain';
+  String get scanKeepOneSelectOthers =>
+      'Simpan foto ini, pilih foto lain dengan pratinjau termuat';
+
+  @override
+  String scanGroupReadyOthers(int ready, int total) {
+    return 'Foto lain dalam grup yang siap dipilih: $ready dari $total';
+  }
 
   @override
   String get scanSelectOthersHint =>
@@ -1151,6 +1161,10 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get swipeMultiSelectTitle => 'Pilih beberapa item';
+
+  @override
+  String get swipeDragSelectHint =>
+      'Tekan lama lalu seret melintasi gambar mini untuk memilih pratinjau yang termuat.';
 
   @override
   String swipeMarkSelectedForDeletion(int count) {

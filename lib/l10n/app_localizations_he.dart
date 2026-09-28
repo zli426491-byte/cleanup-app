@@ -1109,6 +1109,10 @@ class AppLocalizationsHe extends AppLocalizations {
       'בדוק תחילה את תוכן הקבצים ואת גודלם כדי למצוא כפילויות זהות וקבצים גדולים. פריטים בענן יכולים לחכות.';
 
   @override
+  String get scanOriginalsAfterPreview =>
+      'בדיקת קבצי המקור לאיתור כפילויות זהות וקבצים גדולים תתחיל אחרי סריקת התצוגות המקדימות. אפשר להשהות ולבדוק את הפריטים שנמצאו.';
+
+  @override
   String get scanVerifyNow => 'בדוק כפילויות וקבצים גדולים';
 
   @override
@@ -1121,7 +1125,13 @@ class AppLocalizationsHe extends AppLocalizations {
   String get scanClearSelection => 'נקה בחירה';
 
   @override
-  String get scanKeepOneSelectOthers => 'שמור תמונה זו ובחר את האחרות';
+  String get scanKeepOneSelectOthers =>
+      'לשמור את התמונה הזו ולבחור תמונות אחרות שהתצוגה המקדימה שלהן נטענה';
+
+  @override
+  String scanGroupReadyOthers(int ready, int total) {
+    return 'תמונות נוספות בקבוצה שמוכנות לבחירה: $ready מתוך $total';
+  }
 
   @override
   String get scanSelectOthersHint =>
@@ -1144,6 +1154,10 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get swipeMultiSelectTitle => 'בחירת פריטים מרובים';
+
+  @override
+  String get swipeDragSelectHint =>
+      'לחצו לחיצה ארוכה וגררו על תמונות ממוזערות כדי לבחור תצוגות מקדימות שנטענו.';
 
   @override
   String swipeMarkSelectedForDeletion(int count) {

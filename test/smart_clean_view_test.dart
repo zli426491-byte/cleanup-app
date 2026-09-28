@@ -52,8 +52,172 @@ class GridScanner extends PhotoScannerService {
   }
 }
 
+class _ScanningGridScanner extends GridScanner {
+  _ScanningGridScanner(super.assets);
+
+  bool scanning = true;
+  int cancelRequests = 0;
+  int originalVerificationRequests = 0;
+
+  @override
+  bool get isScanning => scanning;
+
+  @override
+  bool get nativeOriginalAnalysisAvailable => true;
+
+  @override
+  int get scannedAssetCount => assets.length;
+
+  @override
+  int? get availableAssetCount => assets.length;
+
+  @override
+  int get totalPhotoCount => assets.length;
+
+  @override
+  int get pendingHashAssetCount => assets.length;
+
+  @override
+  int get pendingSizeAssetCount => assets.length;
+
+  @override
+  void cancelScan() {
+    cancelRequests++;
+    scanning = false;
+    notifyListeners();
+  }
+
+  @override
+  Future<void> verifyOriginals({
+    OriginalVerificationTarget target = OriginalVerificationTarget.all,
+  }) async {
+    originalVerificationRequests++;
+  }
+}
+
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  TestWidgetsFlutterBinding.ensureInitialized();
+  const photosChannel = MethodChannel('com.fluttercandies/photo_manager');
+  final messenger =
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+  final thumbnail = img.encodePng(img.Image(width: 8, height: 8));
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    messenger.setMockMethodCallHandler(photosChannel, (call) async {
+      final id = (call.arguments as Map)['id'] as String;
+      switch (call.method) {
+        case 'fetchEntityProperties':
+          return {'id': id, 'type': 1, 'width': 100, 'height': 100};
+        case 'getThumb':
+          return thumbnail;
+        default:
+          throw StateError('Unexpected photo API ${call.method}');
+      }
+    });
+  });
+  tearDown(() => messenger.setMockMethodCallHandler(photosChannel, null));
+
+  testWidgets('partial preview scan can pause into a stable review snapshot', (
+    tester,
+  ) async {
+    final scanner = _ScanningGridScanner([
+      PhotoAsset(
+        id: 'partial-photo',
+        width: 100,
+        height: 100,
+        size: 0,
+        createDate: DateTime(2026),
+        type: AssetType.image,
+      ),
+    ]);
+    final subscription = ProSubscription();
+    addTearDown(scanner.dispose);
+    addTearDown(subscription.dispose);
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<PhotoScannerService>.value(value: scanner),
+          ChangeNotifierProvider<SubscriptionManager>.value(
+            value: subscription,
+          ),
+        ],
+        child: const MaterialApp(
+          home: SmartCleanView(initialCategory: 'photos'),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey('scan-pause-review-card')),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<TextButton>(
+            find.byKey(const ValueKey('select-current-category')),
+          )
+          .onPressed,
+      isNull,
+    );
+    await tester.tap(find.byKey(const ValueKey('scan-pause-review-action')));
+    await tester.pump();
+    expect(scanner.cancelRequests, 1);
+    expect(find.byKey(const ValueKey('scan-pause-review-card')), findsNothing);
+    expect(
+      tester
+          .widget<TextButton>(
+            find.byKey(const ValueKey('select-current-category')),
+          )
+          .onPressed,
+      isNotNull,
+    );
+    expect(scanner.originalVerificationRequests, 0);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('pausing on a resource tab does not start original checks', (
+    tester,
+  ) async {
+    final scanner = _ScanningGridScanner([
+      PhotoAsset(
+        id: 'resource-pending',
+        width: 100,
+        height: 100,
+        size: 0,
+        createDate: DateTime(2026),
+        type: AssetType.image,
+      ),
+    ]);
+    final subscription = ProSubscription();
+    addTearDown(scanner.dispose);
+    addTearDown(subscription.dispose);
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<PhotoScannerService>.value(value: scanner),
+          ChangeNotifierProvider<SubscriptionManager>.value(
+            value: subscription,
+          ),
+        ],
+        child: const MaterialApp(
+          home: SmartCleanView(initialCategory: 'duplicates'),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.textContaining('照片預覽掃描完成後'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('scan-pause-review-action')));
+    await tester.pump();
+    await tester.pump();
+    expect(scanner.cancelRequests, 1);
+    expect(scanner.originalVerificationRequests, 0);
+    expect(
+      find.byKey(const ValueKey('resource-pending-state')),
+      findsOneWidget,
+    );
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('swipe deletion clears matching grid selection when returning', (
     tester,
   ) async {
