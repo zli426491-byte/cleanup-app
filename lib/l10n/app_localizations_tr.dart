@@ -123,6 +123,33 @@ class AppLocalizationsTr extends AppLocalizations {
   String get paywallBestValue => 'En avantajlı';
 
   @override
+  String get videoTryAnotherPreset => 'Başka bir kalite dene';
+
+  @override
+  String get videoPresetTitle => 'Sıkıştırma kalitesi';
+
+  @override
+  String get videoPresetSmaller => 'Daha küçük dosya';
+
+  @override
+  String get videoPresetBalanced => 'Dengeli';
+
+  @override
+  String get videoPresetHigherQuality => 'Daha yüksek kalite';
+
+  @override
+  String get videoPresetNotice =>
+      'Seçilen ayar sıkıştırmayı yönlendirir. Gerçek dosya boyutu önizleme oluşturulduktan sonra gösterilir. Orijinal korunur.';
+
+  @override
+  String get serviceContinuousScanLimit =>
+      'Bu kesintisiz tarama süre sınırına ulaştı. İlerleme kaydedildi; daha sonra devam edebilirsiniz.';
+
+  @override
+  String get swipeCheckpointRecovered =>
+      'Kaydedilmiş bazı inceleme seçimleri bozulduğu için geri yüklenemedi. Bu fotoğrafları yeniden inceleyin; hiçbir şey silinmedi.';
+
+  @override
   String get videoTitle => 'Video sıkıştırma';
 
   @override

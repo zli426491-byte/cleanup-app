@@ -40,6 +40,7 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
   late final ReviewCheckpointService _checkpoint;
   Timer? _checkpointTimer;
   bool _checkpointFailed = false;
+  bool _checkpointRecovered = false;
   bool _loadingCheckpoint = true;
   bool _snappingBack = false;
   bool _guideOpen = false;
@@ -128,7 +129,12 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
         widget.assets,
       );
       if (!mounted) return;
-      setState(() => _loadingCheckpoint = false);
+      setState(() {
+        _loadingCheckpoint = false;
+        _checkpointRecovered = _checkpoint.recoveredFromCorruption(
+          _checkpointCategory,
+        );
+      });
       if (decisions.isEmpty) return;
       final resume = await showDialog<bool>(
         context: context,
@@ -169,6 +175,7 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
         });
       } else if (resume == false) {
         await _checkpoint.clear(_checkpointCategory);
+        if (mounted) setState(() => _checkpointRecovered = false);
       }
     } catch (_) {
       if (mounted) {
@@ -192,6 +199,9 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
   Future<void> _flushCheckpoint() async {
     try {
       await _checkpoint.flush(_checkpointCategory);
+      if (mounted && _checkpointFailed) {
+        setState(() => _checkpointFailed = false);
+      }
     } catch (_) {
       if (mounted) setState(() => _checkpointFailed = true);
     }
@@ -270,6 +280,8 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
                         _reviewHistory.clear();
                         _toKeep.clear();
                         _toDelete.clear();
+                        _checkpointRecovered = false;
+                        _checkpointFailed = false;
                       });
                       Navigator.pop(context, false);
                     } catch (_) {
@@ -433,11 +445,6 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
               ? const Center(child: CircularProgressIndicator())
               : Column(
                   children: [
-                    if (_checkpointFailed)
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(context.l10n.swipeCheckpointSaveError),
-                      ),
                     Expanded(
                       child: _isDone ? _buildDoneView() : _buildSwipeView(),
                     ),
@@ -449,6 +456,40 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
     );
   }
 
+  Widget _checkpointNotice(String message) => Semantics(
+    liveRegion: true,
+    child: Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.warningLight,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.warning.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.info_outline_rounded,
+            size: 20,
+            color: AppTheme.warning,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: AppTheme.warning,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
   Widget _buildSwipeView() {
     final asset = _currentAsset!;
 
@@ -458,6 +499,10 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
           constraints: BoxConstraints(minHeight: constraints.maxHeight),
           child: Column(
             children: [
+              if (_checkpointFailed)
+                _checkpointNotice(context.l10n.swipeCheckpointSaveError),
+              if (_checkpointRecovered)
+                _checkpointNotice(context.l10n.swipeCheckpointRecovered),
               _gestureGuide(),
               // Progress bar
               Padding(
@@ -1147,6 +1192,10 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            if (_checkpointFailed)
+              _checkpointNotice(context.l10n.swipeCheckpointSaveError),
+            if (_checkpointRecovered)
+              _checkpointNotice(context.l10n.swipeCheckpointRecovered),
             Container(
               width: 80,
               height: 80,

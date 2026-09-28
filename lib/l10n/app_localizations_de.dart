@@ -123,6 +123,33 @@ class AppLocalizationsDe extends AppLocalizations {
   String get paywallBestValue => 'Bestes Angebot';
 
   @override
+  String get videoTryAnotherPreset => 'Andere Qualität ausprobieren';
+
+  @override
+  String get videoPresetTitle => 'Komprimierungsqualität';
+
+  @override
+  String get videoPresetSmaller => 'Kleinere Datei';
+
+  @override
+  String get videoPresetBalanced => 'Ausgewogen';
+
+  @override
+  String get videoPresetHigherQuality => 'Höhere Qualität';
+
+  @override
+  String get videoPresetNotice =>
+      'Die Auswahl steuert die Komprimierung. Die tatsächliche Dateigröße erscheint erst nach der Vorschau. Das Original bleibt erhalten.';
+
+  @override
+  String get serviceContinuousScanLimit =>
+      'Dieser fortlaufende Scan hat sein Zeitlimit erreicht. Der Fortschritt wurde gespeichert; du kannst später fortfahren.';
+
+  @override
+  String get swipeCheckpointRecovered =>
+      'Einige gespeicherte Prüfauswahlen waren beschädigt und konnten nicht wiederhergestellt werden. Prüfe diese Fotos erneut; es wurde nichts gelöscht.';
+
+  @override
   String get videoTitle => 'Videokomprimierung';
 
   @override

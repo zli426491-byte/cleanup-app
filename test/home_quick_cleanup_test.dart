@@ -53,6 +53,7 @@ class _AutoPreviewScanner extends PhotoScannerService {
   _AutoPreviewScanner({this.cancelled = false});
   final bool cancelled;
   int starts = 0;
+  bool? lastResume;
   bool scanning = false;
 
   @override
@@ -62,8 +63,9 @@ class _AutoPreviewScanner extends PhotoScannerService {
   @override
   bool get hasCompletedScan => false;
   @override
-  Future<void> startFullScan() async {
+  Future<void> startContinuousScan({bool resume = false}) async {
     starts++;
+    lastResume = resume;
     scanning = true;
     notifyListeners();
   }
@@ -174,6 +176,10 @@ void main() {
     );
     await tester.pump();
     expect(scanner.starts, 0);
+    await tester.tap(find.byKey(const ValueKey('home-scan-start')));
+    await tester.pump();
+    expect(scanner.starts, 1);
+    expect(scanner.lastResume, isTrue);
     await tester.pumpWidget(const SizedBox());
   });
 

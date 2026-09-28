@@ -103,10 +103,33 @@ class _PairScanner extends PhotoScannerService {
   int? get availableAssetCount => result.allAssets.length;
 }
 
+class _LocalizedScanningPair extends _PairScanner {
+  _LocalizedScanningPair() : super(withExact: true);
+
+  @override
+  bool get isScanning => true;
+  @override
+  bool get hasCompletedScan => false;
+  @override
+  ScanPhase get currentPhase => ScanPhase.computingHashes;
+  @override
+  int get totalPhotoCount => 3;
+  @override
+  int get attemptedAnalysisCount => 1;
+  @override
+  int get pendingAnalysisCount => 2;
+  @override
+  int get pendingHashAssetCount => 2;
+  @override
+  int get pendingSizeAssetCount => 2;
+}
+
 Future<void> _mount(
   WidgetTester tester,
   PhotoScannerService scanner, {
   ValueChanged<String>? onOpenReview,
+  Locale? locale,
+  double textScale = 1,
 }) async {
   final subscription = SubscriptionManager();
   addTearDown(scanner.dispose);
@@ -118,10 +141,15 @@ Future<void> _mount(
         ChangeNotifierProvider<SubscriptionManager>.value(value: subscription),
       ],
       child: MaterialApp(
-        locale: const Locale.fromSubtags(
-          languageCode: 'zh',
-          scriptCode: 'Hant',
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
         ),
+        locale:
+            locale ??
+            const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: HomeView(onOpenReview: onOpenReview),
@@ -141,6 +169,11 @@ void main() {
       expect(
         find.descendant(of: strip, matching: find.text('讀取相簿目錄')),
         findsOneWidget,
+      );
+      expect(
+        tester.getTopLeft(find.text('讀取相簿目錄')).dy,
+        lessThan(tester.getTopLeft(find.text('已讀取 42683 / 42683 個項目')).dy),
+        reason: 'The changing phase should lead before the fixed index total.',
       );
 
       scanner.phase = ScanPhase.computingHashes;
@@ -198,6 +231,7 @@ void main() {
     testWidgets(
       'home hero displays a real ${withExact ? 'exact' : 'similar'} pair and opens its category',
       (tester) async {
+        final semantics = tester.ensureSemantics();
         final scanner = _PairScanner(withExact: withExact);
         String? opened;
         await _mount(tester, scanner, onOpenReview: (value) => opened = value);
@@ -227,12 +261,96 @@ void main() {
           ),
           findsNothing,
         );
+        expect(
+          find.descendant(
+            of: hero,
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is Semantics &&
+                  widget.properties.label?.contains(
+                        withExact ? '真重複照片' : '視覺相似照片',
+                      ) ==
+                      true &&
+                  widget.properties.onTap != null,
+            ),
+          ),
+          findsOneWidget,
+        );
         await tester.tap(
           find.descendant(of: hero, matching: find.text('整理已載入照片')),
         );
         expect(opened, category);
         await tester.pumpWidget(const SizedBox());
+        semantics.dispose();
       },
     );
+  }
+
+  for (final viewport in [const Size(390, 844), const Size(1180, 820)]) {
+    testWidgets('home keeps photos first and adapts cards to $viewport', (
+      tester,
+    ) async {
+      tester.view.physicalSize = viewport;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await _mount(tester, _PairScanner(withExact: true));
+      final hero = find.byKey(const ValueKey('home-photo-hero-duplicates'));
+      final swipe = find.byKey(const ValueKey('home-swipe-entry'));
+      final tools = find.byKey(const ValueKey('home-category-duplicates'));
+      expect(tester.getTopLeft(hero).dy, lessThan(tester.getTopLeft(swipe).dy));
+      expect(
+        tester.getTopLeft(swipe).dy,
+        lessThan(tester.getTopLeft(tools).dy),
+      );
+      final preview = find.byKey(
+        const ValueKey('home-tool-preview-duplicates'),
+      );
+      expect(
+        tester.getSize(preview).width,
+        viewport.width < 540 ? 112 : greaterThan(200),
+      );
+      expect(
+        tester
+            .getSize(find.byKey(const ValueKey('home-photo-preview-pair-a')))
+            .height,
+        viewport.width < 540 ? greaterThan(140) : greaterThan(250),
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
+  for (final locale in AppLocalizations.supportedLocales) {
+    for (final viewport in [const Size(390, 844), const Size(768, 1024)]) {
+      testWidgets('home scan and cards fit $locale at $viewport', (
+        tester,
+      ) async {
+        tester.view.physicalSize = viewport;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await _mount(
+          tester,
+          _LocalizedScanningPair(),
+          locale: locale,
+          textScale: 1.2,
+        );
+        expect(
+          find.byKey(const ValueKey('home-scan-progress')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('home-photo-hero-duplicates')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('home-category-largeFiles')),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      });
+    }
   }
 }

@@ -33,6 +33,8 @@ String _translateLine(AppLocalizations s, String line) {
       return s.servicePurchaseCancelled;
     case "已暫停，已讀取與分析的結果已保留，可繼續掃描。":
       return s.serviceScanPaused;
+    case "本次連續掃描已達時間上限；已保留進度，稍後可繼續。":
+      return s.serviceContinuousScanLimit;
     case "僅整理你允許存取的照片，未讀取整個相簿。":
       return s.serviceLimitedLibrary;
     case "此裝置尚未提供本機原始素材分析，未確認容量與重複內容。":

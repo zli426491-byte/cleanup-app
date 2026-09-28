@@ -8,6 +8,17 @@ import 'package:path_provider/path_provider.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:video_compress/video_compress.dart';
 
+/// Encoder presets are requests to the native encoder, not size estimates.
+enum VideoCompressionPreset { smaller, balanced, higherQuality }
+
+extension VideoCompressionPresetQuality on VideoCompressionPreset {
+  VideoQuality get videoQuality => switch (this) {
+    VideoCompressionPreset.smaller => VideoQuality.LowQuality,
+    VideoCompressionPreset.balanced => VideoQuality.MediumQuality,
+    VideoCompressionPreset.higherQuality => VideoQuality.HighestQuality,
+  };
+}
+
 class PreparedVideo {
   final File original;
   final File output;
@@ -25,7 +36,11 @@ class PreparedVideo {
 abstract class VideoCompressionBackend {
   Future<File> load(String assetId);
   Future<MediaInfo> inspect(File file);
-  Future<File?> encode(File file, void Function(double) onProgress);
+  Future<File?> encodeWithQuality(
+    File file,
+    VideoCompressionPreset preset,
+    void Function(double) onProgress,
+  );
   Future<Directory> temporaryDirectory();
   Future<String> save(File file);
   Future<void> cancel();
@@ -58,8 +73,15 @@ class DeviceVideoCompressionBackend implements VideoCompressionBackend {
   @override
   Future<MediaInfo> inspect(File file) => VideoCompress.getMediaInfo(file.path);
 
+  Future<File?> encode(File file, void Function(double) onProgress) =>
+      encodeWithQuality(file, VideoCompressionPreset.balanced, onProgress);
+
   @override
-  Future<File?> encode(File file, void Function(double) onProgress) async {
+  Future<File?> encodeWithQuality(
+    File file,
+    VideoCompressionPreset preset,
+    void Function(double) onProgress,
+  ) async {
     if (_encoderActive || VideoCompress.isCompressing) {
       throw StateError('前一次壓縮仍在結束，請稍後重試。');
     }
@@ -100,7 +122,7 @@ class DeviceVideoCompressionBackend implements VideoCompressionBackend {
       try {
         info = await VideoCompress.compressVideo(
           file.path,
-          quality: VideoQuality.MediumQuality,
+          quality: preset.videoQuality,
           deleteOrigin: false,
           includeAudio: true,
         );
@@ -237,7 +259,10 @@ class VideoCompressionService extends ChangeNotifier {
     if (_disposed || _cancelled) throw StateError('已取消壓縮。');
   }
 
-  Future<PreparedVideo> prepare(String assetId) async {
+  Future<PreparedVideo> prepare(
+    String assetId, {
+    VideoCompressionPreset preset = VideoCompressionPreset.balanced,
+  }) async {
     if (_disposed || isBusy || _prepared != null) {
       throw StateError('請先完成目前的影片操作。');
     }
@@ -265,12 +290,14 @@ class VideoCompressionService extends ChangeNotifier {
       _encoding = true;
       try {
         final source = original;
-        final encoding = _backend.encode(source, (value) {
+        void onProgress(double value) {
           if (!_disposed && !_cancelled && runId == _runId) {
             _progress = value.clamp(0.0, 1.0) * 0.9;
             _notify();
           }
-        });
+        }
+
+        final encoding = _backend.encodeWithQuality(source, preset, onProgress);
         unawaited(
           encoding.then<void>((output) async {
             if (output != null &&
@@ -362,6 +389,18 @@ class VideoCompressionService extends ChangeNotifier {
       }
       _notify();
     }
+  }
+
+  /// Releases only this service's temporary preview so another preset can be tried.
+  Future<void> discardPrepared() async {
+    if (_disposed || isBusy || _prepared == null || _savedAssetId != null) {
+      throw StateError('請先完成目前的影片操作。');
+    }
+    final output = _prepared!.output;
+    _prepared = null;
+    _progress = 0;
+    _notify();
+    await _removePreview(output);
   }
 
   Future<void> cancel() async {

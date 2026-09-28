@@ -973,6 +973,39 @@ final class RunnerTests: XCTestCase {
     wait(for: [replied, cancelled], timeout: 2)
   }
 
+  func testPreviewBatchChannelContractAcceptsThirtyTwoDistinctIds() {
+    let ids = (0..<32).map { "photo-\($0)" }
+    XCTAssertEqual(PhotoPreviewBatch.maximumAssetCount, 32)
+    XCTAssertEqual(PhotoPreviewBatch.maximumConcurrentRequests, 16)
+    XCTAssertEqual(PhotoPreviewBatch.batchTimeoutSeconds(for: 8), 2)
+    XCTAssertEqual(PhotoPreviewBatch.batchTimeoutSeconds(for: 32), 6)
+    XCTAssertGreaterThan(PhotoPreviewBatch.batchTimeoutSeconds(for: 32),
+      2 * PhotoPreviewBatch.itemTimeoutSeconds(for: 32))
+    XCTAssertTrue(PhotoPreviewBatch.accepts(ids))
+    XCTAssertFalse(PhotoPreviewBatch.accepts([]))
+    XCTAssertFalse(PhotoPreviewBatch.accepts(ids + ["photo-32"]))
+    XCTAssertFalse(PhotoPreviewBatch.accepts(ids + ["photo-0"]))
+  }
+
+  func testWidePreviewBatchReturnsEveryRowWithoutOriginalReads() throws {
+    let ids = (0..<32).map { "missing-photo-\($0)/L0/001" }
+    let replied = expectation(description: "All bounded preview rows return")
+    var response: [String: Any]?
+    let batch = PhotoPreviewBatch(assetIds: ids) { response = $0; replied.fulfill() }
+    batch.start()
+    wait(for: [replied], timeout: 7)
+    let result = try XCTUnwrap(response)
+    let rows = try XCTUnwrap(result["assets"] as? [[String: Any]])
+    XCTAssertEqual(rows.count, 32)
+    XCTAssertEqual(rows.compactMap { $0["assetId"] as? String }, ids)
+    // On a busy Photos simulator the bounded batch may expire before all
+    // missing identifiers are fetched. Neither state may claim local media.
+    let pendingStatuses: Set<String> = ["unavailable", "timeout", "not_started"]
+    XCTAssertTrue(rows.allSatisfy { pendingStatuses.contains($0["status"] as? String ?? "") })
+    XCTAssertNil(result["hash"])
+    XCTAssertEqual(result["sizeKnown"] as? Bool, false)
+  }
+
   func testRealPhotosCachedPreviewIsIndependentAndNeverVerifiedDuplicate() throws {
     let identifier = try simulatorPhoto()
     let replied = expectation(description: "Real Photos preview batch")

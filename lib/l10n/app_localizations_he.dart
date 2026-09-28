@@ -119,6 +119,33 @@ class AppLocalizationsHe extends AppLocalizations {
   String get paywallBestValue => 'המשתלם ביותר';
 
   @override
+  String get videoTryAnotherPreset => 'לנסות איכות אחרת';
+
+  @override
+  String get videoPresetTitle => 'איכות הדחיסה';
+
+  @override
+  String get videoPresetSmaller => 'קובץ קטן יותר';
+
+  @override
+  String get videoPresetBalanced => 'מאוזן';
+
+  @override
+  String get videoPresetHigherQuality => 'איכות גבוהה יותר';
+
+  @override
+  String get videoPresetNotice =>
+      'ההגדרה שנבחרה מנחה את הדחיסה. הגודל בפועל מוצג לאחר יצירת התצוגה המקדימה. הסרטון המקורי נשמר.';
+
+  @override
+  String get serviceContinuousScanLimit =>
+      'הסריקה הרציפה הגיעה למגבלת הזמן. ההתקדמות נשמרה ואפשר להמשיך מאוחר יותר.';
+
+  @override
+  String get swipeCheckpointRecovered =>
+      'חלק מבחירות הבדיקה השמורות נפגמו ולא ניתן היה לשחזר אותן. יש לבדוק שוב את התמונות האלה; דבר לא נמחק.';
+
+  @override
   String get videoTitle => 'דחיסת סרטונים';
 
   @override

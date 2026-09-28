@@ -50,10 +50,58 @@ class TestScanner extends PhotoScannerService {
   }
 }
 
+/// Widget tests exercise review interactions without a filesystem plugin.
+/// Durable checkpoints and migration have separate real-file service tests.
+class MemoryCheckpoint extends ReviewCheckpointService {
+  final Map<String, Map<String, List<String>>> _choices = {};
+  bool recovered = false;
+
+  @override
+  bool recoveredFromCorruption(String category) => recovered;
+
+  @override
+  Future<Map<String, String>> load(
+    String category,
+    List<PhotoAsset> assets,
+  ) async {
+    final rows = _choices.putIfAbsent(category, () => {});
+    final versions = {
+      for (final asset in assets)
+        asset.id: ReviewCheckpointService.version(asset),
+    };
+    for (final id in versions.keys) {
+      if (rows[id] != null && rows[id]![0] != versions[id]) rows.remove(id);
+    }
+    return {
+      for (final entry in rows.entries)
+        if (versions[entry.key] == entry.value[0]) entry.key: entry.value[1],
+    };
+  }
+
+  @override
+  void record(String category, PhotoAsset asset, String? decision) {
+    final rows = _choices.putIfAbsent(category, () => {});
+    if (decision == null) {
+      rows.remove(asset.id);
+    } else {
+      rows[asset.id] = [ReviewCheckpointService.version(asset), decision];
+    }
+  }
+
+  @override
+  Future<void> clear(String category) async {
+    _choices[category] = {};
+  }
+
+  @override
+  Future<void> flush(String category) async {}
+}
+
 void main() {
   late TestScanner scanner;
   late TestSubscription subscription;
   late PhotoAsset asset;
+  late MemoryCheckpoint checkpoint;
   final baseAsset = PhotoAsset(
     id: 'swipe-gate-test',
     width: 100,
@@ -68,6 +116,7 @@ void main() {
 
   setUp(() {
     asset = baseAsset.copyWith();
+    checkpoint = MemoryCheckpoint();
     SharedPreferences.setMockInitialValues({
       'cleanup.swipe.first_use_guide.v1': true,
     });
@@ -115,7 +164,11 @@ void main() {
           ),
         ],
         child: MaterialApp(
-          home: SwipeCleanView(assets: [asset], title: '照片'),
+          home: SwipeCleanView(
+            assets: [asset],
+            title: '照片',
+            checkpointService: checkpoint,
+          ),
         ),
       ),
     );
@@ -195,6 +248,7 @@ void main() {
                       assets: assets,
                       title: '照片',
                       categoryId: categoryId,
+                      checkpointService: checkpoint,
                     ),
                   ),
                 ),
@@ -288,7 +342,7 @@ void main() {
           thumbnail: asset.thumbnail,
         ),
       );
-      final store = ReviewCheckpointService();
+      final store = checkpoint;
       await store.load('photos', photos);
       store.record('photos', photos[0], 'delete');
       store.record('photos', photos[1], 'keep');
@@ -305,12 +359,20 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('2/3'), findsOneWidget);
       await tester.pump(const Duration(milliseconds: 600));
-      expect(await ReviewCheckpointService().load('photos', photos), {
-        'resume-0': 'delete',
-      });
+      expect(await checkpoint.load('photos', photos), {'resume-0': 'delete'});
       await tester.pumpWidget(const SizedBox());
     },
   );
+
+  testWidgets('damaged checkpoint warns without preselecting deletion', (
+    tester,
+  ) async {
+    checkpoint.recovered = true;
+    await mountReview(tester, [asset]);
+    expect(find.text(appStringsOf().swipeCheckpointRecovered), findsOneWidget);
+    expect(find.text(appStringsOf().swipeDeleteCount(0)), findsOneWidget);
+    expect(scanner.deletionRequests, 0);
+  });
 
   testWidgets(
     'batch choice limits current review and reset clears saved decisions',
@@ -349,7 +411,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('reset-review-checkpoint')));
       await tester.pumpAndSettle();
       expect(find.text('1/120'), findsOneWidget);
-      expect(await ReviewCheckpointService().load('photos', photos), isEmpty);
+      expect(await checkpoint.load('photos', photos), isEmpty);
       await tester.pumpWidget(const SizedBox());
     },
   );
@@ -849,6 +911,7 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       scanner = TestScanner();
       subscription = TestSubscription(true);
+      checkpoint.recovered = true;
       for (final locale in AppLocalizations.supportedLocales) {
         final photo = asset.copyWith();
         scanner.setAssets([photo]);
@@ -870,13 +933,22 @@ void main() {
                 ).copyWith(textScaler: const TextScaler.linear(2)),
                 child: child!,
               ),
-              home: SwipeCleanView(assets: [photo], title: 'photos'),
+              home: SwipeCleanView(
+                assets: [photo],
+                title: 'photos',
+                checkpointService: checkpoint,
+              ),
             ),
           ),
         );
         await tester.pumpAndSettle();
         await waitForDecodedPreview(tester);
         final strings = lookupAppLocalizations(locale);
+        expect(
+          find.text(strings.swipeCheckpointRecovered),
+          findsOneWidget,
+          reason: locale.toLanguageTag(),
+        );
         for (final label in [
           strings.swipeDelete,
           strings.swipeUndoChoice,
@@ -940,7 +1012,11 @@ void main() {
               ).copyWith(textScaler: const TextScaler.linear(2)),
               child: child!,
             ),
-            home: SwipeCleanView(assets: [asset], title: '照片'),
+            home: SwipeCleanView(
+              assets: [asset],
+              title: '照片',
+              checkpointService: checkpoint,
+            ),
           ),
         ),
       );

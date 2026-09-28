@@ -111,6 +111,31 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paywallBestValue => '最佳价值';
 
   @override
+  String get videoTryAnotherPreset => '尝试其他画质';
+
+  @override
+  String get videoPresetTitle => '压缩画质';
+
+  @override
+  String get videoPresetSmaller => '较小文件';
+
+  @override
+  String get videoPresetBalanced => '均衡';
+
+  @override
+  String get videoPresetHigherQuality => '较高画质';
+
+  @override
+  String get videoPresetNotice => '所选模式会影响压缩；创建预览后才会显示实际文件大小。原片会保留。';
+
+  @override
+  String get serviceContinuousScanLimit => '本次连续扫描已达到时间上限；进度已保存，稍后可继续。';
+
+  @override
+  String get swipeCheckpointRecovered =>
+      '部分已保存的整理选择已损坏，无法恢复。请重新检查这些照片；没有删除任何内容。';
+
+  @override
   String get videoTitle => '视频压缩';
 
   @override
@@ -1397,6 +1422,31 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get paywallBestValue => '最佳价值';
 
   @override
+  String get videoTryAnotherPreset => '尝试其他画质';
+
+  @override
+  String get videoPresetTitle => '压缩画质';
+
+  @override
+  String get videoPresetSmaller => '较小文件';
+
+  @override
+  String get videoPresetBalanced => '均衡';
+
+  @override
+  String get videoPresetHigherQuality => '较高画质';
+
+  @override
+  String get videoPresetNotice => '所选模式会影响压缩；创建预览后才会显示实际文件大小。原片会保留。';
+
+  @override
+  String get serviceContinuousScanLimit => '本次连续扫描已达到时间上限；进度已保存，稍后可继续。';
+
+  @override
+  String get swipeCheckpointRecovered =>
+      '部分已保存的整理选择已损坏，无法恢复。请重新检查这些照片；没有删除任何内容。';
+
+  @override
   String get videoTitle => '视频压缩';
 
   @override
@@ -2681,6 +2731,31 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get paywallBestValue => '最佳價值';
+
+  @override
+  String get videoTryAnotherPreset => '試試其他畫質';
+
+  @override
+  String get videoPresetTitle => '壓縮畫質';
+
+  @override
+  String get videoPresetSmaller => '較小檔案';
+
+  @override
+  String get videoPresetBalanced => '平衡';
+
+  @override
+  String get videoPresetHigherQuality => '較高畫質';
+
+  @override
+  String get videoPresetNotice => '所選模式會影響壓縮；建立預覽後才會顯示實際檔案大小。原片會保留。';
+
+  @override
+  String get serviceContinuousScanLimit => '本次連續掃描已達時間上限；已保留進度，稍後可繼續。';
+
+  @override
+  String get swipeCheckpointRecovered =>
+      '部分已儲存的整理選擇損毀，無法還原。請重新檢查這些照片；沒有刪除任何內容。';
 
   @override
   String get videoTitle => '影片壓縮';

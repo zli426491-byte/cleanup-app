@@ -118,6 +118,33 @@ class AppLocalizationsKo extends AppLocalizations {
   String get paywallBestValue => '가장 경제적';
 
   @override
+  String get videoTryAnotherPreset => '다른 화질 시도';
+
+  @override
+  String get videoPresetTitle => '압축 품질';
+
+  @override
+  String get videoPresetSmaller => '더 작은 파일';
+
+  @override
+  String get videoPresetBalanced => '균형';
+
+  @override
+  String get videoPresetHigherQuality => '더 높은 화질';
+
+  @override
+  String get videoPresetNotice =>
+      '선택한 설정에 따라 압축합니다. 실제 파일 크기는 미리 보기를 만든 후 표시됩니다. 원본은 보관됩니다.';
+
+  @override
+  String get serviceContinuousScanLimit =>
+      '연속 스캔이 시간 제한에 도달했습니다. 진행 상황이 저장되어 나중에 계속할 수 있습니다.';
+
+  @override
+  String get swipeCheckpointRecovered =>
+      '저장된 검토 선택 일부가 손상되어 복원할 수 없습니다. 사진을 다시 확인하세요. 삭제된 항목은 없습니다.';
+
+  @override
   String get videoTitle => '동영상 압축';
 
   @override

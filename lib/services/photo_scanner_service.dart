@@ -232,14 +232,28 @@ class _RoundBudgetExpired implements Exception {}
 
 class PhotoScannerService extends ChangeNotifier {
   static const _assetPageSize = 120;
+  // Keep the first preview small so the home screen becomes useful quickly,
+  // then amortize PhotoKit/Flutter channel overhead across a larger batch.
+  // Native preview requests are concurrent and bounded independently.
+  static const _firstPreviewBatchSize = 8;
+  static const _previewBatchSize = 32;
   static const _pageTimeout = Duration(seconds: 30);
   static const _previewTimeout = Duration(milliseconds: 2500);
+  static const _widePreviewTimeout = Duration(milliseconds: 6500);
   static const _previewRoundBudget = Duration(seconds: 30);
+  static const _defaultContinuousPreviewRoundBudget = Duration(minutes: 2);
+  static const _defaultContinuousScanBudget = Duration(minutes: 10);
   static const _resourceRoundBudget = Duration(seconds: 60);
   static const _resourceTimeout = Duration(seconds: 5);
   static const _resourceChannel = MethodChannel('cleanup/photo_resources');
   static int _instances = 0;
   final String _instanceId = 'scanner-${++_instances}';
+  final Duration _continuousPreviewRoundBudget;
+  final Duration _continuousScanBudget;
+  bool _continuousScanActive = false;
+  bool _continuousStopRequested = false;
+  bool _resumeContinuousAfterAccessRefresh = false;
+  Completer<void>? _continuousStopped;
   bool _isScanning = false;
   bool _isDeleting = false;
   bool _isVerifyingOriginals = false;
@@ -299,12 +313,22 @@ class PhotoScannerService extends ChangeNotifier {
   List<DuplicateGroup> _duplicateGroups = [];
   List<SimilarGroup> _similarGroups = [];
 
-  PhotoScannerService({bool? supportsNativeResources})
-    : _nativeAvailable =
-          supportsNativeResources ??
-          (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS);
+  PhotoScannerService({
+    bool? supportsNativeResources,
+    Duration continuousPreviewRoundBudget =
+        _defaultContinuousPreviewRoundBudget,
+    Duration continuousScanBudget = _defaultContinuousScanBudget,
+  }) : assert(continuousPreviewRoundBudget > Duration.zero),
+       assert(continuousScanBudget > Duration.zero),
+       _continuousPreviewRoundBudget = continuousPreviewRoundBudget,
+       _continuousScanBudget = continuousScanBudget,
+       _nativeAvailable =
+           supportsNativeResources ??
+           (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS);
 
-  bool get isScanning => _isScanning;
+  // Keep the UI busy across the brief handoff between automatic rounds.
+  bool get isScanning => _isScanning || _continuousScanActive;
+  bool get isContinuousScanning => _continuousScanActive;
   bool get isDeleting => _isDeleting;
   bool get wasCancelled => _wasCancelled;
   bool get hasCompletedScan => _hasCompletedScan;
@@ -347,17 +371,194 @@ class PhotoScannerService extends ChangeNotifier {
           scannedAssetCount < _availableAssetCount!)
         '已讀取 $scannedAssetCount / $_availableAssetCount 個可存取項目。',
       if (_hasLimitedAccess) '僅整理你允許存取的照片，未讀取整個相簿。',
-      if (!_isScanning && pendingAnalysisCount > 0)
+      if (!isScanning && pendingAnalysisCount > 0)
         '$pendingAnalysisCount 張照片仍待視覺分析；繼續掃描會先處理尚未嘗試的照片，不自動下載雲端素材。',
       if (!_nativeAvailable) '此裝置尚未提供本機原始素材分析，未確認容量與重複內容。',
-      if (!_isScanning && _nativeAvailable && pendingResourceCount > 0)
+      if (!isScanning && _nativeAvailable && pendingResourceCount > 0)
         '素材容量與完全重複另需驗證本機原始素材；大型或雲端素材可能仍待驗證，未驗證項目不估算容量。',
     ];
     return notices.isEmpty ? null : notices.join('\n');
   }
 
-  Future<void> startFullScan() => _scan(resume: false);
-  Future<void> resumeScan() => _scan(resume: true);
+  Future<void> startFullScan() =>
+      _continuousScanActive ? Future<void>.value() : _scan(resume: false);
+  Future<void> resumeScan() =>
+      _continuousScanActive ? Future<void>.value() : _scan(resume: true);
+
+  /// Continue foreground preview analysis through bounded rounds without
+  /// asking the user to tap Resume after every deadline. Every image is tried
+  /// at most once during this call, including cloud-only and timed-out items.
+  /// A later explicit retry remains possible. Cancel retains the safe snapshot.
+  Future<void> startContinuousScan({bool resume = false}) async {
+    if (_disposed || _isScanning || _isDeleting || _continuousScanActive) {
+      return;
+    }
+    _continuousScanActive = true;
+    _continuousStopRequested = false;
+    _continuousStopped = Completer<void>();
+    final retryIds = <String>{
+      if (resume)
+        for (final asset in _checkpointAssets.values)
+          if (asset.type == AssetType.image &&
+              asset.analysisPending &&
+              asset.analysisAttempted)
+            asset.id,
+    };
+    final clock = Stopwatch()..start();
+    var useCheckpoint = resume;
+    var previousAttempted = -1;
+    var previousIndexed = -1;
+    var reusedIndex = false;
+    try {
+      while (!_disposed && !_continuousStopRequested) {
+        final reuse = useCheckpoint && await _canReusePreviewIndex();
+        if (_continuousStopRequested || _disposed) break;
+        if (reuse) {
+          reusedIndex = true;
+          await _scanPreviewRoundInPlace(retryIds);
+        } else {
+          await _scan(
+            resume: useCheckpoint,
+            retryEligiblePreviewIds: retryIds,
+            previewRoundBudget: _continuousPreviewRoundBudget,
+          );
+        }
+        useCheckpoint = true;
+        if (_disposed ||
+            _continuousStopRequested ||
+            _wasCancelled ||
+            permissionDenied ||
+            !_nativeAvailable) {
+          break;
+        }
+        final indexed = _nextAssetOffset;
+        final attempted = _attemptedCount;
+        if (_hasCompletedScan || attempted >= totalPhotoCount) break;
+        if (indexed <= previousIndexed && attempted <= previousAttempted) {
+          // A permanently failing page or native callback cannot spin forever.
+          break;
+        }
+        previousIndexed = indexed;
+        previousAttempted = attempted;
+        if (clock.elapsed >= _continuousScanBudget) {
+          _lastError = '本次連續掃描已達時間上限；已保留進度，稍後可繼續。';
+          notifyListeners();
+          break;
+        }
+        await Future<void>.delayed(Duration.zero);
+      }
+      if (reusedIndex && !_disposed && !_continuousStopRequested) {
+        final matches = await _continuousSnapshotMatchesLibrary();
+        if (!_disposed && !_continuousStopRequested && !matches) {
+          // PhotoKit can change while a long scan is running. Revalidate once
+          // at the end; only a changed scope needs the expensive full re-index.
+          await _scan(
+            resume: true,
+            retryEligiblePreviewIds: retryIds,
+            previewRoundBudget: _continuousPreviewRoundBudget,
+          );
+        }
+      }
+    } finally {
+      _continuousScanActive = false;
+      _continuousStopRequested = false;
+      clock.stop();
+      _continuousStopped?.complete();
+      _continuousStopped = null;
+      if (!_disposed) notifyListeners();
+      _drainPhotoAccessRefresh();
+    }
+  }
+
+  /// Pause an automatic preview scan and wait until targeted original-resource
+  /// verification is allowed to start. The indexed results remain available.
+  Future<void> pauseContinuousScan() async {
+    if (!_continuousScanActive) return;
+    final stopped = _continuousStopped!.future;
+    cancelScan();
+    await stopped;
+  }
+
+  Future<bool> _canReusePreviewIndex() async {
+    if (_disposed ||
+        _continuousStopRequested ||
+        _photoAccessRefreshPending ||
+        _album == null ||
+        _availableAssetCount == null ||
+        _nextAssetOffset != _availableAssetCount ||
+        _photoPermission?.hasAccess != true ||
+        _hasLimitedAccess ||
+        _knownSizeCount != 0 ||
+        _verifiedHashCount != 0) {
+      return false;
+    }
+    try {
+      final state = await PhotoManager.getPermissionState(
+        requestOption: const PermissionRequestOption(),
+      ).timeout(const Duration(seconds: 5));
+      if (_continuousStopRequested || state != _photoPermission) return false;
+      final count = await _album!.assetCountAsync.timeout(
+        const Duration(seconds: 5),
+      );
+      return !_continuousStopRequested && count == _availableAssetCount;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> _continuousSnapshotMatchesLibrary() async {
+    if (_disposed || _continuousStopRequested || _photoAccessRefreshPending) {
+      return false;
+    }
+    try {
+      final state = await PhotoManager.getPermissionState(
+        requestOption: const PermissionRequestOption(),
+      ).timeout(const Duration(seconds: 5));
+      if (state != _photoPermission || !state.hasAccess) return false;
+      return await _limitedPhotoScopeMatches(
+        () => !_disposed && !_continuousStopRequested,
+      ).timeout(const Duration(seconds: 30));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _scanPreviewRoundInPlace(Set<String> retryIds) async {
+    if (_disposed || _isScanning || _isDeleting || _continuousStopRequested) {
+      return;
+    }
+    final runId = ++_scanRunId;
+    _isScanning = true;
+    _isVerifyingOriginals = false;
+    _originalVerificationTarget = null;
+    _originalRoundTotal = null;
+    _originalRoundProcessed = 0;
+    _wasCancelled = false;
+    _hasCompletedScan = false;
+    _lastError = null;
+    _currentPhase = ScanPhase.computingHashes;
+    _setOperation('分析本機預覽（$pendingAnalysisCount 張）');
+    notifyListeners();
+    try {
+      await _analyzeLocalPreviews(
+        runId,
+        retryEligibleIds: retryIds,
+        roundBudget: _continuousPreviewRoundBudget,
+      );
+      await _finish(runId, completed: _previewRoundComplete(retryIds));
+    } on _RoundBudgetExpired {
+      if (!_active(runId)) return;
+      _cancelNative('$_instanceId:$runId:');
+      _lastError = '部分讀取逾時，已保留目前結果，可繼續掃描。';
+      await _finish(runId, completed: false, refresh: false);
+    } on _ScanCancelled {
+      // cancelScan already published the stable partial snapshot.
+    } catch (_) {
+      if (!_active(runId)) return;
+      _lastError = '部分相簿讀取中斷，已保留目前結果，可繼續掃描。';
+      await _finish(runId, completed: false, refresh: false);
+    }
+  }
 
   Future<bool> openPhotoSettings() async {
     try {
@@ -371,17 +572,29 @@ class PhotoScannerService extends ChangeNotifier {
   Future<void> refreshPhotoAccess() async {
     if (_disposed) return;
     _photoAccessRefreshPending = true;
-    if (_isScanning || _isDeleting || _checkingPhotoAccess) return;
+    if (_continuousScanActive) {
+      // A foreground return can also mean Photos access changed in Settings.
+      // Stop the long-running scan now so a revoked snapshot is not kept on
+      // screen until its next (potentially ten-minute) completion.
+      // An explicit user cancellation already in flight must stay cancelled.
+      if (!_continuousStopRequested) {
+        _resumeContinuousAfterAccessRefresh = true;
+      }
+      cancelScan();
+      return;
+    }
+    if (isScanning || _isDeleting || _checkingPhotoAccess) return;
     _photoAccessRefreshPending = false;
     _checkingPhotoAccess = true;
     final runId = _scanRunId;
     final snapshot = _scanResult;
     final previous = _photoPermission;
+    var mayResumeContinuous = false;
     var checkAlive = true;
     bool canApply() =>
         checkAlive &&
         !_disposed &&
-        !_isScanning &&
+        !isScanning &&
         !_isDeleting &&
         runId == _scanRunId &&
         identical(snapshot, _scanResult);
@@ -400,7 +613,10 @@ class PhotoScannerService extends ChangeNotifier {
         if (!_disposed) _photoAccessRefreshPending = true;
         return;
       }
-      if (unchanged) return;
+      if (unchanged) {
+        mayResumeContinuous = state.hasAccess;
+        return;
+      }
       _photoScopeChanged = previous?.hasAccess == true;
       _photoPermission = state;
       _hasLimitedAccess = state.isLimited;
@@ -423,6 +639,17 @@ class PhotoScannerService extends ChangeNotifier {
       checkAlive = false;
       _checkingPhotoAccess = false;
       _drainPhotoAccessRefresh();
+      final resumeContinuous =
+          _resumeContinuousAfterAccessRefresh &&
+          mayResumeContinuous &&
+          !_photoAccessRefreshPending &&
+          !_disposed;
+      if (!_photoAccessRefreshPending) {
+        _resumeContinuousAfterAccessRefresh = false;
+      }
+      if (resumeContinuous) {
+        unawaited(startContinuousScan(resume: true));
+      }
     }
   }
 
@@ -504,7 +731,7 @@ class PhotoScannerService extends ChangeNotifier {
   void _drainPhotoAccessRefresh() {
     if (_photoAccessRefreshPending &&
         !_disposed &&
-        !_isScanning &&
+        !isScanning &&
         !_isDeleting &&
         !_checkingPhotoAccess) {
       unawaited(refreshPhotoAccess());
@@ -512,7 +739,7 @@ class PhotoScannerService extends ChangeNotifier {
   }
 
   Future<void> managePhotoAccess() async {
-    if (_disposed || _isScanning || _isDeleting) return;
+    if (_disposed || isScanning || _isDeleting) return;
     await PhotoManager.presentLimited(type: RequestType.common);
     if (!_disposed) await resumeScan();
   }
@@ -521,10 +748,20 @@ class PhotoScannerService extends ChangeNotifier {
   /// Re-index first so revoked access or same-ID edits cannot reuse old hashes.
   Future<void> verifyOriginals({
     OriginalVerificationTarget target = OriginalVerificationTarget.all,
-  }) => _scan(resume: true, originals: true, target: target);
+  }) => _continuousScanActive
+      ? Future<void>.value()
+      : _scan(resume: true, originals: true, target: target);
 
   void cancelScan() {
-    if (!_isScanning || _disposed) return;
+    if (_disposed) return;
+    _continuousStopRequested = true;
+    if (!_isScanning) {
+      if (_continuousScanActive) {
+        _wasCancelled = true;
+        notifyListeners();
+      }
+      return;
+    }
     final prefix = '$_instanceId:$_scanRunId:';
     _scanRunId++;
     _abortWait?.call(_ScanCancelled());
@@ -543,6 +780,8 @@ class PhotoScannerService extends ChangeNotifier {
     required bool resume,
     bool originals = false,
     OriginalVerificationTarget target = OriginalVerificationTarget.all,
+    Set<String>? retryEligiblePreviewIds,
+    Duration previewRoundBudget = _previewRoundBudget,
   }) async {
     if (_disposed || _isScanning || _isDeleting) return;
     final runId = ++_scanRunId;
@@ -729,15 +968,24 @@ class PhotoScannerService extends ChangeNotifier {
       if (originals) {
         await _verifyLocalResources(runId, target, originalCandidates);
       } else {
-        await _analyzeLocalPreviews(runId);
+        await _analyzeLocalPreviews(
+          runId,
+          retryEligibleIds: retryEligiblePreviewIds,
+          roundBudget: previewRoundBudget,
+        );
       }
-      await _finish(runId);
+      await _finish(
+        runId,
+        completed: originals || _previewRoundComplete(retryEligiblePreviewIds),
+      );
     } on _RoundBudgetExpired {
       if (!_active(runId)) return;
       _cancelNative('$_instanceId:$runId:');
       _lastError = originals
           ? '本輪原始素材驗證已達 60 秒，結果已保留；再次驗證會先處理未嘗試項目。'
-          : '本輪本機預覽分析已達 30 秒，結果已保留；繼續掃描會先處理未嘗試照片。';
+          : previewRoundBudget == _previewRoundBudget
+          ? '本輪本機預覽分析已達 30 秒，結果已保留；繼續掃描會先處理未嘗試照片。'
+          : '部分讀取逾時，已保留目前結果，可繼續掃描。';
       await _finish(runId, completed: false, refresh: false);
     } on _ScanCancelled {
       // cancelScan has already published a stable partial snapshot.
@@ -824,18 +1072,28 @@ class PhotoScannerService extends ChangeNotifier {
   }
 
   Future<void> _publishAnalysisBatch(int runId, {bool first = false}) async {
-    // Publish the first usable batch immediately, then at most once per second.
-    // This bounds snapshot/group work independently of library size or callbacks.
-    if (first || _snapshotClock.elapsedMilliseconds >= 1000) {
-      _publish();
-      await _refreshGroups(runId);
+    // Publish the first usable batch immediately. Rebuilding groups from a
+    // large library on every preview batch can monopolize the round budget.
+    if (first || _snapshotClock.elapsedMilliseconds >= 2000) {
+      try {
+        await _refreshGroups(runId);
+      } on TimeoutException {
+        // A slow visual grouping pass must not stop local preview or original
+        // verification. Exact SHA groups and progress remain available.
+        _checkRun(runId);
+        _publish(groups: true);
+      }
       _snapshotClock.reset();
     } else {
       notifyListeners();
     }
   }
 
-  Future<void> _analyzeLocalPreviews(int runId) async {
+  Future<void> _analyzeLocalPreviews(
+    int runId, {
+    required Set<String>? retryEligibleIds,
+    required Duration roundBudget,
+  }) async {
     if (!_nativeAvailable) return;
     final pending = _assets.values
         .where(
@@ -846,13 +1104,28 @@ class PhotoScannerService extends ChangeNotifier {
     // photos at the head. A later round can retry unavailable previews.
     final ids = [
       ...pending.where((asset) => !asset.analysisAttempted).map((a) => a.id),
-      ...pending.where((asset) => asset.analysisAttempted).map((a) => a.id),
+      ...pending
+          .where(
+            (asset) =>
+                asset.analysisAttempted &&
+                (retryEligibleIds == null ||
+                    retryEligibleIds.contains(asset.id)),
+          )
+          .map((a) => a.id),
     ];
-    _startBudget(_previewRoundBudget);
-    for (var offset = 0; offset < ids.length; offset += 8) {
+    _startBudget(roundBudget);
+    for (var offset = 0; offset < ids.length;) {
       _checkRun(runId);
-      final batch = ids.sublist(offset, math.min(offset + 8, ids.length));
-      final token = '$_instanceId:$runId:preview:$offset';
+      final batchStart = offset;
+      final batchSize = offset == 0
+          ? _firstPreviewBatchSize
+          : _previewBatchSize;
+      final batch = ids.sublist(
+        offset,
+        math.min(offset + batchSize, ids.length),
+      );
+      offset += batch.length;
+      final token = '$_instanceId:$runId:preview:$batchStart';
       _setOperation('讀取本機預覽（${batch.length} 張）');
       Map<dynamic, dynamic>? data;
       try {
@@ -862,7 +1135,9 @@ class PhotoScannerService extends ChangeNotifier {
             'token': token,
           }),
           runId,
-          timeout: _previewTimeout,
+          timeout: batch.length <= _firstPreviewBatchSize
+              ? _previewTimeout
+              : _widePreviewTimeout,
         );
       } on MissingPluginException {
         _nativeAvailable = false;
@@ -883,19 +1158,28 @@ class PhotoScannerService extends ChangeNotifier {
         }
       }
       final bytes = <String, Uint8List>{};
+      final attemptedIds = <String>{};
       for (final id in batch) {
         final row = rows[id];
+        // A channel failure or missing native row proves no request began.
+        // Only native can distinguish an attempted timeout from a queued item.
+        final status = row?['status'] as String? ?? 'not_started';
         final thumbnail = row?['thumbnail'];
         if (thumbnail is Uint8List && thumbnail.isNotEmpty) {
           bytes[id] = thumbnail;
         }
+        final attempted = status != 'not_started' || bytes.containsKey(id);
+        if (attempted) attemptedIds.add(id);
         _setAsset(
           _assets[id]!.copyWith(
-            analysisAttempted: true,
-            pendingReason: row?['status'] as String? ?? 'timeout',
+            analysisAttempted: _assets[id]!.analysisAttempted || attempted,
+            pendingReason: status,
           ),
         );
       }
+      // Native may have queued fewer than 32 previews by its deadline. Those
+      // never-started IDs remain fresh work for the next automatic round.
+      retryEligibleIds?.removeAll(attemptedIds);
       // Attempts are visible even while the CPU worker is analyzing the bytes.
       _scanProgress =
           0.45 +
@@ -916,7 +1200,7 @@ class PhotoScannerService extends ChangeNotifier {
           for (final id in bytes.keys) {
             _setAsset(_assets[id]!.copyWith(pendingReason: 'analysis_timeout'));
           }
-          await _publishAnalysisBatch(runId, first: offset == 0);
+          await _publishAnalysisBatch(runId, first: batchStart == 0);
           continue;
         }
         _checkRun(runId);
@@ -942,10 +1226,17 @@ class PhotoScannerService extends ChangeNotifier {
           );
         }
       }
-      await _publishAnalysisBatch(runId, first: offset == 0);
+      await _publishAnalysisBatch(runId, first: batchStart == 0);
       await Future<void>.delayed(Duration.zero);
       _checkRun(runId);
     }
+  }
+
+  bool _previewRoundComplete(Set<String>? retryEligibleIds) {
+    if (!_nativeAvailable) return true;
+    if (_attemptedCount < totalPhotoCount) return false;
+    return retryEligibleIds == null ||
+        !retryEligibleIds.any((id) => _assets[id]?.analysisPending == true);
   }
 
   List<String> _verificationQueue(
@@ -968,6 +1259,30 @@ class PhotoScannerService extends ChangeNotifier {
     var untouched = pending.where((a) => lastAttempt(a) == null).toList();
     final retries = pending.where((a) => lastAttempt(a) != null).toList()
       ..sort((a, b) => lastAttempt(a)!.compareTo(lastAttempt(b)!));
+    if (target == OriginalVerificationTarget.fileSizes) {
+      // When a user opens Large Files, the bounded first round should inspect
+      // likely large, locally previewable files before known cloud misses.
+      // Dimensions/duration are only queue hints; displayed bytes still need
+      // a complete native size result.
+      final originalOrder = <String, int>{
+        for (var i = 0; i < untouched.length; i++) untouched[i].id: i,
+      };
+      int locality(PhotoAsset asset) => switch (asset.pendingReason) {
+        'local' => 0,
+        'not_local' => 2,
+        _ => 1,
+      };
+      int sizeHint(PhotoAsset asset) =>
+          asset.width * asset.height * math.max(1, asset.durationSeconds);
+      untouched.sort((a, b) {
+        final available = locality(a).compareTo(locality(b));
+        if (available != 0) return available;
+        final dimensions = sizeHint(b).compareTo(sizeHint(a));
+        return dimensions != 0
+            ? dimensions
+            : originalOrder[a.id]!.compareTo(originalOrder[b.id]!);
+      });
+    }
     List<PhotoAsset> boundedPriority(
       List<PhotoAsset> preferred,
       List<PhotoAsset> other,
@@ -1449,7 +1764,7 @@ class PhotoScannerService extends ChangeNotifier {
               current.type == asset.type)
             asset.id,
     };
-    if (_disposed || _isScanning || _isDeleting || ids.isEmpty) return {};
+    if (_disposed || isScanning || _isDeleting || ids.isEmpty) return {};
     _isDeleting = true;
     notifyListeners();
     try {

@@ -122,6 +122,33 @@ class AppLocalizationsRu extends AppLocalizations {
   String get paywallBestValue => 'Выгоднее всего';
 
   @override
+  String get videoTryAnotherPreset => 'Попробовать другое качество';
+
+  @override
+  String get videoPresetTitle => 'Качество сжатия';
+
+  @override
+  String get videoPresetSmaller => 'Меньший файл';
+
+  @override
+  String get videoPresetBalanced => 'Баланс';
+
+  @override
+  String get videoPresetHigherQuality => 'Выше качество';
+
+  @override
+  String get videoPresetNotice =>
+      'Выбранный режим управляет сжатием. Фактический размер появится после создания предпросмотра. Оригинал сохраняется.';
+
+  @override
+  String get serviceContinuousScanLimit =>
+      'Непрерывное сканирование достигло лимита времени. Прогресс сохранён; можно продолжить позже.';
+
+  @override
+  String get swipeCheckpointRecovered =>
+      'Некоторые сохранённые варианты проверки были повреждены и не восстановились. Проверьте эти фото ещё раз; ничего не удалено.';
+
+  @override
   String get videoTitle => 'Сжатие видео';
 
   @override

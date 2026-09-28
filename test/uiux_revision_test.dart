@@ -52,7 +52,7 @@ class _Scanner extends PhotoScannerService {
   }
 
   @override
-  Future<void> startFullScan() async {
+  Future<void> startContinuousScan({bool resume = false}) async {
     starts++;
     scanning = true;
     notifyListeners();

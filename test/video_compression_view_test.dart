@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:cleanup_app/services/photo_scanner_service.dart';
+import 'package:cleanup_app/l10n/app_localizations.dart';
 import 'package:cleanup_app/services/subscription_manager.dart';
 import 'package:cleanup_app/services/video_compression_service.dart';
 import 'package:cleanup_app/views/components/video_compression_view.dart';
@@ -13,8 +14,9 @@ import 'package:video_compress/video_compress.dart';
 import 'package:video_player/video_player.dart';
 
 class _ProSubscription extends SubscriptionManager {
+  bool enabled = true;
   @override
-  bool get isPro => true;
+  bool get isPro => enabled;
 }
 
 class _Backend implements VideoCompressionBackend {
@@ -26,15 +28,25 @@ class _Backend implements VideoCompressionBackend {
   Completer<String>? saving;
   int saveCalls = 0;
   int cancels = 0;
+  VideoCompressionPreset? lastPreset;
 
   @override
   Future<File> load(String assetId) async => loading?.future ?? original;
   @override
   Future<MediaInfo> inspect(File file) async =>
       MediaInfo(path: file.path, width: 640, height: 480, duration: 10000);
-  @override
   Future<File?> encode(File file, void Function(double) onProgress) async =>
       encoded;
+  @override
+  Future<File?> encodeWithQuality(
+    File file,
+    VideoCompressionPreset preset,
+    void Function(double) onProgress,
+  ) {
+    lastPreset = preset;
+    return encode(file, onProgress);
+  }
+
   @override
   Future<Directory> temporaryDirectory() async => directory;
   @override
@@ -137,11 +149,18 @@ void main() {
     await directory.delete();
   });
 
-  Future<void> mount(WidgetTester tester) async {
+  Future<void> mount(WidgetTester tester, {Locale? locale}) async {
     await tester.pumpWidget(
       ChangeNotifierProvider<SubscriptionManager>.value(
         value: subscription,
         child: MaterialApp(
+          locale: locale,
+          localizationsDelegates: locale == null
+              ? null
+              : AppLocalizations.localizationsDelegates,
+          supportedLocales: locale == null
+              ? const [Locale('en')]
+              : AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) => Scaffold(
               body: TextButton(
@@ -190,10 +209,71 @@ void main() {
     find.widgetWithText(FilledButton, '確認副本並另存至照片'),
   );
 
+  testWidgets('quality can be chosen before creating a preview', (
+    tester,
+  ) async {
+    await mount(tester);
+    expect(find.text('原片：0.0 MB'), findsNothing);
+    await tester.tap(find.text('較高畫質'));
+    await tester.pump();
+    expect(
+      tester
+          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, '較高畫質'))
+          .selected,
+      isTrue,
+    );
+    expect(find.text('建立壓縮預覽'), findsOneWidget);
+    expect(backend.lastPreset, isNull);
+  });
+
+  testWidgets('free users cannot start a quality preset or encode', (
+    tester,
+  ) async {
+    subscription.enabled = false;
+    await mount(tester);
+    for (final chip in tester.widgetList<ChoiceChip>(find.byType(ChoiceChip))) {
+      expect(chip.onSelected, isNull);
+    }
+    expect(
+      tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, '建立壓縮預覽'))
+          .onPressed,
+      isNull,
+    );
+    expect(backend.lastPreset, isNull);
+  });
+
+  testWidgets('all 19 languages fit iPhone and iPad quality selection', (
+    tester,
+  ) async {
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    for (final width in [390.0, 768.0]) {
+      tester.view.physicalSize = Size(width, width == 390 ? 844 : 1024);
+      tester.view.devicePixelRatio = 1;
+      for (final locale in AppLocalizations.supportedLocales.where(
+        (locale) => locale.toString() != 'zh',
+      )) {
+        await tester.pumpWidget(const SizedBox.shrink());
+        service = VideoCompressionService(backend: backend);
+        await mount(tester, locale: locale);
+        expect(
+          find.text(lookupAppLocalizations(locale).videoPresetNotice),
+          findsOneWidget,
+          reason: '$locale at $width px',
+        );
+        expect(tester.takeException(), isNull, reason: '$locale at $width px');
+      }
+    }
+  });
+
   testWidgets(
     'original and compressed previews preserve the comparison position',
     (tester) async {
       await loadPreparedPreview(tester);
+      expect(find.text('試試其他畫質'), findsOneWidget);
       tester.widget<Slider>(find.byType(Slider)).onChanged!(6500);
       await tester.pump();
       expect(players.last.value.position, const Duration(milliseconds: 6500));

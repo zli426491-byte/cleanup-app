@@ -88,7 +88,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         return;
       }
       _startedInitialPreview = true;
-      unawaited(scanner.startFullScan());
+      unawaited(scanner.startContinuousScan());
     } catch (_) {
       // The manual scan action remains available if the permission check fails.
     } finally {
@@ -140,17 +140,6 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildHeader(isPro),
-                  const SizedBox(height: AppTheme.s16),
-                  if (_storage != null && !_storage!.isEstimate)
-                    _buildStorageCard(_storage!)
-                  else if (scanner.knownSizeAssetCount > 0)
-                    Text(
-                      context.l10n.homeKnownLibrarySize(
-                        scanner.knownSizeAssetCount,
-                        formatBytes(scanner.knownLibraryBytes),
-                      ),
-                      style: AppTheme.caption,
-                    ),
                   if (scanner.photoScopeChanged &&
                       !scanner.permissionDenied) ...[
                     const SizedBox(height: AppTheme.s12),
@@ -160,17 +149,21 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                     ),
                   ],
                   if (scanner.permissionDenied && !scanner.isScanning) ...[
-                    const SizedBox(height: AppTheme.s12),
+                    const SizedBox(height: AppTheme.s16),
                     _buildPermissionCard(scanner),
+                    if (_storage != null && !_storage!.isEstimate) ...[
+                      const SizedBox(height: AppTheme.s20),
+                      _buildStorageCard(_storage!, scanner),
+                    ],
                   ] else ...[
                     if (scanner.isScanning ||
                         scanner.scannedAssetCount > 0) ...[
-                      const SizedBox(height: AppTheme.s12),
+                      const SizedBox(height: AppTheme.s16),
                       _buildScanStrip(scanner),
                     ],
                     if (!scanner.isScanning &&
                         scanner.scanResult.allAssets.isEmpty) ...[
-                      const SizedBox(height: AppTheme.s12),
+                      const SizedBox(height: AppTheme.s16),
                       _buildScanButton(scanner),
                     ],
                     if (_photoCount > 0) ...[
@@ -188,21 +181,6 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                         ),
                       ),
                     ],
-                    if (!scanner.isScanning &&
-                        scanner.scanResult.allAssets.isNotEmpty)
-                      TextButton.icon(
-                        onPressed: scanner.isDeleting
-                            ? null
-                            : _shouldResume(scanner)
-                            ? scanner.resumeScan
-                            : scanner.startFullScan,
-                        icon: const Icon(Icons.refresh_rounded),
-                        label: Text(
-                          _shouldResume(scanner)
-                              ? context.l10n.homeContinueAnalysis
-                              : context.l10n.homeScanAll,
-                        ),
-                      ),
                     if (scanner.hasLimitedAccess)
                       TextButton.icon(
                         onPressed: scanner.isScanning || scanner.isDeleting
@@ -215,6 +193,19 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                         scanner.scanResult.allAssets.isNotEmpty) ...[
                       const SizedBox(height: AppTheme.s12),
                       _buildSwipeEntry(scanner),
+                    ],
+                    if (_storage != null && !_storage!.isEstimate) ...[
+                      const SizedBox(height: AppTheme.s20),
+                      _buildStorageCard(_storage!, scanner),
+                    ] else if (scanner.knownSizeAssetCount > 0) ...[
+                      const SizedBox(height: AppTheme.s16),
+                      Text(
+                        context.l10n.homeKnownLibrarySize(
+                          scanner.knownSizeAssetCount,
+                          formatBytes(scanner.knownLibraryBytes),
+                        ),
+                        style: AppTheme.caption,
+                      ),
                     ],
                     const SizedBox(height: AppTheme.s20),
                     _buildSectionHeader(context.l10n.homeCleanupTools),
@@ -287,7 +278,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
           label: Text(context.l10n.homeOpenSettings),
         ),
         TextButton(
-          onPressed: scanner.startFullScan,
+          onPressed: () => scanner.startContinuousScan(),
           child: Text(context.l10n.scanStart),
         ),
       ],
@@ -341,7 +332,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   );
 
   // ── Storage Card ──
-  Widget _buildStorageCard(StorageInfo info) {
+  Widget _buildStorageCard(StorageInfo info, PhotoScannerService scanner) {
     final pct = info.usedPercentage.clamp(0.0, 1.0);
     final ringColor = pct > 0.85
         ? AppTheme.danger
@@ -423,38 +414,43 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
               ),
             ],
           ),
-          const SizedBox(height: AppTheme.s16),
-          // Bottom hint
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppTheme.s12,
-              vertical: AppTheme.s8,
-            ),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryLight,
-              borderRadius: BorderRadius.circular(AppTheme.r8),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: AppTheme.accent,
-                    shape: BoxShape.circle,
+          if (!scanner.isScanning &&
+              !scanner.permissionDenied &&
+              !scanner.hasCompletedScan &&
+              !scanner.wasCancelled &&
+              scanner.scannedAssetCount == 0) ...[
+            const SizedBox(height: AppTheme.s16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.s12,
+                vertical: AppTheme.s8,
+              ),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryLight,
+                borderRadius: BorderRadius.circular(AppTheme.r8),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: AppTheme.accent,
+                      shape: BoxShape.circle,
+                    ),
                   ),
-                ),
-                const SizedBox(width: AppTheme.s8),
-                Expanded(
-                  child: Text(
-                    context.l10n.homeStartScanHint,
-                    style: AppTheme.small.copyWith(color: AppTheme.primary),
+                  const SizedBox(width: AppTheme.s8),
+                  Expanded(
+                    child: Text(
+                      context.l10n.homeStartScanHint,
+                      style: AppTheme.small.copyWith(color: AppTheme.primary),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -526,35 +522,33 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         decoration: BoxDecoration(
           color: AppTheme.primaryLight,
           borderRadius: BorderRadius.circular(AppTheme.r16),
+          border: Border.all(color: AppTheme.primary.withValues(alpha: 0.12)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              total == null
-                  ? context.l10n.homeIndexedCount(indexed)
-                  : context.l10n.homeIndexedCountWithTotal(indexed, total),
-              style: AppTheme.body.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: AppTheme.s6),
             if (scanner.isScanning) ...[
               Text(
                 stageTitle,
-                style: AppTheme.caption.copyWith(
-                  color: AppTheme.primary,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: AppTheme.heading3.copyWith(color: AppTheme.primary),
               ),
+              const SizedBox(height: AppTheme.s4),
               Text(stageCount, style: AppTheme.caption),
-              const SizedBox(height: AppTheme.s6),
+              const SizedBox(height: AppTheme.s10),
               LinearProgressIndicator(
                 value: stageProgress,
-                minHeight: 4,
+                minHeight: 5,
                 backgroundColor: AppTheme.cardBg,
                 color: AppTheme.primary,
                 borderRadius: BorderRadius.circular(AppTheme.r8),
               ),
-              const SizedBox(height: AppTheme.s6),
+              const SizedBox(height: AppTheme.s10),
+              Text(
+                total == null
+                    ? context.l10n.homeIndexedCount(indexed)
+                    : context.l10n.homeIndexedCountWithTotal(indexed, total),
+                style: AppTheme.small,
+              ),
               if (scanner.currentOperation != null)
                 Text(
                   context.l10n.scanOperationWait(
@@ -573,14 +567,46 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                   ),
                 ],
               ),
-            ] else
+            ] else ...[
               Text(
-                context.l10n.homeAnalysisSummary(
-                  scanner.analyzedAssetCount,
-                  scanner.verifiedOriginalCount,
-                ),
-                style: AppTheme.caption,
+                total == null
+                    ? context.l10n.homeIndexedCount(indexed)
+                    : context.l10n.homeIndexedCountWithTotal(indexed, total),
+                style: AppTheme.heading3,
               ),
+              const SizedBox(height: AppTheme.s6),
+              Wrap(
+                spacing: AppTheme.s12,
+                runSpacing: AppTheme.s4,
+                children: [
+                  Text(
+                    context.l10n.scanVisualSuccessCount(
+                      scanner.analyzedAssetCount,
+                    ),
+                    style: AppTheme.caption,
+                  ),
+                  Text(
+                    context.l10n.scanOriginalVerifiedCount(
+                      scanner.verifiedOriginalCount,
+                    ),
+                    style: AppTheme.caption,
+                  ),
+                ],
+              ),
+              TextButton.icon(
+                onPressed: scanner.isDeleting
+                    ? null
+                    : _shouldResume(scanner)
+                    ? () => scanner.startContinuousScan(resume: true)
+                    : () => scanner.startContinuousScan(),
+                icon: const Icon(Icons.refresh_rounded),
+                label: Text(
+                  _shouldResume(scanner)
+                      ? context.l10n.homeContinueAnalysis
+                      : context.l10n.homeScanAll,
+                ),
+              ),
+            ],
           ],
         ),
       );
@@ -592,22 +618,24 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     var category = 'photos';
     var title = context.l10n.scanCategoryPhotos;
     var count = _photoCount;
-    final previewHeight = min(
-      172.0,
-      max(112.0, MediaQuery.sizeOf(context).height * 0.19),
-    );
     if (scanner.scanResult.duplicateGroups.isNotEmpty) {
       final group = scanner.scanResult.duplicateGroups.first;
       preview = group.assets.take(2).toList();
       category = 'duplicates';
       title = context.l10n.homeExactDuplicates;
-      count = group.assets.length;
+      count = scanner.scanResult.duplicateGroups.fold<int>(
+        0,
+        (total, candidate) => total + candidate.assets.length,
+      );
     } else if (scanner.scanResult.similarGroups.isNotEmpty) {
       final group = scanner.scanResult.similarGroups.first;
       preview = group.assets.take(2).toList();
       category = 'similar';
       title = context.l10n.homeSimilarPhotos;
-      count = group.assets.length;
+      count = scanner.scanResult.similarGroups.fold<int>(
+        0,
+        (total, candidate) => total + candidate.assets.length,
+      );
     }
     return Container(
       key: ValueKey('home-photo-hero-$category'),
@@ -625,32 +653,70 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
           Row(
             children: [
               Expanded(child: Text(title, style: AppTheme.heading2)),
-              Text(
-                context.l10n.homePhotoCount(count),
-                style: AppTheme.caption.copyWith(color: AppTheme.primary),
+              const SizedBox(width: AppTheme.s8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.s10,
+                  vertical: AppTheme.s6,
+                ),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryLight,
+                  borderRadius: BorderRadius.circular(AppTheme.r50),
+                ),
+                child: Text(
+                  context.l10n.homePhotoCount(count),
+                  style: AppTheme.caption.copyWith(
+                    color: AppTheme.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ],
           ),
           const SizedBox(height: AppTheme.s12),
-          Row(
-            children: [
-              for (var i = 0; i < preview.length; i++) ...[
-                if (i > 0) const SizedBox(width: AppTheme.s8),
-                Expanded(
-                  child: ClipRRect(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final previewHeight = (constraints.maxWidth * 0.41).clamp(
+                146.0,
+                276.0,
+              );
+              return Semantics(
+                button: true,
+                enabled: !scanner.isDeleting,
+                label: '$title, ${context.l10n.homePhotoCount(count)}',
+                onTap: scanner.isDeleting ? null : () => _openReview(category),
+                child: ExcludeSemantics(
+                  child: InkWell(
+                    onTap: scanner.isDeleting
+                        ? null
+                        : () => _openReview(category),
                     borderRadius: BorderRadius.circular(AppTheme.r12),
-                    child: SizedBox(
-                      height: previewHeight,
-                      child: AssetThumbnail(
-                        key: ValueKey('home-photo-preview-${preview[i].id}'),
-                        asset: preview[i],
-                        previewSize: 220,
-                      ),
+                    child: Row(
+                      children: [
+                        for (var i = 0; i < preview.length; i++) ...[
+                          if (i > 0) const SizedBox(width: AppTheme.s8),
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(AppTheme.r12),
+                              child: SizedBox(
+                                height: previewHeight,
+                                child: AssetThumbnail(
+                                  key: ValueKey(
+                                    'home-photo-preview-${preview[i].id}',
+                                  ),
+                                  asset: preview[i],
+                                  previewSize: 300,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ),
-              ],
-            ],
+              );
+            },
           ),
           const SizedBox(height: AppTheme.s12),
           SizedBox(
@@ -695,8 +761,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         onTap: s.isScanning || s.isDeleting
             ? null
             : _shouldResume(s)
-            ? s.resumeScan
-            : s.startFullScan,
+            ? () => s.startContinuousScan(resume: true)
+            : () => s.startContinuousScan(),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Row(
@@ -819,6 +885,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
           duplicateCount,
           s.pendingHashAssetCount,
           hasScanned,
+          indexComplete: indexComplete,
           photos: true,
         ),
         duplicateCount > 0
@@ -902,6 +969,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
           s.scanResult.largeFiles.length,
           s.pendingSizeAssetCount,
           hasScanned,
+          indexComplete: indexComplete,
           photos: false,
         ),
         s.scanResult.largeFiles.isNotEmpty
@@ -921,13 +989,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     return LayoutBuilder(
       builder: (context, constraints) {
         final textScale = MediaQuery.textScalerOf(context).scale(1);
-        final columns = textScale > 1.3
-            ? 1
-            : constraints.maxWidth >= 660
-            ? 3
-            : constraints.maxWidth >= 340
-            ? 2
-            : 1;
+        final columns = textScale > 1.3 || constraints.maxWidth < 540 ? 1 : 2;
         final width =
             (constraints.maxWidth - AppTheme.s10 * (columns - 1)) / columns;
         return Wrap(
@@ -935,7 +997,10 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
           runSpacing: AppTheme.s10,
           children: [
             for (final tool in items)
-              SizedBox(width: width, child: _buildToolCard(tool)),
+              SizedBox(
+                width: width,
+                child: _buildToolCard(tool, horizontal: columns == 1),
+              ),
           ],
         );
       },
@@ -953,9 +1018,13 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     int count,
     int pending,
     bool hasScanned, {
+    required bool indexComplete,
     required bool photos,
   }) {
     if (!hasScanned) return context.l10n.homeNotScanned;
+    if (!indexComplete && count == 0 && pending == 0) {
+      return context.l10n.scanEmptyIndexing;
+    }
     if (pending > 0) {
       if (count == 0) return context.l10n.homePendingVerification;
       return photos
@@ -968,7 +1037,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         : context.l10n.homeItemCount(count);
   }
 
-  Widget _buildToolCard(_Tool t) => Material(
+  Widget _buildToolCard(_Tool t, {required bool horizontal}) => Material(
     key: ValueKey('home-category-${t.category}'),
     color: AppTheme.cardBg,
     borderRadius: BorderRadius.circular(AppTheme.r16),
@@ -980,59 +1049,67 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
           border: Border.all(color: AppTheme.border),
           borderRadius: BorderRadius.circular(AppTheme.r16),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              height: 120,
-              width: double.infinity,
-              child: t.preview == null
-                  ? ColoredBox(
-                      color: t.color.withValues(alpha: 0.1),
-                      child: Center(
-                        child: Icon(t.icon, color: t.color, size: 38),
-                      ),
-                    )
-                  : AssetThumbnail(
-                      key: ValueKey('home-preview-${t.category}'),
-                      asset: t.preview!,
-                      previewSize: 220,
-                    ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppTheme.s12),
-              child: Column(
+        child: horizontal
+            ? Row(
+                children: [
+                  _buildToolPreview(t, horizontal: true),
+                  Expanded(child: _buildToolDetails(t)),
+                ],
+              )
+            : Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(t.title, style: AppTheme.heading3),
-                  const SizedBox(height: AppTheme.s4),
-                  Text(t.subtitle, style: AppTheme.caption),
-                  const SizedBox(height: AppTheme.s8),
-                  _buildStatusTag(t.status),
-                  const SizedBox(height: AppTheme.s8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          context.l10n.homePreviewOrganize,
-                          style: AppTheme.label.copyWith(
-                            color: AppTheme.primary,
-                          ),
-                        ),
-                      ),
-                      Icon(
-                        Icons.arrow_forward_rounded,
-                        color: AppTheme.primary,
-                        size: 18,
-                      ),
-                    ],
-                  ),
+                  _buildToolPreview(t, horizontal: false),
+                  _buildToolDetails(t),
                 ],
               ),
+      ),
+    ),
+  );
+
+  Widget _buildToolPreview(_Tool tool, {required bool horizontal}) => SizedBox(
+    key: ValueKey('home-tool-preview-${tool.category}'),
+    width: horizontal ? 112 : double.infinity,
+    height: horizontal ? 148 : 168,
+    child: tool.preview == null
+        ? ColoredBox(
+            color: tool.color.withValues(alpha: 0.1),
+            child: Center(child: Icon(tool.icon, color: tool.color, size: 38)),
+          )
+        : AssetThumbnail(
+            key: ValueKey('home-preview-${tool.category}'),
+            asset: tool.preview!,
+            previewSize: 240,
+          ),
+  );
+
+  Widget _buildToolDetails(_Tool tool) => Padding(
+    padding: const EdgeInsets.all(AppTheme.s12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(tool.title, style: AppTheme.heading3),
+        const SizedBox(height: AppTheme.s4),
+        Text(tool.subtitle, style: AppTheme.caption),
+        const SizedBox(height: AppTheme.s8),
+        _buildStatusTag(tool.status),
+        const SizedBox(height: AppTheme.s8),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                context.l10n.homePreviewOrganize,
+                style: AppTheme.label.copyWith(color: AppTheme.primary),
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_rounded,
+              color: AppTheme.primary,
+              size: 18,
             ),
           ],
         ),
-      ),
+      ],
     ),
   );
 
@@ -1048,7 +1125,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
           child: Text(
             context.l10n.homeNeedsReview,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: FontWeight.w700,
               color: AppTheme.danger,
             ),
@@ -1064,7 +1141,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
           child: Text(
             context.l10n.homeCanReview,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: FontWeight.w700,
               color: AppTheme.warning,
             ),
@@ -1080,7 +1157,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
           child: Text(
             context.l10n.homeCanReview,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: FontWeight.w700,
               color: AppTheme.primary,
             ),

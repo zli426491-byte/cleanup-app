@@ -119,6 +119,33 @@ class AppLocalizationsTh extends AppLocalizations {
   String get paywallBestValue => 'คุ้มค่าที่สุด';
 
   @override
+  String get videoTryAnotherPreset => 'ลองคุณภาพอื่น';
+
+  @override
+  String get videoPresetTitle => 'คุณภาพการบีบอัด';
+
+  @override
+  String get videoPresetSmaller => 'ไฟล์เล็กลง';
+
+  @override
+  String get videoPresetBalanced => 'สมดุล';
+
+  @override
+  String get videoPresetHigherQuality => 'คุณภาพสูงขึ้น';
+
+  @override
+  String get videoPresetNotice =>
+      'ตัวเลือกนี้กำหนดการบีบอัด ขนาดไฟล์จริงจะแสดงหลังสร้างตัวอย่าง และไฟล์ต้นฉบับจะยังคงอยู่';
+
+  @override
+  String get serviceContinuousScanLimit =>
+      'การสแกนต่อเนื่องถึงขีดจำกัดเวลาแล้ว บันทึกความคืบหน้าไว้แล้ว และกลับมาทำต่อภายหลังได้';
+
+  @override
+  String get swipeCheckpointRecovered =>
+      'ตัวเลือกตรวจสอบที่บันทึกไว้บางส่วนเสียหายและกู้คืนไม่ได้ โปรดตรวจสอบรูปภาพเหล่านี้อีกครั้ง ไม่มีข้อมูลใดถูกลบ';
+
+  @override
   String get videoTitle => 'บีบอัดวิดีโอ';
 
   @override

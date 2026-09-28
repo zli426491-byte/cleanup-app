@@ -286,7 +286,7 @@ void main() {
       expect(scanner.verifiedOriginalCount, 1);
       library = [
         library.single,
-        for (var i = 0; i < 400; i++)
+        for (var i = 0; i < 800; i++)
           {
             'id': 'photo-$i',
             'type': 1,
@@ -315,11 +315,11 @@ void main() {
       await scan;
       await tester.pump();
       expect(scanner.hasCompletedScan, isFalse);
-      expect(scanner.scannedAssetCount, 401);
-      expect(scanner.pendingAnalysisCount, 400);
+      expect(scanner.scannedAssetCount, 801);
+      expect(scanner.pendingAnalysisCount, 800);
       expect(scanner.verifiedOriginalCount, 1);
       expect(
-        find.text(appStringsOf().homeIndexedCountWithTotal(401, 401)),
+        find.text(appStringsOf().homeIndexedCountWithTotal(801, 801)),
         findsOneWidget,
       );
       await tester.ensureVisible(find.text(appStringsOf().homeScanDetails));

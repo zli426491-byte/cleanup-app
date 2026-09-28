@@ -120,6 +120,33 @@ class AppLocalizationsAr extends AppLocalizations {
   String get paywallBestValue => 'أفضل قيمة';
 
   @override
+  String get videoTryAnotherPreset => 'جرّب جودة أخرى';
+
+  @override
+  String get videoPresetTitle => 'جودة الضغط';
+
+  @override
+  String get videoPresetSmaller => 'ملف أصغر';
+
+  @override
+  String get videoPresetBalanced => 'متوازن';
+
+  @override
+  String get videoPresetHigherQuality => 'جودة أعلى';
+
+  @override
+  String get videoPresetNotice =>
+      'يوجّه الوضع المحدد عملية الضغط. يظهر الحجم الفعلي بعد إنشاء المعاينة. يبقى الفيديو الأصلي محفوظًا.';
+
+  @override
+  String get serviceContinuousScanLimit =>
+      'وصل الفحص المتواصل إلى الحد الزمني. حُفظ التقدم ويمكنك المتابعة لاحقًا.';
+
+  @override
+  String get swipeCheckpointRecovered =>
+      'تضررت بعض خيارات المراجعة المحفوظة وتعذرت استعادتها. راجع هذه الصور مرة أخرى؛ لم يُحذف أي شيء.';
+
+  @override
   String get videoTitle => 'ضغط الفيديو';
 
   @override

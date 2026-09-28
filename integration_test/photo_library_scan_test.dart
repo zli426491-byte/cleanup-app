@@ -88,14 +88,23 @@ void main() {
 
       final watch = Stopwatch()..start();
       final labels = AppLocalizations.of(tester.element(find.byType(HomeView)));
-      await _tapVisible(tester, find.text(labels.homeScanAll));
+      if (!scanner.isScanning && scanner.scannedAssetCount == 0) {
+        await _tapVisible(tester, find.text(labels.homeScanAll));
+      }
       await _waitUntil(
         tester,
         () => scanner.isScanning || scanner.scannedAssetCount > 0,
         'home scan start',
       );
-      await _waitUntil(tester, () => !scanner.isScanning, 'home scan end');
-      stages['initialPreviewMs'] = watch.elapsedMilliseconds;
+      // Continuous previews may legitimately run for minutes on a large
+      // library. Opening a resource category pauses them and verifies the
+      // requested originals, so only indexing must finish here.
+      await _waitUntil(
+        tester,
+        () => scanner.scannedAssetCount >= actualCount,
+        'home indexing end',
+      );
+      stages['initialIndexMs'] = watch.elapsedMilliseconds;
       expect(scanner.scannedAssetCount, greaterThanOrEqualTo(actualCount));
       expect(scanner.totalPhotoCount, greaterThanOrEqualTo(workload));
       expect(
@@ -123,12 +132,16 @@ void main() {
       await _waitUntil(
         tester,
         () =>
-            scanner.isScanning || scanner.scanResult.duplicateGroups.isNotEmpty,
+            scanner.originalVerificationTarget ==
+            OriginalVerificationTarget.exactPhotos,
         'automatic exact start',
       );
       await _waitUntil(
         tester,
-        () => !scanner.isScanning,
+        () =>
+            scanner.originalVerificationTarget ==
+                OriginalVerificationTarget.exactPhotos &&
+            !scanner.isScanning,
         'automatic exact end',
       );
       stages['automaticExactMs'] = watch.elapsedMilliseconds;
@@ -196,6 +209,7 @@ void main() {
       var previewContinuationChecked = false;
       if (scanner.pendingAnalysisCount > 0) {
         final knownBeforePreview = scanner.knownSizeAssetCount;
+        final attemptedBeforePreview = scanner.attemptedAnalysisCount;
         watch.reset();
         await _tapVisible(tester, find.byType(BackButton));
         await _tapVisible(tester, find.text(labels.homeContinueAnalysis));
@@ -206,9 +220,17 @@ void main() {
         );
         await _waitUntil(
           tester,
-          () => !scanner.isScanning,
-          'preview resume end',
+          () =>
+              scanner.attemptedAnalysisCount > attemptedBeforePreview ||
+              !scanner.isScanning,
+          'preview resume progress',
         );
+        // The purpose here is to verify preservation across a resumed round,
+        // not to exhaust every remaining cloud-only photo in the fixture.
+        if (scanner.isContinuousScanning) {
+          await scanner.pauseContinuousScan();
+        }
+        await _waitUntil(tester, () => !scanner.isScanning, 'preview pause');
         _expectMovies(scanner, movieIds, expectedBytes);
         _expectExactPair(scanner, duplicateIds, differentIds);
         expect(

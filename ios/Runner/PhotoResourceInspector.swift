@@ -142,9 +142,9 @@ final class PhotoResourceInspector: NSObject, FlutterPlugin {
       }
       let job: NativePhotoJob
       if call.method == "inspectPreviews" {
-        guard let identifiers = args["assetIds"] as? [String], !identifiers.isEmpty,
-          identifiers.count <= 8, Set(identifiers).count == identifiers.count else {
-          result(FlutterError(code: "arguments", message: "Provide 1–8 distinct asset identifiers", details: nil)); return
+        guard let identifiers = args["assetIds"] as? [String],
+          PhotoPreviewBatch.accepts(identifiers) else {
+          result(FlutterError(code: "arguments", message: "Provide 1–32 distinct asset identifiers", details: nil)); return
         }
         job = PhotoPreviewBatch(assetIds: identifiers, completion: completion)
       } else {
@@ -265,21 +265,50 @@ final class PhotoPreviewInspection: NativePhotoJob {
 }
 
 final class PhotoPreviewBatch: NativePhotoJob {
+  // One Dart channel request is the concurrency boundary for PhotoKit.
+  // The scanner starts only one batch at a time. A wide batch is scheduled in
+  // two waves so PhotoKit never has 32 image decodes in flight at once.
+  static let maximumAssetCount = 32
+  static let maximumConcurrentRequests = 16
+  static func batchTimeoutSeconds(for count: Int) -> Double { count <= 8 ? 2 : 6 }
+  static func itemTimeoutSeconds(for count: Int) -> Double { count <= 8 ? 1.5 : 2.25 }
+  static func accepts(_ identifiers: [String]) -> Bool {
+    !identifiers.isEmpty && identifiers.count <= maximumAssetCount &&
+      Set(identifiers).count == identifiers.count
+  }
   private let assetIds: [String]
   private let gate: NativeInspectionCompletion
   private let lock = NSLock()
   private var rows: [String: [String: Any]] = [:]
+  private var startedIds: Set<String> = []
   private var children: [PhotoPreviewInspection] = []
+  private var nextIndex = 0
+  private var inFlight = 0
   init(assetIds: [String], completion: @escaping ([String: Any]) -> Void) {
     self.assetIds = assetIds; gate = NativeInspectionCompletion(completion: completion)
   }
   func start() {
-    gate.armDeadline(seconds: 2) { [weak self] in self?.response(missing: "timeout") ?? [:] }
-    for identifier in assetIds {
-      let child = PhotoPreviewInspection(assetId: identifier) { [weak self] row in
+    if !Thread.isMainThread { DispatchQueue.main.async { self.start() }; return }
+    gate.armDeadline(seconds: Self.batchTimeoutSeconds(for: assetIds.count)) {
+      [weak self] in self?.response(missing: "timeout") ?? [:]
+    }
+    launchMore()
+  }
+  private func launchMore() {
+    // start() and child completion both run on the main queue; the response
+    // dictionary alone is protected because deadlines can read it elsewhere.
+    while !gate.isFinished && inFlight < Self.maximumConcurrentRequests && nextIndex < assetIds.count {
+      let identifier = assetIds[nextIndex]
+      nextIndex += 1; inFlight += 1
+      lock.lock(); startedIds.insert(identifier); lock.unlock()
+      let child = PhotoPreviewInspection(assetId: identifier,
+        timeoutSeconds: Self.itemTimeoutSeconds(for: assetIds.count)) { [weak self] row in
         guard let self = self, !self.gate.isFinished else { return }
+        self.gate.untrack(identifier)
         self.lock.lock(); self.rows[identifier] = row; let complete = self.rows.count == self.assetIds.count; self.lock.unlock()
+        self.inFlight -= 1
         if complete { self.gate.finish(self.response(missing: "timeout")) }
+        else { self.launchMore() }
       }
       children.append(child)
       gate.track(identifier) { child.cancel() }
@@ -288,7 +317,10 @@ final class PhotoPreviewBatch: NativePhotoJob {
   }
   private func response(missing: String) -> [String: Any] {
     lock.lock(); defer { lock.unlock() }
-    return ["assets": assetIds.map { rows[$0] ?? ["assetId": $0, "status": missing] },
+    return ["assets": assetIds.map { identifier in
+      rows[identifier] ?? ["assetId": identifier,
+        "status": startedIds.contains(identifier) ? missing : "not_started"]
+    },
       "complete": false, "sizeKnown": false, "size": 0]
   }
   func cancel() { gate.finish(response(missing: "unavailable")) }

@@ -114,6 +114,33 @@ class AppLocalizationsJa extends AppLocalizations {
   String get paywallBestValue => 'お得なプラン';
 
   @override
+  String get videoTryAnotherPreset => '別の画質を試す';
+
+  @override
+  String get videoPresetTitle => '圧縮画質';
+
+  @override
+  String get videoPresetSmaller => '小さいファイル';
+
+  @override
+  String get videoPresetBalanced => 'バランス';
+
+  @override
+  String get videoPresetHigherQuality => '高画質';
+
+  @override
+  String get videoPresetNotice =>
+      '選択した設定で圧縮します。実際のファイルサイズはプレビュー作成後に表示されます。元の動画は保持されます。';
+
+  @override
+  String get serviceContinuousScanLimit =>
+      '連続スキャンが制限時間に達しました。進行状況は保存され、後で再開できます。';
+
+  @override
+  String get swipeCheckpointRecovered =>
+      '保存済みの確認内容の一部が破損し、復元できませんでした。これらの写真をもう一度確認してください。何も削除されていません。';
+
+  @override
   String get videoTitle => '動画圧縮';
 
   @override

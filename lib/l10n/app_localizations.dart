@@ -336,6 +336,54 @@ abstract class AppLocalizations {
   /// **'Best value'**
   String get paywallBestValue;
 
+  /// No description provided for @videoTryAnotherPreset.
+  ///
+  /// In en, this message translates to:
+  /// **'Try another quality'**
+  String get videoTryAnotherPreset;
+
+  /// No description provided for @videoPresetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Compression quality'**
+  String get videoPresetTitle;
+
+  /// No description provided for @videoPresetSmaller.
+  ///
+  /// In en, this message translates to:
+  /// **'Smaller file'**
+  String get videoPresetSmaller;
+
+  /// No description provided for @videoPresetBalanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Balanced'**
+  String get videoPresetBalanced;
+
+  /// No description provided for @videoPresetHigherQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'Higher quality'**
+  String get videoPresetHigherQuality;
+
+  /// No description provided for @videoPresetNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'The preset guides encoding. Actual file size is shown after the preview is created. The original is kept.'**
+  String get videoPresetNotice;
+
+  /// No description provided for @serviceContinuousScanLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'This continuous scan reached its time limit. Progress was saved; you can resume later.'**
+  String get serviceContinuousScanLimit;
+
+  /// No description provided for @swipeCheckpointRecovered.
+  ///
+  /// In en, this message translates to:
+  /// **'Some saved review choices were damaged and could not be restored. Please review these photos again; nothing was deleted.'**
+  String get swipeCheckpointRecovered;
+
   /// No description provided for @videoTitle.
   ///
   /// In en, this message translates to:

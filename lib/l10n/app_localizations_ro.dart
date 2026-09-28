@@ -123,6 +123,33 @@ class AppLocalizationsRo extends AppLocalizations {
   String get paywallBestValue => 'Cea mai avantajoasă opțiune';
 
   @override
+  String get videoTryAnotherPreset => 'Încearcă altă calitate';
+
+  @override
+  String get videoPresetTitle => 'Calitatea comprimării';
+
+  @override
+  String get videoPresetSmaller => 'Fișier mai mic';
+
+  @override
+  String get videoPresetBalanced => 'Echilibrată';
+
+  @override
+  String get videoPresetHigherQuality => 'Calitate mai mare';
+
+  @override
+  String get videoPresetNotice =>
+      'Opțiunea aleasă ghidează comprimarea. Dimensiunea reală apare după crearea previzualizării. Originalul este păstrat.';
+
+  @override
+  String get serviceContinuousScanLimit =>
+      'Această scanare continuă a atins limita de timp. Progresul a fost salvat; poți relua mai târziu.';
+
+  @override
+  String get swipeCheckpointRecovered =>
+      'Unele selecții salvate au fost deteriorate și nu au putut fi restaurate. Verifică din nou aceste fotografii; nu s-a șters nimic.';
+
+  @override
   String get videoTitle => 'Comprimare video';
 
   @override

@@ -119,6 +119,33 @@ class AppLocalizationsVi extends AppLocalizations {
   String get paywallBestValue => 'Tiết kiệm nhất';
 
   @override
+  String get videoTryAnotherPreset => 'Thử chất lượng khác';
+
+  @override
+  String get videoPresetTitle => 'Chất lượng nén';
+
+  @override
+  String get videoPresetSmaller => 'Tệp nhỏ hơn';
+
+  @override
+  String get videoPresetBalanced => 'Cân bằng';
+
+  @override
+  String get videoPresetHigherQuality => 'Chất lượng cao hơn';
+
+  @override
+  String get videoPresetNotice =>
+      'Lựa chọn này điều chỉnh quá trình nén. Kích thước thực được hiển thị sau khi tạo bản xem trước. Video gốc được giữ lại.';
+
+  @override
+  String get serviceContinuousScanLimit =>
+      'Lần quét liên tục này đã đạt giới hạn thời gian. Tiến độ đã được lưu; bạn có thể tiếp tục sau.';
+
+  @override
+  String get swipeCheckpointRecovered =>
+      'Một số lựa chọn đã lưu bị hỏng và không thể khôi phục. Hãy xem lại những ảnh này; không có gì bị xóa.';
+
+  @override
   String get videoTitle => 'Nén video';
 
   @override

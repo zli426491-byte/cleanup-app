@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cleanup_app/l10n/app_localizations.dart';
 import 'package:cleanup_app/services/photo_scanner_service.dart';
 import 'package:cleanup_app/services/subscription_manager.dart';
@@ -30,6 +32,8 @@ class _Scanner extends PhotoScannerService {
     this.pendingHash = 0,
     this.pendingSize = 0,
     this.nativeReady = false,
+    this.continuous = false,
+    this.availableCount,
     bool groups = false,
     bool screenshots = true,
     bool largeResults = true,
@@ -63,12 +67,19 @@ class _Scanner extends PhotoScannerService {
   final int pendingHash;
   final int pendingSize;
   final bool nativeReady;
+  final bool continuous;
+  final int? availableCount;
   final List<OriginalVerificationTarget> verifyTargets = [];
   @override
   bool get nativeOriginalAnalysisAvailable => nativeReady;
+  @override
+  bool get isContinuousScanning => continuous && checking;
   int verifyCalls = 0;
   int cancelCalls = 0;
+  int pauseCalls = 0;
   bool checking = false;
+  bool verifying = false;
+  Completer<void>? pauseGate;
   @override
   void cancelScan() {
     cancelCalls++;
@@ -77,13 +88,22 @@ class _Scanner extends PhotoScannerService {
   }
 
   @override
+  Future<void> pauseContinuousScan() async {
+    pauseCalls++;
+    cancelScan();
+    if (pauseGate != null) await pauseGate!.future;
+  }
+
+  @override
   ScanResult get scanResult => result;
   @override
   bool get isScanning => checking;
   @override
-  bool get isVerifyingOriginals => checking;
+  bool get isVerifyingOriginals => checking && verifying;
   @override
   int get scannedAssetCount => 5;
+  @override
+  int? get availableAssetCount => availableCount;
   @override
   int get totalPhotoCount => 4;
   @override
@@ -107,6 +127,7 @@ class _Scanner extends PhotoScannerService {
     verifyTargets.add(target);
     verifyCalls++;
     checking = true;
+    verifying = true;
     notifyListeners();
   }
 }
@@ -207,7 +228,9 @@ void main() {
       await _mount(tester, _Scanner(), 'screenshots');
       expect(find.byTooltip('Swipe cleanup'), findsNothing);
       await _tapKey(tester, 'start-category-swipe');
-      await tester.pumpAndSettle();
+      // Swipe mode has a persistent gesture hint animation, so it never
+      // reaches a fully settled frame.
+      await tester.pump(const Duration(milliseconds: 500));
       expect(
         tester
             .widget<SwipeCleanView>(find.byType(SwipeCleanView))
@@ -238,13 +261,10 @@ void main() {
       expect(scanner.verifyCalls, 0);
       await _tapKey(tester, 'verify-originals-cta');
       expect(scanner.verifyCalls, 1);
+      expect(find.byKey(const ValueKey('verify-originals-cta')), findsNothing);
       expect(
-        tester
-            .widget<FilledButton>(
-              find.byKey(const ValueKey('verify-originals-cta')),
-            )
-            .onPressed,
-        isNull,
+        find.byKey(const ValueKey('scan-pause-review-card')),
+        findsOneWidget,
       );
       await tester.pumpWidget(const SizedBox());
       await _mount(
@@ -363,7 +383,10 @@ void main() {
         tester.element(find.byType(SmartCleanView)),
       ).serviceScanPaused;
       expect(find.text(notice), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('scan-details-0')));
+      final details = AppLocalizations.of(
+        tester.element(find.byType(SmartCleanView)),
+      ).scanDetails;
+      await tester.tap(find.byTooltip(details));
       await tester.pumpAndSettle();
       expect(find.text(notice), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
@@ -646,6 +669,78 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(scanner.verifyTargets, [OriginalVerificationTarget.exactPhotos]);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets(
+    'empty resource tabs pause fully indexed continuous preview and verify once',
+    (tester) async {
+      for (final category in ['duplicates', 'largeFiles']) {
+        final scanner = _Scanner(
+          pendingHash: 3,
+          pendingSize: 1,
+          nativeReady: true,
+          continuous: true,
+          availableCount: 5,
+          largeResults: false,
+        )..checking = true;
+        await _mount(tester, scanner, category, settle: false);
+        await tester.pump();
+        await tester.pump();
+        expect(scanner.pauseCalls, 1);
+        expect(scanner.cancelCalls, 1);
+        expect(scanner.verifyTargets, [
+          category == 'duplicates'
+              ? OriginalVerificationTarget.exactPhotos
+              : OriginalVerificationTarget.fileSizes,
+        ]);
+        await tester.pump();
+        expect(scanner.verifyCalls, 1);
+        await tester.pumpWidget(const SizedBox());
+      }
+    },
+  );
+
+  testWidgets('resource tab waits for full indexing before pausing preview', (
+    tester,
+  ) async {
+    final scanner = _Scanner(
+      pendingHash: 3,
+      nativeReady: true,
+      continuous: true,
+      availableCount: 6,
+    )..checking = true;
+    await _mount(tester, scanner, 'duplicates', settle: false);
+    await tester.pump();
+    await tester.pump();
+    expect(scanner.pauseCalls, 0);
+    expect(scanner.verifyCalls, 0);
+    expect(
+      find.byKey(const ValueKey('resource-pending-state')),
+      findsOneWidget,
+    );
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('leaving resource tab during preview pause avoids verification', (
+    tester,
+  ) async {
+    final scanner = _Scanner(
+      pendingHash: 3,
+      nativeReady: true,
+      continuous: true,
+      availableCount: 5,
+    )..checking = true;
+    final pauseGate = Completer<void>();
+    scanner.pauseGate = pauseGate;
+    await _mount(tester, scanner, 'duplicates', settle: false);
+    await tester.pump();
+    expect(scanner.pauseCalls, 1);
+    await tester.tap(find.text('Photos').first);
+    await tester.pump();
+    pauseGate.complete();
+    await tester.pump();
+    expect(scanner.verifyCalls, 0);
     await tester.pumpWidget(const SizedBox());
   });
 

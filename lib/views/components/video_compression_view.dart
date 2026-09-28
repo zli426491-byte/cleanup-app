@@ -31,13 +31,19 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
   late final VideoCompressionService _service;
   VideoPlayerController? _player;
   bool _initializingPreview = false;
+  bool _resettingPreset = false;
   bool _savingRequested = false;
   bool _showOriginal = false;
   String? _error;
   bool _cancelRequested = false;
   int _previewGeneration = 0;
+  VideoCompressionPreset _preset = VideoCompressionPreset.balanced;
 
-  bool get _busy => _service.isBusy || _initializingPreview || _savingRequested;
+  bool get _busy =>
+      _service.isBusy ||
+      _initializingPreview ||
+      _resettingPreset ||
+      _savingRequested;
   bool get _canLeave =>
       !_busy || (_cancelRequested && !_service.isSaving && !_savingRequested);
 
@@ -63,7 +69,7 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
       _cancelRequested = false;
     });
     try {
-      final prepared = await _service.prepare(widget.asset.id);
+      final prepared = await _service.prepare(widget.asset.id, preset: _preset);
       if (!mounted || _cancelRequested) return;
       await _loadPreview(prepared.output, original: false);
     } catch (error) {
@@ -180,6 +186,30 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
     }
   }
 
+  Future<void> _chooseAnotherPreset() async {
+    if (_busy || _service.prepared == null || _service.savedAssetId != null) {
+      return;
+    }
+    setState(() {
+      _resettingPreset = true;
+      _previewGeneration++;
+      _error = null;
+    });
+    final player = _player;
+    player?.removeListener(_onPlayerChanged);
+    _player = null;
+    try {
+      await player?.dispose();
+      if (!mounted) return;
+      await _service.discardPrepared();
+      if (mounted) setState(() => _showOriginal = false);
+    } catch (error) {
+      if (mounted) setState(() => _error = _message(error));
+    } finally {
+      if (mounted) setState(() => _resettingPreset = false);
+    }
+  }
+
   String _message(Object error) => error is StateError
       ? error.message.toString()
       : 'videoOperationIncomplete';
@@ -201,6 +231,13 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
             NumberFormat('0.0', locale).format(bytes / 1048576),
           );
   }
+
+  String _presetLabel(VideoCompressionPreset preset) => switch (preset) {
+    VideoCompressionPreset.smaller => context.l10n.videoPresetSmaller,
+    VideoCompressionPreset.balanced => context.l10n.videoPresetBalanced,
+    VideoCompressionPreset.higherQuality =>
+      context.l10n.videoPresetHigherQuality,
+  };
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
@@ -256,10 +293,53 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
                         child: Text(context.l10n.scanCancel),
                       ),
                     ],
+                    if (_resettingPreset) const LinearProgressIndicator(),
                     if (_error != null) ...[
                       Text(
                         _localizedError(_error!),
                         style: const TextStyle(color: AppTheme.danger),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    if (prepared == null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              context.l10n.videoPresetTitle,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: VideoCompressionPreset.values.map((
+                                preset,
+                              ) {
+                                return ChoiceChip(
+                                  label: Text(_presetLabel(preset)),
+                                  selected: _preset == preset,
+                                  onSelected: _busy || !isPro
+                                      ? null
+                                      : (_) => setState(() => _preset = preset),
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              context.l10n.videoPresetNotice,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -382,6 +462,12 @@ class _VideoCompressionViewState extends State<VideoCompressionView> {
                           ),
                         ],
                       ),
+                      if (!saved)
+                        OutlinedButton.icon(
+                          onPressed: _busy ? null : _chooseAnotherPreset,
+                          icon: const Icon(Icons.tune),
+                          label: Text(context.l10n.videoTryAnotherPreset),
+                        ),
                       const SizedBox(height: 16),
                       if (saved)
                         Text(context.l10n.videoSaved)

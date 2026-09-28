@@ -178,11 +178,20 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   }
 
   bool _shouldAutoVerify(PhotoScannerService scanner) {
+    final indexedAll =
+        scanner.availableAssetCount != null &&
+        scanner.scannedAssetCount >= scanner.availableAssetCount!;
+    final canPausePreview =
+        scanner.isScanning &&
+        scanner.isContinuousScanning &&
+        !scanner.isVerifyingOriginals &&
+        scanner.scannedAssetCount > 0 &&
+        indexedAll;
     if (!widget.isActive ||
         !_isResourceCategory ||
         _autoVerificationAttempted.contains(_selectedCategory) ||
         !scanner.nativeOriginalAnalysisAvailable ||
-        scanner.isScanning ||
+        (scanner.isScanning && !canPausePreview) ||
         scanner.isDeleting ||
         _isDeleting) {
       return false;
@@ -194,10 +203,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
         _selectedCategory == 5 && scanner.scanResult.largeFiles.isNotEmpty) {
       return false;
     }
-    final indexComplete =
-        scanner.availableAssetCount != null &&
-        scanner.scannedAssetCount >= scanner.availableAssetCount!;
-    if (indexComplete && _pendingChecks(scanner) == 0) {
+    if (indexedAll && _pendingChecks(scanner) == 0) {
       return false;
     }
     return !(scanner.hasCompletedScan && scanner.availableAssetCount == 0);
@@ -218,18 +224,36 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     final category = _selectedCategory;
     if (!_autoVerificationScheduled.add(category)) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _autoVerificationScheduled.remove(category);
-      if (!mounted ||
-          category != _selectedCategory ||
-          !identical(scanner, context.read<PhotoScannerService>()) ||
-          !_shouldAutoVerify(scanner)) {
-        return;
+      unawaited(_autoVerifyCategory(scanner, category));
+    });
+  }
+
+  Future<void> _autoVerifyCategory(
+    PhotoScannerService scanner,
+    int category,
+  ) async {
+    bool stillSelected() =>
+        mounted &&
+        widget.isActive &&
+        category == _selectedCategory &&
+        identical(scanner, context.read<PhotoScannerService>());
+
+    try {
+      if (!stillSelected() || !_shouldAutoVerify(scanner)) return;
+      if (scanner.isScanning) {
+        // The home screen can still be analyzing previews for many minutes.
+        // The resource tabs need a bounded original pass to show confirmed
+        // duplicates and file sizes. Keep the indexed preview snapshot.
+        await scanner.pauseContinuousScan();
       }
+      if (!stillSelected() || !_shouldAutoVerify(scanner)) return;
       // Record before starting: timeout/cancel/unavailable completion cannot
       // automatically retry the same category and erase partial results.
       _autoVerificationAttempted.add(category);
-      unawaited(_verifyOriginals(scanner));
-    });
+      await _verifyOriginals(scanner);
+    } finally {
+      _autoVerificationScheduled.remove(category);
+    }
   }
 
   @override
@@ -255,6 +279,26 @@ class _SmartCleanViewState extends State<SmartCleanView> {
         appBar: AppBar(
           title: Text(context.l10n.scanSmartTitle),
           actions: [
+            IconButton(
+              tooltip: context.l10n.scanDetails,
+              icon: const Icon(Icons.info_outline_rounded),
+              onPressed: () => showModalBottomSheet<void>(
+                context: context,
+                showDragHandle: true,
+                isScrollControlled: true,
+                builder: (_) => SafeArea(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsetsDirectional.fromSTEB(
+                      20,
+                      0,
+                      20,
+                      20,
+                    ),
+                    child: _scanDetails(scanner, expanded: true),
+                  ),
+                ),
+              ),
+            ),
             if (scanner.isScanning)
               IconButton(
                 tooltip: context.l10n.scanCancelKeepProgress,
@@ -384,6 +428,21 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                             ),
                           ),
                         ],
+                        if (count > 0 && pending > 0) ...[
+                          const SizedBox(width: 4),
+                          Tooltip(
+                            message: context.l10n.scanPendingCheckCount(
+                              pending,
+                            ),
+                            child: Icon(
+                              Icons.pending_outlined,
+                              size: 14,
+                              color: selected
+                                  ? Colors.white
+                                  : AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -478,7 +537,9 @@ class _SmartCleanViewState extends State<SmartCleanView> {
               label: Text(context.l10n.homeOpenSettings),
             ),
             TextButton(
-              onPressed: scanner.isDeleting ? null : scanner.startFullScan,
+              onPressed: scanner.isDeleting
+                  ? null
+                  : () => scanner.startContinuousScan(),
               child: Text(context.l10n.scanStart),
             ),
           ],
@@ -546,9 +607,9 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                   onTap: scanner.isDeleting
                       ? null
                       : () => _runKeepingCategoryVisible(
-                          scanner.wasCancelled
-                              ? scanner.resumeScan
-                              : scanner.startFullScan,
+                          () => scanner.startContinuousScan(
+                            resume: scanner.wasCancelled,
+                          ),
                         ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -591,11 +652,18 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(context.l10n.scanPreviewWhileRunning, style: AppTheme.body),
-        if (_isResourceCategory && !scanner.isVerifyingOriginals) ...[
-          const SizedBox(height: 6),
-          Text(context.l10n.scanOriginalsAfterPreview, style: AppTheme.caption),
-        ],
+        Row(
+          children: [
+            const Icon(Icons.hourglass_top_rounded, color: AppTheme.primary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                context.l10n.scanPreviewWhileRunning,
+                style: AppTheme.body,
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 12),
         FilledButton.icon(
           key: const ValueKey('scan-pause-review-action'),
@@ -634,7 +702,9 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                     ],
                     if (_isSwipeCategory && assets.isNotEmpty)
                       _swipeCard(scanner),
-                    if (_isResourceCategory && _pendingChecks(scanner) > 0) ...[
+                    if (_isResourceCategory &&
+                        _pendingChecks(scanner) > 0 &&
+                        (!scanner.isScanning || hasResults)) ...[
                       const SizedBox(height: 12),
                       _verificationCard(scanner, compact: hasResults),
                     ],
@@ -663,12 +733,11 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                         onPressed: scanner.isDeleting || _isDeleting
                             ? null
                             : () => _runKeepingCategoryVisible(
-                                scanner.resumeScan,
+                                () => scanner.startContinuousScan(resume: true),
                               ),
                         icon: const Icon(Icons.play_arrow_rounded),
                         label: Text(context.l10n.scanPreviewMore),
                       ),
-                    _scanDetails(scanner),
                     if (hasResults)
                       Text(
                         context.l10n.scanSelectionHint,
@@ -924,10 +993,14 @@ class _SmartCleanViewState extends State<SmartCleanView> {
     ),
   );
 
-  Widget _scanDetails(PhotoScannerService scanner) => AnimatedBuilder(
+  Widget _scanDetails(
+    PhotoScannerService scanner, {
+    bool expanded = false,
+  }) => AnimatedBuilder(
     animation: scanner,
     builder: (context, _) => ExpansionTile(
       key: ValueKey('scan-details-$_selectedCategory'),
+      initiallyExpanded: expanded,
       tilePadding: EdgeInsets.zero,
       title: Text(context.l10n.scanDetails),
       childrenPadding: const EdgeInsets.only(bottom: 12),
@@ -1562,37 +1635,33 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                 ),
               ),
               const SizedBox(height: 4),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      assetSizeLabel(asset, context: context),
-                      style: const TextStyle(fontSize: 11),
-                      maxLines: 2,
-                    ),
-                  ),
-                  if (asset.type == AssetType.video)
-                    IconButton(
-                      tooltip: context.l10n.scanCompressVideo,
-                      icon: const Icon(Icons.compress_rounded, size: 20),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: 44,
-                        minHeight: 44,
+              if (asset.sizeKnown || asset.type == AssetType.video)
+                Row(
+                  children: [
+                    if (asset.sizeKnown)
+                      Expanded(
+                        child: Text(
+                          assetSizeLabel(asset, context: context),
+                          style: const TextStyle(fontSize: 11),
+                          maxLines: 2,
+                        ),
+                      )
+                    else
+                      const Spacer(),
+                    if (asset.type == AssetType.video)
+                      IconButton(
+                        tooltip: context.l10n.scanCompressVideo,
+                        icon: const Icon(Icons.compress_rounded, size: 20),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 44,
+                          minHeight: 44,
+                        ),
+                        onPressed: scanner.isScanning || scanner.isDeleting
+                            ? null
+                            : () => _openCompression(asset),
                       ),
-                      onPressed: scanner.isScanning || scanner.isDeleting
-                          ? null
-                          : () => _openCompression(asset),
-                    ),
-                ],
-              ),
-              if (asset.analysisPending)
-                Text(
-                  context.l10n.scanContentPending,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: AppTheme.textSecondary,
-                  ),
+                  ],
                 ),
             ],
           ),

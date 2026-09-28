@@ -128,6 +128,11 @@ class _Scanner extends PhotoScannerService {
   }
 
   @override
+  Future<void> startContinuousScan({bool resume = false}) async {
+    resumeRequests++;
+  }
+
+  @override
   ScanResult get scanResult => result;
 }
 
@@ -206,7 +211,7 @@ void main() {
       final strings = tester.element(find.byType(SmartCleanView)).l10n;
       final details = find
           .widgetWithText(ExpansionTile, strings.scanDetails)
-          .last;
+          .first;
       final reasonHeader = find
           .descendant(of: details, matching: find.text(strings.scanDetails))
           .first;
@@ -242,7 +247,7 @@ void main() {
       expect(find.text('2 張視覺相似照片'), findsOneWidget);
       final similarDetails = find
           .widgetWithText(ExpansionTile, strings.scanDetails)
-          .last;
+          .first;
       final similarReasonHeader = find
           .descendant(
             of: similarDetails,
@@ -264,8 +269,8 @@ void main() {
   ) async {
     await _mount(tester, _Scanner(), const SmartCleanView());
     expect(find.text('8.0 MB'), findsWidgets);
-    expect(find.text('容量未取得'), findsOneWidget);
-    expect(find.text('內容待分析'), findsOneWidget);
+    expect(find.text('容量未取得'), findsNothing);
+    expect(find.text('內容待分析'), findsNothing);
     expect(find.text('0.0 MB'), findsNothing);
     await tester.pumpWidget(const SizedBox());
   });
@@ -275,15 +280,16 @@ void main() {
     (tester) async {
       final scanner = _Scanner(scanning: true);
       await _mount(tester, scanner, const SmartCleanView());
-      await tester.tap(find.byKey(const ValueKey('scan-details-0')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.byTooltip('掃描詳情'));
+      await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('已讀取 1200 / 6000 個項目'), findsOneWidget);
       expect(find.text('照片畫面已處理 1000 / 1200 張'), findsOneWidget);
       expect(find.text('視覺分析成功 1000 個'), findsNWidgets(2));
       expect(find.text('原始素材已驗證 900 個'), findsNWidgets(2));
       expect(find.text('待下載 200 個'), findsOneWidget);
       expect(find.textContaining('最多讀取 900'), findsNothing);
+      Navigator.of(tester.element(find.byType(SmartCleanView))).pop();
+      await tester.pump(const Duration(milliseconds: 300));
       await tester.tap(find.byTooltip('取消掃描並保留進度'));
       await tester.pump();
       expect(scanner.cancelled, isTrue);

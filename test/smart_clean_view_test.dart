@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -98,11 +100,22 @@ class _ScanningGridScanner extends GridScanner {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const photosChannel = MethodChannel('com.fluttercandies/photo_manager');
+  const pathsChannel = MethodChannel('plugins.flutter.io/path_provider');
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
   final thumbnail = img.encodePng(img.Image(width: 8, height: 8));
+  late Directory checkpointDirectory;
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    checkpointDirectory = Directory.systemTemp.createTempSync(
+      'cleanup-smart-test-',
+    );
+    messenger.setMockMethodCallHandler(pathsChannel, (call) async {
+      if (call.method == 'getApplicationSupportDirectory') {
+        return checkpointDirectory.path;
+      }
+      throw StateError('Unexpected path API ${call.method}');
+    });
     messenger.setMockMethodCallHandler(photosChannel, (call) async {
       final id = (call.arguments as Map)['id'] as String;
       switch (call.method) {
@@ -115,7 +128,11 @@ void main() {
       }
     });
   });
-  tearDown(() => messenger.setMockMethodCallHandler(photosChannel, null));
+  tearDown(() {
+    messenger.setMockMethodCallHandler(photosChannel, null);
+    messenger.setMockMethodCallHandler(pathsChannel, null);
+    checkpointDirectory.deleteSync(recursive: true);
+  });
 
   testWidgets('partial preview scan can pause into a stable review snapshot', (
     tester,
@@ -205,7 +222,8 @@ void main() {
       ),
     );
     await tester.pump();
-    expect(find.textContaining('照片預覽掃描完成後'), findsOneWidget);
+    expect(find.textContaining('尚有原始素材待驗證'), findsOneWidget);
+    expect(find.textContaining('照片預覽掃描完成後'), findsNothing);
     await tester.tap(find.byKey(const ValueKey('scan-pause-review-action')));
     await tester.pump();
     await tester.pump();
@@ -266,6 +284,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byType(Image), findsNWidgets(2));
+    expect(find.text('容量未取得'), findsNothing);
     expect(find.byTooltip('重新載入預覽'), findsNothing);
     await tester.runAsync(() async {
       for (final image in tester.widgetList<Image>(find.byType(Image))) {
@@ -282,7 +301,11 @@ void main() {
     await tester.ensureVisible(
       find.byKey(const ValueKey('start-category-swipe')),
     );
-    await tester.tap(find.byKey(const ValueKey('start-category-swipe')));
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const ValueKey('start-category-swipe')));
+      await tester.pump(const Duration(milliseconds: 500));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
     await tester.pumpAndSettle();
     final previews = tester
         .widgetList<Image>(

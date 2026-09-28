@@ -20,6 +20,7 @@ class FakeBackend implements VideoCompressionBackend {
   Completer<File>? loading;
   final List<void Function(double)> progressCallbacks = [];
   int released = 0;
+  VideoCompressionPreset? lastPreset;
   Completer<String>? saving;
   FakeBackend(this.directory, this.original, this.encoded);
 
@@ -33,7 +34,6 @@ class FakeBackend implements VideoCompressionBackend {
     height: 480,
     duration: file.path != original.path && badDuration ? 500 : 10000,
   );
-  @override
   Future<File?> encode(File file, void Function(double) onProgress) async {
     onProgress(0.5);
     progressCallbacks.add(onProgress);
@@ -42,6 +42,16 @@ class FakeBackend implements VideoCompressionBackend {
         : sameFile
         ? original
         : encoded;
+  }
+
+  @override
+  Future<File?> encodeWithQuality(
+    File file,
+    VideoCompressionPreset preset,
+    void Function(double) onProgress,
+  ) {
+    lastPreset = preset;
+    return encode(file, onProgress);
   }
 
   @override
@@ -121,10 +131,12 @@ void main() {
       expect(result.originalBytes, 10000);
       expect(result.outputBytes, 4000);
       expect(result.savedBytes, 6000);
+      expect(backend.lastPreset, VideoCompressionPreset.balanced);
       expect(await original.readAsBytes(), everyElement(7));
       expect(backend.saves, 0);
       expect(await service.savePrepared(), 'new-copy');
       expect(await service.savePrepared(), 'new-copy');
+      await expectLater(service.discardPrepared(), throwsStateError);
       expect(
         backend.saves,
         1,
@@ -133,6 +145,50 @@ void main() {
       expect(await original.exists(), isTrue);
     },
   );
+
+  test(
+    'passes the selected native quality without estimating output size',
+    () async {
+      expect(
+        VideoCompressionPreset.smaller.videoQuality,
+        VideoQuality.LowQuality,
+      );
+      expect(
+        VideoCompressionPreset.balanced.videoQuality,
+        VideoQuality.MediumQuality,
+      );
+      expect(
+        VideoCompressionPreset.higherQuality.videoQuality,
+        VideoQuality.HighestQuality,
+      );
+      final result = await service.prepare(
+        'source',
+        preset: VideoCompressionPreset.higherQuality,
+      );
+      expect(backend.lastPreset, VideoCompressionPreset.higherQuality);
+      expect(result.outputBytes, 4000);
+      expect(await original.readAsBytes(), everyElement(7));
+    },
+  );
+
+  test('trying another preset deletes only the temporary preview', () async {
+    final first = await service.prepare(
+      'source',
+      preset: VideoCompressionPreset.higherQuality,
+    );
+    expect(await first.output.exists(), isTrue);
+    await service.discardPrepared();
+    expect(await first.output.exists(), isFalse);
+    expect(service.prepared, isNull);
+    expect(await original.readAsBytes(), everyElement(7));
+    final second = await service.prepare(
+      'source',
+      preset: VideoCompressionPreset.smaller,
+    );
+    expect(backend.lastPreset, VideoCompressionPreset.smaller);
+    expect(await second.output.exists(), isTrue);
+    expect(await original.readAsBytes(), everyElement(7));
+  });
 
   test('rejects an encoder returning the source path', () async {
     backend.sameFile = true;
@@ -289,6 +345,10 @@ void main() {
         expect(call.method, 'compressVideo');
         expect((call.arguments as Map)['deleteOrigin'], isFalse);
         expect((call.arguments as Map)['includeAudio'], isTrue);
+        expect(
+          (call.arguments as Map)['quality'],
+          VideoQuality.LowQuality.index,
+        );
         await fresh.writeAsBytes(List.filled(1000, 8));
         return jsonEncode({'path': fresh.path, 'isCancel': false});
       });
@@ -297,7 +357,11 @@ void main() {
         messenger.setMockMethodCallHandler(encoder, null);
       });
       final device = TestDeviceBackend(directory);
-      final result = await device.encode(original, (_) {});
+      final result = await device.encodeWithQuality(
+        original,
+        VideoCompressionPreset.smaller,
+        (_) {},
+      );
       expect(result, isNotNull);
       expect(await fresh.exists(), isFalse);
       expect(await oldCache.exists(), isTrue);

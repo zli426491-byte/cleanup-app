@@ -122,6 +122,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paywallBestValue => 'Best value';
 
   @override
+  String get videoTryAnotherPreset => 'Try another quality';
+
+  @override
+  String get videoPresetTitle => 'Compression quality';
+
+  @override
+  String get videoPresetSmaller => 'Smaller file';
+
+  @override
+  String get videoPresetBalanced => 'Balanced';
+
+  @override
+  String get videoPresetHigherQuality => 'Higher quality';
+
+  @override
+  String get videoPresetNotice =>
+      'The preset guides encoding. Actual file size is shown after the preview is created. The original is kept.';
+
+  @override
+  String get serviceContinuousScanLimit =>
+      'This continuous scan reached its time limit. Progress was saved; you can resume later.';
+
+  @override
+  String get swipeCheckpointRecovered =>
+      'Some saved review choices were damaged and could not be restored. Please review these photos again; nothing was deleted.';
+
+  @override
   String get videoTitle => 'Video compression';
 
   @override

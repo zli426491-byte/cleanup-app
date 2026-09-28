@@ -122,6 +122,33 @@ class AppLocalizationsId extends AppLocalizations {
   String get paywallBestValue => 'Paling hemat';
 
   @override
+  String get videoTryAnotherPreset => 'Coba kualitas lain';
+
+  @override
+  String get videoPresetTitle => 'Kualitas kompresi';
+
+  @override
+  String get videoPresetSmaller => 'File lebih kecil';
+
+  @override
+  String get videoPresetBalanced => 'Seimbang';
+
+  @override
+  String get videoPresetHigherQuality => 'Kualitas lebih tinggi';
+
+  @override
+  String get videoPresetNotice =>
+      'Pilihan ini mengarahkan proses kompresi. Ukuran sebenarnya ditampilkan setelah pratinjau dibuat. Video asli tetap disimpan.';
+
+  @override
+  String get serviceContinuousScanLimit =>
+      'Pemindaian berkelanjutan ini mencapai batas waktu. Progres disimpan; Anda dapat melanjutkan nanti.';
+
+  @override
+  String get swipeCheckpointRecovered =>
+      'Beberapa pilihan peninjauan yang tersimpan rusak dan tidak dapat dipulihkan. Tinjau foto ini lagi; tidak ada yang dihapus.';
+
+  @override
   String get videoTitle => 'Kompresi video';
 
   @override
