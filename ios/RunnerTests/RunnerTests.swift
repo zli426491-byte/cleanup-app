@@ -125,7 +125,7 @@ final class PhotoLibrarySeedTests: XCTestCase {
     let date: Date
   }
 
-  private func importPhotos(_ photos: [SeedPhoto]) throws -> [String] {
+  private func importPhotos(_ photos: [SeedPhoto], timeout: TimeInterval = 60) throws -> [String] {
     // addResource(data:) may normalize JPEG metadata on import (the real CI
     // observed +62 bytes on the first similar photo). Use actual source files
     // for every JPEG, retaining independent input Data SHA/byte expectations.
@@ -139,8 +139,22 @@ final class PhotoLibrarySeedTests: XCTestCase {
       try photo.data.write(to: file)
       return file
     }
+    let firstIndex = photos.first?.index ?? -1
+    let lastIndex = photos.last?.index ?? -1
     let saved = expectation(description: "Import \(photos.count) real JPEG Photos assets")
     let lock = NSLock(); var ids: [String] = []; var saveError: Error?
+    let started = Date()
+    print("REAL_PHOTOS_IMPORT_BEGIN first=\(firstIndex) last=\(lastIndex) count=\(photos.count) timeout=\(Int(timeout))s")
+    // Photos may pause a large simulator library while its database catches
+    // up. Give each small transaction a finite deadline and show liveness in
+    // the CI log; never retry an unresolved transaction that could commit late.
+    let heartbeat = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
+    heartbeat.schedule(deadline: .now() + 15, repeating: .seconds(15))
+    heartbeat.setEventHandler {
+      print("REAL_PHOTOS_IMPORT_WAIT first=\(firstIndex) last=\(lastIndex) elapsed=\(Int(Date().timeIntervalSince(started)))s")
+    }
+    heartbeat.resume()
+    defer { heartbeat.cancel() }
     PHPhotoLibrary.shared().performChanges({
       var created: [String] = []
       for (index, photo) in photos.enumerated() {
@@ -157,13 +171,31 @@ final class PhotoLibrarySeedTests: XCTestCase {
       lock.lock(); saveError = success ? nil : error ?? NSError(domain: self.owner, code: 11); lock.unlock()
       saved.fulfill()
     })
-    wait(for: [saved], timeout: 60)
+    let outcome = XCTWaiter.wait(for: [saved], timeout: timeout)
+    guard outcome == .completed else {
+      XCTFail("Photos import did not finish: first=\(firstIndex) last=\(lastIndex) count=\(photos.count) elapsed=\(Int(Date().timeIntervalSince(started)))s waiter=\(outcome). Transaction was not retried because it may still commit.")
+      throw NSError(domain: owner, code: 25)
+    }
     lock.lock(); let result = ids; let error = saveError; lock.unlock()
     if let error = error { throw error }
     guard result.count == photos.count else {
       XCTFail("A real creation placeholder is required for every JPEG: \(result.count)/\(photos.count).")
       throw NSError(domain: owner, code: 12)
     }
+    // Placeholders alone are not proof that the committed assets are visible
+    // to the production Photos query. Check every batch before recording IDs.
+    var visibleCount = 0
+    let visibilityDeadline = Date().addingTimeInterval(20)
+    repeat {
+      visibleCount = PHAsset.fetchAssets(withLocalIdentifiers: result, options: nil).count
+      if visibleCount == result.count { break }
+      Thread.sleep(forTimeInterval: 0.25)
+    } while Date() < visibilityDeadline
+    guard visibleCount == result.count else {
+      XCTFail("Committed Photos batch is not fully queryable: first=\(firstIndex) last=\(lastIndex) visible=\(visibleCount)/\(result.count).")
+      throw NSError(domain: owner, code: 26)
+    }
+    print("REAL_PHOTOS_IMPORT_VERIFIED first=\(firstIndex) last=\(lastIndex) count=\(result.count) elapsed=\(Int(Date().timeIntervalSince(started)))s")
     return result
   }
 
@@ -418,7 +450,11 @@ final class PhotoLibrarySeedTests: XCTestCase {
       }
     }
     while photoIds.count < target {
-      let start = photoIds.count, end = min(target, start + 250)
+      // A 250-resource transaction stalled after 5,250 photos on the 10k CI
+      // simulator. Smaller commits reduce Photos daemon backpressure while
+      // preserving real file-backed Photos assets and exact count checks.
+      let batchSize = target == 10000 ? 50 : 250
+      let start = photoIds.count, end = min(target, start + batchSize)
       var batch: [SeedPhoto] = []
       for index in start..<end {
         let highResolution = index % 100 == 0
@@ -438,7 +474,7 @@ final class PhotoLibrarySeedTests: XCTestCase {
         let past = Date(timeIntervalSince1970: 1262304000 + Double((index * 179) % 4800) * 86400)
         batch.append(SeedPhoto(data: data, fileURL: nil, role: "unique", index: index, date: past))
       }
-      let created = try importPhotos(batch)
+      let created = try importPhotos(batch, timeout: target == 10000 ? 180 : 60)
       for (offset, id) in created.enumerated() {
         photoIds.append(id); allIds.append(id)
         sourceByteCounts[id] = Int64(batch[offset].data.count); sourceHashes[id] = digest(batch[offset].data)
