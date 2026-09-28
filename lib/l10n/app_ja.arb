@@ -301,6 +301,8 @@
   "scanSelectOthersHint": "残す候補の写真をプレビューしてから、グループの他の写真をまとめて選択します。",
   "scanNotChecked": "未確認",
   "scanPendingCheckCount": "未確認 {count} 件",
+  "swipeMultiSelectTitle": "複数の項目を選択",
+  "swipeMarkSelectedForDeletion": "{count} 枚を削除候補に追加",
   "swipeGestureTitle": "スワイプでかんたん整理",
   "swipeGestureDelete": "左にスワイプして削除候補に",
   "swipeGestureKeep": "右にスワイプして残す",

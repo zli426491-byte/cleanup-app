@@ -571,6 +571,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   Widget _content(PhotoScannerService scanner) {
     final groups = _groupsFor(_selectedCategory, scanner);
     final assets = _assetsFor(_selectedCategory, scanner);
+    final hasResults = groups.isNotEmpty || assets.isNotEmpty;
     final textScale = MediaQuery.textScalerOf(context).scale(12) / 12;
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -592,10 +593,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                       _swipeCard(scanner),
                     if (_isResourceCategory && _pendingChecks(scanner) > 0) ...[
                       const SizedBox(height: 12),
-                      _verificationCard(
-                        scanner,
-                        compact: groups.isNotEmpty || assets.isNotEmpty,
-                      ),
+                      _verificationCard(scanner, compact: hasResults),
                     ],
                     if (scanner.isScanning) ...[
                       const SizedBox(height: 8),
@@ -635,9 +633,11 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                         label: Text(context.l10n.scanPreviewMore),
                       ),
                     _scanDetails(scanner),
-                    if (assets.isNotEmpty || groups.isNotEmpty)
+                    if (hasResults)
                       Text(
-                        context.l10n.scanSelectionHint,
+                        groups.isNotEmpty
+                            ? context.l10n.scanSelectOthersHint
+                            : context.l10n.scanSelectionHint,
                         style: AppTheme.caption,
                       ),
                     if (assets.isNotEmpty || _selectedIds.isNotEmpty)
@@ -670,7 +670,9 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                   ),
                 ),
               )
-            else if (!_isResourceCategory || _pendingChecks(scanner) == 0)
+            else if (_isResourceCategory)
+              SliverToBoxAdapter(child: _resourceEmptyState(scanner))
+            else
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(32),
@@ -691,6 +693,156 @@ class _SmartCleanViewState extends State<SmartCleanView> {
   bool get _isManualCategory => const [0, 3, 4, 5].contains(_selectedCategory);
 
   bool get _isSwipeCategory => _selectedCategory == 0 || _selectedCategory == 3;
+
+  // This is a preview of the ordinary photo library, never a duplicate or
+  // large-file candidate list. Only a few thumbnails are built even for a
+  // library with tens of thousands of assets.
+  List<PhotoAsset> _resourcePreviewPhotos(PhotoScannerService scanner) {
+    final photos = <PhotoAsset>[];
+    for (final asset in scanner.scanResult.allAssets) {
+      if (asset.type != AssetType.image) continue;
+      photos.add(asset);
+      if (photos.length == 3) break;
+    }
+    return photos;
+  }
+
+  void _browsePhotos() {
+    setState(() {
+      _selectedCategory = 0;
+      _selectedIds.clear();
+      _selectionUndo = null;
+    });
+    _revealSelectedCategory();
+    widget.onCategoryChanged?.call('photos');
+  }
+
+  Widget _resourceEmptyState(PhotoScannerService scanner) {
+    final indexedAll =
+        scanner.availableAssetCount == null ||
+        scanner.scannedAssetCount >= scanner.availableAssetCount!;
+    final pending =
+        _pendingChecks(scanner) > 0 || scanner.isScanning || !indexedAll;
+    final photos = pending ? _resourcePreviewPhotos(scanner) : <PhotoAsset>[];
+    return Padding(
+      padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            key: ValueKey(
+              pending
+                  ? 'resource-pending-state'
+                  : 'resource-verified-empty-state',
+            ),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.cardBg,
+              border: Border.all(color: AppTheme.border),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  pending
+                      ? Icons.hourglass_top_rounded
+                      : Icons.check_circle_outline,
+                  color: AppTheme.primary,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        pending
+                            ? _pendingChecks(scanner) > 0
+                                  ? context.l10n.scanEmptyUnverified
+                                  : context.l10n.scanEmptyIndexing
+                            : context.l10n.scanEmptyCategory,
+                        style: AppTheme.body,
+                      ),
+                      if (!pending || _pendingChecks(scanner) == 0) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          context.l10n.scanVerificationProgress(
+                            _verifiedChecks(scanner),
+                            _checkTotal(scanner),
+                          ),
+                          style: AppTheme.caption,
+                        ),
+                      ],
+                      if (!pending)
+                        TextButton.icon(
+                          onPressed: _browsePhotos,
+                          icon: const Icon(Icons.photo_library_outlined),
+                          label: Text(context.l10n.scanBrowsePhotos),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (photos.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Text(context.l10n.scanCategoryPhotos, style: AppTheme.heading3),
+            const SizedBox(height: 8),
+            SizedBox(
+              key: const ValueKey('resource-unverified-photo-preview'),
+              height: 124,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: photos.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 10),
+                itemBuilder: (context, index) {
+                  final asset = photos[index];
+                  return Semantics(
+                    button: true,
+                    label:
+                        '${context.l10n.scanCategoryPhotos} ${index + 1} · '
+                        '${context.l10n.scanZoomPreview}',
+                    child: InkWell(
+                      key: ValueKey('resource-preview-${asset.id}'),
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => _previewAsset(asset),
+                      child: SizedBox(
+                        width: 108,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              AssetThumbnail(asset: asset),
+                              PositionedDirectional(
+                                bottom: 6,
+                                end: 6,
+                                child: Icon(
+                                  Icons.zoom_in_rounded,
+                                  color: Colors.white,
+                                  shadows: const [
+                                    Shadow(
+                                      color: Colors.black87,
+                                      blurRadius: 4,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 
   int _pendingChecks(PhotoScannerService scanner) => _selectedCategory == 1
       ? scanner.pendingHashAssetCount
@@ -910,15 +1062,7 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                 TextButton(
                   onPressed: scanner.isDeleting || _isDeleting
                       ? null
-                      : () {
-                          setState(() {
-                            _selectedCategory = 0;
-                            _selectedIds.clear();
-                            _selectionUndo = null;
-                          });
-                          _revealSelectedCategory();
-                          widget.onCategoryChanged?.call('photos');
-                        },
+                      : _browsePhotos,
                   child: Text(context.l10n.scanBrowsePhotos),
                 ),
               ],

@@ -1132,6 +1132,14 @@ class AppLocalizationsTh extends AppLocalizations {
   }
 
   @override
+  String get swipeMultiSelectTitle => 'เลือกหลายรายการ';
+
+  @override
+  String swipeMarkSelectedForDeletion(int count) {
+    return 'ทำเครื่องหมาย $count รูปเพื่อลบ';
+  }
+
+  @override
   String get swipeGestureTitle => 'จัดรูปอย่างรวดเร็วด้วยการปัด';
 
   @override

@@ -68,7 +68,9 @@ void main() {
 
   setUp(() {
     asset = baseAsset.copyWith();
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      'cleanup.swipe.first_use_guide.v1': true,
+    });
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('com.fluttercandies/photo_manager'),
@@ -163,6 +165,7 @@ void main() {
     List<PhotoAsset> assets, {
     bool reduceMotion = false,
     bool settle = true,
+    String? categoryId,
   }) async {
     scanner = TestScanner();
     scanner.setAssets(assets);
@@ -188,7 +191,11 @@ void main() {
                 onPressed: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => SwipeCleanView(assets: assets, title: '照片'),
+                    builder: (_) => SwipeCleanView(
+                      assets: assets,
+                      title: '照片',
+                      categoryId: categoryId,
+                    ),
                   ),
                 ),
                 child: const Text('open review'),
@@ -545,6 +552,112 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('first review teaches physical swipe directions once', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    await mountReview(tester, [asset]);
+    expect(find.text(appStringsOf().swipeGestureTitle), findsOneWidget);
+    expect(find.text(appStringsOf().swipeGestureDelete), findsWidgets);
+    expect(find.text(appStringsOf().swipeGestureKeep), findsWidgets);
+    expect(find.text(appStringsOf().swipeGestureSafety), findsWidgets);
+    expect(scanner.deletionRequests, 0);
+    await tester.tap(
+      find.widgetWithText(FilledButton, appStringsOf().swipeContinueReview),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(appStringsOf().swipeGestureTitle), findsNothing);
+    final preferences = await SharedPreferences.getInstance();
+    expect(preferences.getBool('cleanup.swipe.first_use_guide.v1'), isTrue);
+    await tester.tap(find.byTooltip(appStringsOf().swipeGestureHelp));
+    await tester.pumpAndSettle();
+    expect(find.text(appStringsOf().swipeGestureTitle), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    scanner.dispose();
+    subscription.dispose();
+    await mountReview(tester, [asset]);
+    expect(find.text(appStringsOf().swipeGestureTitle), findsNothing);
+  });
+
+  testWidgets('first-use lesson offers the faster multi-select route', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    await mountReview(tester, [asset]);
+    await tester.tap(find.byKey(const ValueKey('swipe-help-select-many')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('swipe-select-loaded')), findsOneWidget);
+    expect(scanner.deletionRequests, 0);
+  });
+
+  testWidgets(
+    'bulk grid marks only decoded previews, then Undo restores the last choice',
+    (tester) async {
+      final photos = [
+        asset,
+        PhotoAsset(
+          id: 'loaded-batch',
+          width: 100,
+          height: 100,
+          size: 0,
+          createDate: DateTime(2026),
+          type: AssetType.image,
+          thumbnail: asset.thumbnail,
+        ),
+        PhotoAsset(
+          id: 'unavailable-batch',
+          width: 100,
+          height: 100,
+          size: 0,
+          createDate: DateTime(2026),
+          type: AssetType.image,
+        ),
+      ];
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(
+        const MethodChannel('com.fluttercandies/photo_manager'),
+        (call) async {
+          final args = call.arguments as Map;
+          if (call.method == 'fetchEntityProperties') {
+            return {'id': args['id'], 'type': 1, 'width': 100, 'height': 100};
+          }
+          if (call.method == 'getThumb' && args['id'] == 'unavailable-batch') {
+            return null;
+          }
+          return asset.thumbnail;
+        },
+      );
+      await mountReview(tester, photos, reduceMotion: true);
+      await tester.tap(find.byKey(const ValueKey('swipe-select-many')));
+      await tester.pumpAndSettle();
+      await waitForDecodedPreview(tester);
+      final unavailable = tester.widget<InkWell>(
+        find.byKey(const ValueKey('swipe-batch-unavailable-batch')),
+      );
+      expect(unavailable.onTap, isNull);
+      await tester.tap(find.byKey(const ValueKey('swipe-select-loaded')));
+      await tester.pumpAndSettle();
+      expect(find.text(appStringsOf().scanSelectedCount(2)), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('swipe-mark-selected')));
+      await tester.pumpAndSettle();
+      expect(find.text(appStringsOf().swipeDeleteCount(2)), findsOneWidget);
+      expect(scanner.deletionRequests, 0);
+      await tester.tap(find.byTooltip(appStringsOf().swipeUndoChoice));
+      await tester.pumpAndSettle();
+      expect(find.text(appStringsOf().swipeDeleteCount(1)), findsOneWidget);
+      expect(scanner.deletionRequests, 0);
+    },
+  );
+
+  testWidgets('group reviews do not offer unsafe select-all deletion', (
+    tester,
+  ) async {
+    await mountReview(tester, [asset], categoryId: 'duplicates');
+    expect(find.byKey(const ValueKey('swipe-select-many')), findsNothing);
+    expect(scanner.deletionRequests, 0);
+  });
 
   testWidgets(
     'all locale action footers remain visible at 200 percent on a small phone',

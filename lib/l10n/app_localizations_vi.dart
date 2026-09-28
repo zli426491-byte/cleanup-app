@@ -1142,6 +1142,14 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get swipeMultiSelectTitle => 'Chọn nhiều mục';
+
+  @override
+  String swipeMarkSelectedForDeletion(int count) {
+    return 'Đánh dấu $count ảnh để xóa';
+  }
+
+  @override
   String get swipeGestureTitle => 'Sắp xếp nhanh bằng vuốt';
 
   @override

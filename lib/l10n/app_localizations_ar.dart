@@ -1165,6 +1165,14 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get swipeMultiSelectTitle => 'تحديد عناصر متعددة';
+
+  @override
+  String swipeMarkSelectedForDeletion(int count) {
+    return 'وضع علامة على $count صورة للحذف';
+  }
+
+  @override
   String get swipeGestureTitle => 'تنظيم سريع بالسحب';
 
   @override

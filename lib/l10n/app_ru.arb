@@ -301,6 +301,8 @@
   "scanSelectOthersHint": "Просмотрите фото, которое предложено сохранить, затем выберите остальные в группе одним действием.",
   "scanNotChecked": "Ожидает проверки",
   "scanPendingCheckCount": "{count, plural, one{Проверить: {count} файл} few{Проверить: {count} файла} many{Проверить: {count} файлов} other{Проверить: {count} файла}}",
+  "swipeMultiSelectTitle": "Выбрать несколько элементов",
+  "swipeMarkSelectedForDeletion": "Отметить {count} фото для удаления",
   "swipeGestureTitle": "Быстрый разбор смахиванием",
   "swipeGestureDelete": "Смахнуть влево — отметить для удаления",
   "swipeGestureKeep": "Смахнуть вправо — сохранить",

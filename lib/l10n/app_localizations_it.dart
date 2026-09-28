@@ -1177,6 +1177,14 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String get swipeMultiSelectTitle => 'Seleziona più elementi';
+
+  @override
+  String swipeMarkSelectedForDeletion(int count) {
+    return 'Contrassegna $count foto per l’eliminazione';
+  }
+
+  @override
   String get swipeGestureTitle => 'Ordina rapidamente scorrendo';
 
   @override

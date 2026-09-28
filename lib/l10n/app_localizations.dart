@@ -1938,6 +1938,18 @@ abstract class AppLocalizations {
   /// **'{count, plural, one{{count} item to check} other{{count} items to check}}'**
   String scanPendingCheckCount(int count);
 
+  /// No description provided for @swipeMultiSelectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select multiple items'**
+  String get swipeMultiSelectTitle;
+
+  /// No description provided for @swipeMarkSelectedForDeletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark {count} for deletion'**
+  String swipeMarkSelectedForDeletion(int count);
+
   /// No description provided for @swipeGestureTitle.
   ///
   /// In en, this message translates to:

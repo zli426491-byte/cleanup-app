@@ -12,7 +12,7 @@ void main() {
         final text = lookupAppLocalizations(option.locale);
         for (final count in [0, 1, 2, 100]) {
           final samples = _catalog(text, count);
-          expect(samples.length, 361);
+          expect(samples.length, 363);
           for (final entry in samples.entries) {
             expect(entry.value.trim(), isNotEmpty, reason: entry.key);
             expect(
@@ -340,6 +340,8 @@ Map<String, String> _catalog(AppLocalizations text, int count) => {
   'scanSelectOthersHint': text.scanSelectOthersHint,
   'scanNotChecked': text.scanNotChecked,
   'scanPendingCheckCount': text.scanPendingCheckCount(count),
+  'swipeMultiSelectTitle': text.swipeMultiSelectTitle,
+  'swipeMarkSelectedForDeletion': text.swipeMarkSelectedForDeletion(count),
   'swipeGestureTitle': text.swipeGestureTitle,
   'swipeGestureDelete': text.swipeGestureDelete,
   'swipeGestureKeep': text.swipeGestureKeep,

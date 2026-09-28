@@ -1103,6 +1103,14 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get swipeMultiSelectTitle => '여러 항목 선택';
+
+  @override
+  String swipeMarkSelectedForDeletion(int count) {
+    return '$count장을 삭제 후보로 표시';
+  }
+
+  @override
   String get swipeGestureTitle => '밀어서 빠르게 정리';
 
   @override

@@ -301,6 +301,8 @@
   "scanSelectOthersHint": "Previsualiza la foto recomendada para conservar y selecciona el resto del grupo de una vez.",
   "scanNotChecked": "Por comprobar",
   "scanPendingCheckCount": "{count, plural, one{{count} elemento por comprobar} other{{count} elementos por comprobar}}",
+  "swipeMultiSelectTitle": "Seleccionar varios elementos",
+  "swipeMarkSelectedForDeletion": "Marcar {count} fotos para borrar",
   "swipeGestureTitle": "Organizar rápido deslizando",
   "swipeGestureDelete": "Deslizar a la izquierda para marcar para borrar",
   "swipeGestureKeep": "Deslizar a la derecha para conservar",

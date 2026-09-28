@@ -49,7 +49,134 @@ class _IndexedScanner extends PhotoScannerService {
   );
 }
 
+class _AutoPreviewScanner extends PhotoScannerService {
+  _AutoPreviewScanner({this.cancelled = false});
+  final bool cancelled;
+  int starts = 0;
+  bool scanning = false;
+
+  @override
+  bool get isScanning => scanning;
+  @override
+  bool get wasCancelled => cancelled;
+  @override
+  bool get hasCompletedScan => false;
+  @override
+  Future<void> startFullScan() async {
+    starts++;
+    scanning = true;
+    notifyListeners();
+  }
+
+  void finishWithoutResult() {
+    scanning = false;
+    notifyListeners();
+  }
+}
+
 void main() {
+  testWidgets('authorized empty Home starts one preview automatically', (
+    tester,
+  ) async {
+    const channel = MethodChannel('com.fluttercandies/photo_manager');
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'getPermissionState') {
+        return PermissionState.authorized.index;
+      }
+      throw StateError('Unexpected Photos method ${call.method}');
+    });
+    final scanner = _AutoPreviewScanner();
+    final subscription = SubscriptionManager();
+    addTearDown(() {
+      messenger.setMockMethodCallHandler(channel, null);
+      scanner.dispose();
+      subscription.dispose();
+    });
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<PhotoScannerService>.value(value: scanner),
+          ChangeNotifierProvider<SubscriptionManager>.value(
+            value: subscription,
+          ),
+        ],
+        child: const MaterialApp(home: HomeView()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(scanner.starts, 1);
+    scanner.finishWithoutResult();
+    await tester.pump();
+    await tester.pump();
+    expect(scanner.starts, 1);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('Home does not auto-prompt without Photos permission', (
+    tester,
+  ) async {
+    const channel = MethodChannel('com.fluttercandies/photo_manager');
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'getPermissionState') {
+        return PermissionState.denied.index;
+      }
+      throw StateError('Unexpected Photos method ${call.method}');
+    });
+    final scanner = _AutoPreviewScanner();
+    final subscription = SubscriptionManager();
+    addTearDown(() {
+      messenger.setMockMethodCallHandler(channel, null);
+      scanner.dispose();
+      subscription.dispose();
+    });
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<PhotoScannerService>.value(value: scanner),
+          ChangeNotifierProvider<SubscriptionManager>.value(
+            value: subscription,
+          ),
+        ],
+        child: const MaterialApp(home: HomeView()),
+      ),
+    );
+    await tester.pump();
+    expect(scanner.starts, 0);
+    expect(find.byKey(const ValueKey('home-scan-start')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('home-scan-start')));
+    await tester.pump();
+    expect(scanner.starts, 1);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('cancelled empty Home does not restart itself', (tester) async {
+    final scanner = _AutoPreviewScanner(cancelled: true);
+    final subscription = SubscriptionManager();
+    addTearDown(() {
+      scanner.dispose();
+      subscription.dispose();
+    });
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<PhotoScannerService>.value(value: scanner),
+          ChangeNotifierProvider<SubscriptionManager>.value(
+            value: subscription,
+          ),
+        ],
+        child: const MaterialApp(home: HomeView()),
+      ),
+    );
+    await tester.pump();
+    expect(scanner.starts, 0);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   for (final scanning in [false, true]) {
     testWidgets(
       'home swipe entry is explicit and ${scanning ? 'disabled while scanning' : 'opens image review directly'}',
@@ -85,6 +212,14 @@ void main() {
         await tester.pump();
         expect(find.text('逐張左右滑動，比點選縮圖更快。'), findsOneWidget);
         expect(find.text('開始滑動整理'), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('home-photo-preview-image')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('home-category-videos')),
+          findsOneWidget,
+        );
         expect(tester.widget<FilledButton>(start).onPressed == null, scanning);
         if (!scanning) {
           await tester.tap(start);

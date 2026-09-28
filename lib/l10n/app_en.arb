@@ -721,6 +721,11 @@
   "scanSelectOthersHint": "Preview the suggested photo to keep, then select the rest of this group in one go.",
   "scanNotChecked": "To check",
   "scanPendingCheckCount": "{count, plural, one{{count} item to check} other{{count} items to check}}",
+  "swipeMultiSelectTitle": "Select multiple items",
+  "swipeMarkSelectedForDeletion": "Mark {count} for deletion",
+  "@swipeMarkSelectedForDeletion": {
+    "placeholders": {"count": {"type": "int"}}
+  },
   "swipeGestureTitle": "Quick swipe cleanup",
   "swipeGestureDelete": "Swipe left to mark for deletion",
   "swipeGestureKeep": "Swipe right to keep",

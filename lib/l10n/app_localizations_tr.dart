@@ -1154,6 +1154,14 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get swipeMultiSelectTitle => 'Birden fazla öğe seç';
+
+  @override
+  String swipeMarkSelectedForDeletion(int count) {
+    return '$count fotoğrafı silinmek üzere işaretle';
+  }
+
+  @override
   String get swipeGestureTitle => 'Kaydırarak hızlı düzenleme';
 
   @override

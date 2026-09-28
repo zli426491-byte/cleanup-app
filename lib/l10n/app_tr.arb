@@ -301,6 +301,8 @@
   "scanSelectOthersHint": "Saklanması önerilen fotoğrafı önizleyin, ardından gruptaki diğerlerini tek seferde seçin.",
   "scanNotChecked": "Kontrol bekliyor",
   "scanPendingCheckCount": "{count} öğe kontrol bekliyor",
+  "swipeMultiSelectTitle": "Birden fazla öğe seç",
+  "swipeMarkSelectedForDeletion": "{count} fotoğrafı silinmek üzere işaretle",
   "swipeGestureTitle": "Kaydırarak hızlı düzenleme",
   "swipeGestureDelete": "Silmek üzere işaretlemek için sola kaydır",
   "swipeGestureKeep": "Saklamak için sağa kaydır",

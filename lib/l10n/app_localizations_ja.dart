@@ -1091,6 +1091,14 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get swipeMultiSelectTitle => '複数の項目を選択';
+
+  @override
+  String swipeMarkSelectedForDeletion(int count) {
+    return '$count 枚を削除候補に追加';
+  }
+
+  @override
   String get swipeGestureTitle => 'スワイプでかんたん整理';
 
   @override

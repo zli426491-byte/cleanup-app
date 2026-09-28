@@ -1150,6 +1150,14 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String get swipeMultiSelectTitle => 'Pilih beberapa item';
+
+  @override
+  String swipeMarkSelectedForDeletion(int count) {
+    return 'Tandai $count foto untuk dihapus';
+  }
+
+  @override
   String get swipeGestureTitle => 'Rapikan cepat dengan geser';
 
   @override

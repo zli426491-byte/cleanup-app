@@ -301,6 +301,8 @@
   "scanSelectOthersHint": "ดูตัวอย่างรูปที่แนะนำให้เก็บ แล้วเลือกรูปที่เหลือในกลุ่มพร้อมกัน",
   "scanNotChecked": "รอตรวจ",
   "scanPendingCheckCount": "รอตรวจ {count} รายการ",
+  "swipeMultiSelectTitle": "เลือกหลายรายการ",
+  "swipeMarkSelectedForDeletion": "ทำเครื่องหมาย {count} รูปเพื่อลบ",
   "swipeGestureTitle": "จัดรูปอย่างรวดเร็วด้วยการปัด",
   "swipeGestureDelete": "ปัดซ้ายเพื่อทำเครื่องหมายลบ",
   "swipeGestureKeep": "ปัดขวาเพื่อเก็บ",

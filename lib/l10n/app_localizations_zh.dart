@@ -1064,6 +1064,14 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get swipeMultiSelectTitle => '批量选择项目';
+
+  @override
+  String swipeMarkSelectedForDeletion(int count) {
+    return '将 $count 张标记为待删除';
+  }
+
+  @override
   String get swipeGestureTitle => '快速滑动整理';
 
   @override
@@ -2330,6 +2338,14 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
+  String get swipeMultiSelectTitle => '批量选择项目';
+
+  @override
+  String swipeMarkSelectedForDeletion(int count) {
+    return '将 $count 张标记为待删除';
+  }
+
+  @override
   String get swipeGestureTitle => '快速滑动整理';
 
   @override
@@ -3556,6 +3572,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String scanPendingCheckCount(int count) {
     return '待檢查 $count 個';
+  }
+
+  @override
+  String get swipeMultiSelectTitle => '批量選取項目';
+
+  @override
+  String swipeMarkSelectedForDeletion(int count) {
+    return '將 $count 張標記為待刪';
   }
 
   @override

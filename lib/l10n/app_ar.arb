@@ -301,6 +301,8 @@
   "scanSelectOthersHint": "عاين الصورة المقترحة للاحتفاظ، ثم حدّد بقية المجموعة دفعة واحدة.",
   "scanNotChecked": "بانتظار الفحص",
   "scanPendingCheckCount": "{count, plural, zero{لا عناصر بانتظار الفحص} one{عنصر واحد بانتظار الفحص} two{عنصران بانتظار الفحص} few{{count} عناصر بانتظار الفحص} many{{count} عنصرًا بانتظار الفحص} other{{count} عنصر بانتظار الفحص}}",
+  "swipeMultiSelectTitle": "تحديد عناصر متعددة",
+  "swipeMarkSelectedForDeletion": "وضع علامة على {count} صورة للحذف",
   "swipeGestureTitle": "تنظيم سريع بالسحب",
   "swipeGestureDelete": "اسحب لليسار لتحديد الحذف",
   "swipeGestureKeep": "اسحب لليمين للاحتفاظ",

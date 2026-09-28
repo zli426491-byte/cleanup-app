@@ -301,6 +301,8 @@
   "scanSelectOthersHint": "Pratinjau foto yang disarankan untuk disimpan, lalu pilih foto lain dalam grup sekaligus.",
   "scanNotChecked": "Belum diperiksa",
   "scanPendingCheckCount": "{count} item belum diperiksa",
+  "swipeMultiSelectTitle": "Pilih beberapa item",
+  "swipeMarkSelectedForDeletion": "Tandai {count} foto untuk dihapus",
   "swipeGestureTitle": "Rapikan cepat dengan geser",
   "swipeGestureDelete": "Geser ke kiri untuk menandai hapus",
   "swipeGestureKeep": "Geser ke kanan untuk menyimpan",

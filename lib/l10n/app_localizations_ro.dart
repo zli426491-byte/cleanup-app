@@ -1182,6 +1182,14 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String get swipeMultiSelectTitle => 'Selectează mai multe elemente';
+
+  @override
+  String swipeMarkSelectedForDeletion(int count) {
+    return 'Marchează $count fotografii pentru ștergere';
+  }
+
+  @override
   String get swipeGestureTitle => 'Sortare rapidă prin glisare';
 
   @override

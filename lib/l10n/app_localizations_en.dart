@@ -1218,6 +1218,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get swipeMultiSelectTitle => 'Select multiple items';
+
+  @override
+  String swipeMarkSelectedForDeletion(int count) {
+    return 'Mark $count for deletion';
+  }
+
+  @override
   String get swipeGestureTitle => 'Quick swipe cleanup';
 
   @override

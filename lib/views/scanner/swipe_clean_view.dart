@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cleanup_app/l10n/l10n.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/photo_scanner_service.dart';
 import '../../services/subscription_manager.dart';
 import '../../utils/app_theme.dart';
@@ -33,6 +34,7 @@ class SwipeCleanView extends StatefulWidget {
 
 class _SwipeCleanViewState extends State<SwipeCleanView>
     with TickerProviderStateMixin {
+  static const _firstUseGuideKey = 'cleanup.swipe.first_use_guide.v1';
   int _currentIndex = 0;
   late List<PhotoAsset> _sessionAssets;
   late final ReviewCheckpointService _checkpoint;
@@ -40,7 +42,10 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
   bool _checkpointFailed = false;
   bool _loadingCheckpoint = true;
   bool _snappingBack = false;
+  bool _guideOpen = false;
   String get _checkpointCategory => widget.categoryId ?? 'photos';
+  bool get _canBulkSelect =>
+      _checkpointCategory != 'duplicates' && _checkpointCategory != 'similar';
   final List<PhotoAsset> _toDelete = [];
   final List<PhotoAsset> _toKeep = [];
   final List<int> _reviewHistory = [];
@@ -63,7 +68,6 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
     super.initState();
     _sessionAssets = List.of(widget.assets);
     _checkpoint = widget.checkpointService ?? ReviewCheckpointService();
-    unawaited(_restoreCheckpoint());
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 150),
@@ -80,6 +84,7 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
         _animController.reset();
       }
     });
+    unawaited(_initializeReview());
   }
 
   @override
@@ -95,6 +100,25 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
       _isDone ? null : _sessionAssets[_currentIndex];
   double get _progress =>
       widget.assets.isEmpty ? 1.0 : _currentIndex / _sessionAssets.length;
+
+  Future<void> _initializeReview() async {
+    await _restoreCheckpoint();
+    if (!mounted || _isDone) return;
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      if (!mounted || preferences.getBool(_firstUseGuideKey) == true) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted &&
+            !_isDone &&
+            !_guideOpen &&
+            ModalRoute.of(context)?.isCurrent == true) {
+          unawaited(_showGestureHelp());
+        }
+      });
+    } catch (_) {
+      // A failed hint preference must never stop photo review.
+    }
+  }
 
   // Swipe direction indicator
   Future<void> _restoreCheckpoint() async {
@@ -281,6 +305,50 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
     });
   }
 
+  Future<void> _selectMany() async {
+    if (_isAnimating ||
+        _isDeleting ||
+        _loadingCheckpoint ||
+        _isDone ||
+        !_canBulkSelect) {
+      return;
+    }
+    final remaining = _sessionAssets.skip(_currentIndex).toList();
+    final picked = await showModalBottomSheet<List<PhotoAsset>>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) => _MultiSelectSheet(assets: remaining),
+    );
+    if (!mounted || picked == null || picked.isEmpty || _isDone) return;
+
+    // The sheet can only return decoded previews from the current review.
+    final pickedIds = picked.map((asset) => asset.id).toSet();
+    final selected = remaining.where((asset) => pickedIds.contains(asset.id));
+    final selectedAssets = selected.toList();
+    if (selectedAssets.isEmpty) return;
+    final unselected = remaining.where(
+      (asset) => !pickedIds.contains(asset.id),
+    );
+    final reviewedCount = _currentIndex;
+    setState(() {
+      _sessionAssets = [
+        ..._sessionAssets.take(reviewedCount),
+        ...selectedAssets,
+        ...unselected,
+      ];
+      for (var i = 0; i < selectedAssets.length; i++) {
+        final asset = selectedAssets[i];
+        _toDelete.add(asset);
+        _reviewHistory.add(reviewedCount + i);
+        _persistChoice(asset, 'delete');
+      }
+      _currentIndex += selectedAssets.length;
+    });
+    _checkpointTimer?.cancel();
+    unawaited(_flushCheckpoint());
+  }
+
   String get _swipeLabel {
     if (_dragX > 40) return context.l10n.swipeKeep;
     if (_dragX < -40) return context.l10n.swipeDelete;
@@ -326,7 +394,7 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
             IconButton(
               tooltip: context.l10n.swipeGestureHelp,
               icon: const Icon(Icons.help_outline_rounded),
-              onPressed: _showGestureHelp,
+              onPressed: _isDeleting ? null : () => _showGestureHelp(),
             ),
             ConstrainedBox(
               constraints: BoxConstraints(
@@ -647,31 +715,112 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
         ),
         const SizedBox(height: 8),
         Text(context.l10n.swipeGestureSafety, style: AppTheme.caption),
+        if (!expanded && _canBulkSelect) ...[
+          const SizedBox(height: 4),
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: TextButton.icon(
+              key: const ValueKey('swipe-select-many'),
+              onPressed: _isAnimating || _isDeleting ? null : _selectMany,
+              icon: const Icon(Icons.grid_view_rounded),
+              label: Text(context.l10n.swipeMultiSelectTitle),
+            ),
+          ),
+        ],
       ],
     ),
   );
 
-  void _showGestureHelp() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _gestureGuide(expanded: true),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(context.l10n.swipeContinueReview),
-              ),
-              const SizedBox(height: 16),
-            ],
+  Widget _firstUseDirectionCard({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.09),
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: color.withValues(alpha: 0.22)),
+    ),
+    child: Row(
+      textDirection: TextDirection.ltr,
+      children: [
+        Icon(icon, textDirection: TextDirection.ltr, color: color, size: 32),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Text(
+            label,
+            style: AppTheme.body.copyWith(
+              color: color,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ),
-      ),
-    );
+      ],
+    ),
+  );
+
+  Future<void> _showGestureHelp() async {
+    if (_guideOpen || !mounted) return;
+    _guideOpen = true;
+    bool? openMultiSelect;
+    try {
+      openMultiSelect = await showModalBottomSheet<bool>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        builder: (sheetContext) => SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(context.l10n.swipeGestureTitle, style: AppTheme.heading3),
+                const SizedBox(height: 16),
+                _firstUseDirectionCard(
+                  icon: Icons.arrow_back_rounded,
+                  label: context.l10n.swipeGestureDelete,
+                  color: AppTheme.danger,
+                ),
+                const SizedBox(height: 10),
+                _firstUseDirectionCard(
+                  icon: Icons.arrow_forward_rounded,
+                  label: context.l10n.swipeGestureKeep,
+                  color: AppTheme.primary,
+                ),
+                const SizedBox(height: 12),
+                Text(context.l10n.swipeGestureSafety, style: AppTheme.caption),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(sheetContext, false),
+                    child: Text(context.l10n.swipeContinueReview),
+                  ),
+                ),
+                if (_canBulkSelect)
+                  TextButton.icon(
+                    key: const ValueKey('swipe-help-select-many'),
+                    onPressed: () => Navigator.pop(sheetContext, true),
+                    icon: const Icon(Icons.grid_view_rounded),
+                    label: Text(context.l10n.swipeMultiSelectTitle),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } finally {
+      _guideOpen = false;
+      try {
+        final preferences = await SharedPreferences.getInstance();
+        await preferences.setBool(_firstUseGuideKey, true);
+      } catch (_) {
+        // The hint remains replayable even when persistence is unavailable.
+      }
+    }
+    if (mounted && openMultiSelect == true) await _selectMany();
   }
 
   Widget _buildCard(
@@ -1260,6 +1409,207 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Grid decisions stay local until the user reviews the deletion list.
+/// A thumbnail must decode before its item can enter that list.
+class _MultiSelectSheet extends StatefulWidget {
+  const _MultiSelectSheet({required this.assets});
+
+  final List<PhotoAsset> assets;
+
+  @override
+  State<_MultiSelectSheet> createState() => _MultiSelectSheetState();
+}
+
+class _MultiSelectSheetState extends State<_MultiSelectSheet> {
+  final Set<String> _readyIds = {};
+  final Set<String> _selectedIds = {};
+
+  void _setReady(String id, bool ready) {
+    if (!mounted || !ready) return;
+    // Virtualized tiles briefly report a pending frame when rebuilt. A photo
+    // already decoded in this sheet must not lose its selection on scroll.
+    if (_readyIds.add(id)) setState(() {});
+  }
+
+  void _toggle(String id) {
+    if (!_readyIds.contains(id)) return;
+    setState(() {
+      if (!_selectedIds.add(id)) _selectedIds.remove(id);
+    });
+  }
+
+  Widget _tile(BuildContext context, PhotoAsset asset) {
+    final ready = _readyIds.contains(asset.id);
+    final selected = _selectedIds.contains(asset.id);
+    return Material(
+      color: AppTheme.cardBg,
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        key: ValueKey('swipe-batch-${asset.id}'),
+        onTap: ready ? () => _toggle(asset.id) : null,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: AssetThumbnail(
+                key: ValueKey('swipe-batch-preview-${asset.id}'),
+                asset: asset,
+                previewSize: 300,
+                onPreviewReady: (value) => _setReady(asset.id, value),
+              ),
+            ),
+            Positioned.directional(
+              textDirection: Directionality.of(context),
+              top: 4,
+              start: 4,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Checkbox(
+                  value: selected,
+                  onChanged: ready ? (_) => _toggle(asset.id) : null,
+                ),
+              ),
+            ),
+            Positioned.directional(
+              textDirection: Directionality.of(context),
+              bottom: 4,
+              end: 4,
+              child: IconButton.filledTonal(
+                tooltip: context.l10n.scanZoomPreview,
+                icon: const Icon(Icons.zoom_in_rounded),
+                onPressed: () => showAssetPreview(context, asset),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = context.l10n;
+    return FractionallySizedBox(
+      heightFactor: 0.9,
+      child: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) => CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    strings.swipeMultiSelectTitle,
+                                    style: AppTheme.heading3,
+                                  ),
+                                ),
+                                IconButton(
+                                  tooltip: strings.swipeCancel,
+                                  icon: const Icon(Icons.close_rounded),
+                                  onPressed: () => Navigator.pop(context),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              strings.swipeGestureSafety,
+                              style: AppTheme.caption,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Wrap(
+                              alignment: WrapAlignment.spaceBetween,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 8,
+                              children: [
+                                Text(
+                                  strings.scanSelectedCount(
+                                    _selectedIds.length,
+                                  ),
+                                ),
+                                TextButton.icon(
+                                  key: const ValueKey('swipe-select-loaded'),
+                                  onPressed: _readyIds.isEmpty
+                                      ? null
+                                      : () => setState(
+                                          () => _selectedIds.addAll(_readyIds),
+                                        ),
+                                  icon: const Icon(Icons.select_all_rounded),
+                                  label: Text(strings.scanSelectLoaded),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                      sliver: SliverGrid(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: constraints.maxWidth >= 600 ? 5 : 3,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                          childAspectRatio: 0.8,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) =>
+                              _tile(context, widget.assets[index]),
+                          childCount: widget.assets.length,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  key: const ValueKey('swipe-mark-selected'),
+                  onPressed: _selectedIds.isEmpty
+                      ? null
+                      : () => Navigator.pop(
+                          context,
+                          widget.assets
+                              .where(
+                                (asset) =>
+                                    _readyIds.contains(asset.id) &&
+                                    _selectedIds.contains(asset.id),
+                              )
+                              .toList(),
+                        ),
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  label: Text(
+                    strings.swipeMarkSelectedForDeletion(_selectedIds.length),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

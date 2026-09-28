@@ -301,6 +301,8 @@
   "scanSelectOthersHint": "Previzualizează fotografia recomandată de păstrat, apoi selectează restul grupului dintr-o dată.",
   "scanNotChecked": "De verificat",
   "scanPendingCheckCount": "{count, plural, one{{count} element de verificat} few{{count} elemente de verificat} other{{count} de elemente de verificat}}",
+  "swipeMultiSelectTitle": "Selectează mai multe elemente",
+  "swipeMarkSelectedForDeletion": "Marchează {count} fotografii pentru ștergere",
   "swipeGestureTitle": "Sortare rapidă prin glisare",
   "swipeGestureDelete": "Glisează la stânga pentru a marca pentru ștergere",
   "swipeGestureKeep": "Glisează la dreapta pentru a păstra",

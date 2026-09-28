@@ -301,6 +301,8 @@
   "scanSelectOthersHint": "Xem trước ảnh được đề xuất giữ, rồi chọn các ảnh còn lại trong nhóm cùng lúc.",
   "scanNotChecked": "Chờ kiểm tra",
   "scanPendingCheckCount": "{count} mục chờ kiểm tra",
+  "swipeMultiSelectTitle": "Chọn nhiều mục",
+  "swipeMarkSelectedForDeletion": "Đánh dấu {count} ảnh để xóa",
   "swipeGestureTitle": "Sắp xếp nhanh bằng vuốt",
   "swipeGestureDelete": "Vuốt trái để đánh dấu xóa",
   "swipeGestureKeep": "Vuốt phải để giữ",

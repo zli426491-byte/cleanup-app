@@ -301,6 +301,8 @@
   "scanSelectOthersHint": "Prévisualisez la photo conseillée à garder, puis sélectionnez le reste du groupe en une fois.",
   "scanNotChecked": "À vérifier",
   "scanPendingCheckCount": "{count, plural, =0{{count} éléments à vérifier} one{{count} élément à vérifier} other{{count} éléments à vérifier}}",
+  "swipeMultiSelectTitle": "Sélectionner plusieurs éléments",
+  "swipeMarkSelectedForDeletion": "Marquer {count} photos à supprimer",
   "swipeGestureTitle": "Tri rapide par glissement",
   "swipeGestureDelete": "Glisser à gauche pour marquer à supprimer",
   "swipeGestureKeep": "Glisser à droite pour garder",

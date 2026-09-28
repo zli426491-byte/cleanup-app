@@ -301,6 +301,8 @@
   "scanSelectOthersHint": "Podejrzyj zdjęcie sugerowane do zachowania, a następnie wybierz resztę grupy naraz.",
   "scanNotChecked": "Do sprawdzenia",
   "scanPendingCheckCount": "{count, plural, one{Do sprawdzenia: {count} element} few{Do sprawdzenia: {count} elementy} many{Do sprawdzenia: {count} elementów} other{Do sprawdzenia: {count} elementu}}",
+  "swipeMultiSelectTitle": "Wybierz wiele elementów",
+  "swipeMarkSelectedForDeletion": "Oznacz {count} zdjęć do usunięcia",
   "swipeGestureTitle": "Szybkie porządkowanie przesuwaniem",
   "swipeGestureDelete": "Przesuń w lewo, by oznaczyć do usunięcia",
   "swipeGestureKeep": "Przesuń w prawo, by zachować",

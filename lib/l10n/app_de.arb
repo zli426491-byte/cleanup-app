@@ -301,6 +301,8 @@
   "scanSelectOthersHint": "Sieh dir das zum Behalten empfohlene Foto an und wähle dann den Rest der Gruppe auf einmal aus.",
   "scanNotChecked": "Noch zu prüfen",
   "scanPendingCheckCount": "{count, plural, one{{count} Element zu prüfen} other{{count} Elemente zu prüfen}}",
+  "swipeMultiSelectTitle": "Mehrere Elemente auswählen",
+  "swipeMarkSelectedForDeletion": "{count} Fotos zum Löschen vormerken",
   "swipeGestureTitle": "Schnell per Wischen sortieren",
   "swipeGestureDelete": "Nach links zum Löschen vormerken",
   "swipeGestureKeep": "Nach rechts zum Behalten wischen",

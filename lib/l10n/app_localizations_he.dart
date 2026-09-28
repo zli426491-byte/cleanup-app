@@ -1143,6 +1143,14 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get swipeMultiSelectTitle => 'בחירת פריטים מרובים';
+
+  @override
+  String swipeMarkSelectedForDeletion(int count) {
+    return 'סימון $count תמונות למחיקה';
+  }
+
+  @override
   String get swipeGestureTitle => 'סידור מהיר בהחלקה';
 
   @override

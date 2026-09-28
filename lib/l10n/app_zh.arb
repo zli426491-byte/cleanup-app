@@ -301,6 +301,8 @@
   "scanSelectOthersHint": "先预览建议保留的照片，再一次选中这组其他照片。",
   "scanNotChecked": "待检查",
   "scanPendingCheckCount": "待检查 {count} 个",
+  "swipeMultiSelectTitle": "批量选择项目",
+  "swipeMarkSelectedForDeletion": "将 {count} 张标记为待删除",
   "swipeGestureTitle": "快速滑动整理",
   "swipeGestureDelete": "左滑标记删除",
   "swipeGestureKeep": "右滑保留",

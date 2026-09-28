@@ -1184,6 +1184,14 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get swipeMultiSelectTitle => 'Выбрать несколько элементов';
+
+  @override
+  String swipeMarkSelectedForDeletion(int count) {
+    return 'Отметить $count фото для удаления';
+  }
+
+  @override
   String get swipeGestureTitle => 'Быстрый разбор смахиванием';
 
   @override

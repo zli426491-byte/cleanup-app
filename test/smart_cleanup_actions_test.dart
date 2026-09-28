@@ -270,6 +270,92 @@ void main() {
   );
 
   testWidgets(
+    'unverified resource tabs show photo previews without selection',
+    (tester) async {
+      for (final category in ['duplicates', 'largeFiles']) {
+        await _mount(
+          tester,
+          _Scanner(pendingHash: 3, pendingSize: 1, largeResults: false),
+          category,
+        );
+        expect(
+          find.byKey(const ValueKey('resource-pending-state')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('resource-unverified-photo-preview')),
+          findsOneWidget,
+        );
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('resource-unverified-photo-preview')),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('resource-preview-action-0')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const ValueKey('select-action-0')), findsNothing);
+        expect(
+          find.byKey(const ValueKey('select-current-category')),
+          findsNothing,
+        );
+        expect(find.textContaining('Selected items:'), findsNothing);
+        await tester.pumpWidget(const SizedBox());
+      }
+    },
+  );
+
+  testWidgets('verified empty category says there are no confirmed results', (
+    tester,
+  ) async {
+    await _mount(tester, _Scanner(largeResults: false), 'duplicates');
+    final strings = AppLocalizations.of(
+      tester.element(find.byType(SmartCleanView)),
+    );
+    expect(
+      find.byKey(const ValueKey('resource-verified-empty-state')),
+      findsOneWidget,
+    );
+    expect(find.text(strings.scanEmptyCategory), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('resource-unverified-photo-preview')),
+      findsNothing,
+    );
+    await tester.tap(find.text(strings.scanBrowsePhotos));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('resource-verified-empty-state')),
+      findsNothing,
+    );
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets(
+    'confirmed duplicate groups stay visible while more checks wait',
+    (tester) async {
+      await _mount(
+        tester,
+        _Scanner(groups: true, pendingHash: 2),
+        'duplicates',
+      );
+      final strings = AppLocalizations.of(
+        tester.element(find.byType(SmartCleanView)),
+      );
+      expect(find.text('Exact duplicates: 3 photos'), findsOneWidget);
+      expect(find.text(strings.scanSelectOthersHint), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('resource-pending-state')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('resource-verified-empty-state')),
+        findsNothing,
+      );
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
     'scan details collapsed by default and reveal full notice on demand',
     (tester) async {
       await _mount(tester, _Scanner(), 'photos');

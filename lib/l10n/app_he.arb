@@ -301,6 +301,8 @@
   "scanSelectOthersHint": "צפה בתמונה המומלצת לשמירה ואז בחר את שאר הקבוצה בבת אחת.",
   "scanNotChecked": "ממתין לבדיקה",
   "scanPendingCheckCount": "{count, plural, one{פריט אחד ממתין לבדיקה} two{שני פריטים ממתינים לבדיקה} other{{count} פריטים ממתינים לבדיקה}}",
+  "swipeMultiSelectTitle": "בחירת פריטים מרובים",
+  "swipeMarkSelectedForDeletion": "סימון {count} תמונות למחיקה",
   "swipeGestureTitle": "סידור מהיר בהחלקה",
   "swipeGestureDelete": "החלק שמאלה לסימון למחיקה",
   "swipeGestureKeep": "החלק ימינה לשמירה",
