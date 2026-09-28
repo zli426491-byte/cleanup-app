@@ -931,6 +931,139 @@ void main() {
   );
 
   test(
+    'exact-to-size reindex retains verified bytes when only presentation metadata changes',
+    () async {
+      library = [
+        photo('copy-a'),
+        photo('copy-b'),
+        {...photo('small-movie', type: 2), 'duration': 3},
+        {...photo('large-movie', type: 2), 'duration': 4},
+      ];
+      nativeResults = {
+        'copy-a': inspected('same-original', size: 10 * 1024 * 1024),
+        'copy-b': inspected('same-original', size: 10 * 1024 * 1024),
+        'small-movie': inspected('small-movie', size: 21 * 1024 * 1024),
+        'large-movie': inspected('large-movie', size: 75 * 1024 * 1024),
+      };
+      await scanner.verifyOriginals(
+        target: OriginalVerificationTarget.exactPhotos,
+      );
+      expect(scanner.verifiedHashAssetCount, 2);
+      expect(scanner.scanResult.duplicateGroups, hasLength(1));
+      final firstHash = scanner.scanResult.allAssets
+          .firstWhere((asset) => asset.id == 'copy-a')
+          .hash;
+
+      // Presentation-only metadata may change without changing the original.
+      // The next category must not re-read already verified content.
+      library = [
+        {...photo('copy-a'), 'title': 'renamed-a.jpg', 'subtype': 4},
+        {...photo('copy-b'), 'title': 'renamed-b.jpg'},
+        {
+          ...photo('small-movie', type: 2),
+          'title': 'renamed-small.mov',
+          'duration': 4,
+        },
+        {
+          ...photo('large-movie', type: 2),
+          'title': 'renamed-large.mov',
+          'duration': 5,
+        },
+      ];
+      resourceRequests.clear();
+      await scanner.verifyOriginals(
+        target: OriginalVerificationTarget.fileSizes,
+      );
+
+      expect(scanner.originalRoundTotal, 2);
+      expect(resourceRequests, unorderedEquals(['small-movie', 'large-movie']));
+      expect(scanner.knownSizeAssetCount, 4);
+      expect(scanner.verifiedHashAssetCount, 2);
+      expect(scanner.scanResult.duplicateGroups, hasLength(1));
+      expect(
+        scanner.scanResult.allAssets
+            .firstWhere((asset) => asset.id == 'copy-a')
+            .hash,
+        firstHash,
+      );
+      expect(
+        scanner.scanResult.largeFiles.map((a) => a.id),
+        containsAll(['small-movie', 'large-movie']),
+      );
+      expect(
+        scanner.scanResult.allAssets
+            .firstWhere((asset) => asset.id == 'copy-a')
+            .isScreenshot,
+        isTrue,
+      );
+      expect(
+        scanner.scanResult.allAssets
+            .firstWhere((asset) => asset.id == 'small-movie')
+            .durationSeconds,
+        4,
+      );
+    },
+  );
+
+  test(
+    'a transient movie size failure retries only that movie and keeps exact hashes',
+    () async {
+      library = [
+        photo('copy-a'),
+        photo('copy-b'),
+        {...photo('small-movie', type: 2), 'duration': 3},
+        {...photo('large-movie', type: 2), 'duration': 4},
+      ];
+      nativeResults = {
+        'copy-a': inspected('same-original', size: 10 * 1024 * 1024),
+        'copy-b': inspected('same-original', size: 10 * 1024 * 1024),
+        'small-movie': {
+          'sizeKnown': false,
+          'size': 0,
+          'complete': false,
+          'pendingReason': 'resource_time_budget',
+        },
+        'large-movie': inspected('large-movie', size: 75 * 1024 * 1024),
+      };
+      await scanner.verifyOriginals(
+        target: OriginalVerificationTarget.exactPhotos,
+      );
+      await scanner.verifyOriginals(
+        target: OriginalVerificationTarget.fileSizes,
+      );
+      expect(scanner.originalRoundTotal, 2);
+      expect(scanner.originalRoundProcessed, 2);
+      expect(
+        scanner.scanResult.largeFiles.map((asset) => asset.id),
+        contains('large-movie'),
+      );
+      expect(
+        scanner.scanResult.largeFiles.map((asset) => asset.id),
+        isNot(contains('small-movie')),
+      );
+      expect(scanner.verifiedHashAssetCount, 2);
+
+      nativeResults['small-movie'] = inspected(
+        'small-movie',
+        size: 21 * 1024 * 1024,
+      );
+      resourceRequests.clear();
+      await scanner.verifyOriginals(
+        target: OriginalVerificationTarget.fileSizes,
+      );
+      expect(scanner.originalRoundTotal, 1);
+      expect(scanner.originalRoundProcessed, 1);
+      expect(resourceRequests, ['small-movie']);
+      expect(
+        scanner.scanResult.largeFiles.map((asset) => asset.id),
+        containsAll(['small-movie', 'large-movie']),
+      );
+      expect(scanner.verifiedHashAssetCount, 2);
+      expect(scanner.scanResult.duplicateGroups, hasLength(1));
+    },
+  );
+
+  test(
     'disposing during native analysis prevents late updates and cancels requests',
     () async {
       final subject = PhotoScannerService(supportsNativeResources: true);
@@ -1512,6 +1645,7 @@ void main() {
       );
       expect(scanner.verifiedHashAssetCount, 2);
       expect(scanner.scanResult.duplicateGroups, hasLength(1));
+      library[0] = {...library[0], 'title': 'renamed-local.jpg', 'subtype': 4};
       previewHandler = (ids) async {
         await Future<void>.delayed(const Duration(milliseconds: 200));
         return {
@@ -1546,6 +1680,12 @@ void main() {
         reason: 'Validated in-place rounds retain the original index.',
       );
       expect(scanner.scanResult.duplicateGroups, hasLength(1));
+      expect(
+        scanner.scanResult.allAssets
+            .firstWhere((asset) => asset.id == 'asset-0')
+            .isScreenshot,
+        isTrue,
+      );
     },
   );
 

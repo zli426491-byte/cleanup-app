@@ -164,6 +164,9 @@ void main() {
         for (final id in duplicateIds)
           id: scanner.scanResult.allAssets.firstWhere((a) => a.id == id).hash,
       };
+      final beforeLarge = {
+        for (final asset in scanner.scanResult.allAssets) asset.id: asset,
+      };
       await tester.pump(const Duration(milliseconds: 600));
       await _revealAsset(tester, duplicateIds.first);
       _expectActiveCategoryVisible(tester, labels.scanCategoryExact);
@@ -181,8 +184,85 @@ void main() {
         () => scanner.isScanning || _hasMovies(scanner, movieIds),
         'automatic size start',
       );
+      await _waitUntil(
+        tester,
+        () =>
+            scanner.originalVerificationTarget ==
+                OriginalVerificationTarget.fileSizes &&
+            scanner.originalRoundTotal != null,
+        'automatic size queue',
+      );
+      final sizeQueueStart = _sizeRoundDiagnostics(scanner, movieIds);
+      stages['sizeQueueStart'] = sizeQueueStart;
+      debugPrint('PHOTO_SIZE_QUEUE_START $sizeQueueStart');
+      final metadataDriftAtSizeStart = _metadataDrift(
+        beforeLarge,
+        scanner.scanResult.allAssets,
+      );
+      stages['metadataDriftAtSizeStart'] = metadataDriftAtSizeStart;
+      debugPrint(
+        'PHOTO_CHECKPOINT_METADATA_DRIFT_AT_SIZE_START '
+        '$metadataDriftAtSizeStart',
+      );
+      for (final entry in originalHash.entries) {
+        final cached = scanner.scanResult.allAssets.firstWhere(
+          (asset) => asset.id == entry.key,
+        );
+        expect(
+          cached.sizeKnown,
+          isTrue,
+          reason: 'Exact-to-size re-index lost a verified photo byte count.',
+        );
+        expect(
+          cached.hash,
+          entry.value,
+          reason: 'Exact-to-size re-index lost a verified SHA.',
+        );
+      }
       await _waitUntil(tester, () => !scanner.isScanning, 'automatic size end');
       stages['automaticLargeMs'] = watch.elapsedMilliseconds;
+      final metadataDrift = _metadataDrift(
+        beforeLarge,
+        scanner.scanResult.allAssets,
+      );
+      stages['metadataDriftAfterExact'] = metadataDrift;
+      debugPrint('PHOTO_CHECKPOINT_METADATA_DRIFT $metadataDrift');
+      debugPrint(
+        'PHOTO_SIZE_ROUND_1 ${_sizeRoundDiagnostics(scanner, movieIds)}',
+      );
+      var sizeRounds = 1;
+      while (!_hasMovies(scanner, movieIds) && sizeRounds < 3) {
+        final knownBefore = scanner.knownSizeAssetCount;
+        await _tapVisible(
+          tester,
+          find.byKey(const ValueKey('verify-originals-cta')),
+        );
+        await _waitUntil(
+          tester,
+          () => !scanner.isScanning,
+          'continued size round end',
+        );
+        sizeRounds++;
+        expect(
+          scanner.knownSizeAssetCount,
+          greaterThanOrEqualTo(knownBefore),
+          reason: 'A retry must retain previously verified bytes.',
+        );
+        for (final entry in originalHash.entries) {
+          expect(
+            scanner.scanResult.allAssets
+                .firstWhere((asset) => asset.id == entry.key)
+                .hash,
+            entry.value,
+            reason: 'A size retry must retain a completed exact SHA.',
+          );
+        }
+        debugPrint(
+          'PHOTO_SIZE_ROUND_$sizeRounds '
+          '${_sizeRoundDiagnostics(scanner, movieIds)}',
+        );
+      }
+      stages['sizeRounds'] = sizeRounds;
       _expectMovies(scanner, movieIds, expectedBytes);
       _expectExactPair(scanner, duplicateIds, differentIds);
       for (final entry in originalHash.entries) {
@@ -514,12 +594,82 @@ void _expectExactPair(
 bool _hasMovies(PhotoScannerService scanner, List<String> ids) =>
     scanner.scanResult.largeFiles.map((a) => a.id).toSet().containsAll(ids);
 
+Map<String, Object?> _sizeRoundDiagnostics(
+  PhotoScannerService scanner,
+  List<String> movieIds,
+) {
+  final byId = {
+    for (final asset in scanner.scanResult.allAssets) asset.id: asset,
+  };
+  return {
+    'roundTotal': scanner.originalRoundTotal,
+    'roundProcessed': scanner.originalRoundProcessed,
+    'knownSizes': scanner.knownSizeAssetCount,
+    'verifiedHashes': scanner.verifiedHashAssetCount,
+    'pendingSizes': scanner.pendingSizeAssetCount,
+    'lastError': scanner.lastError,
+    'movies': [
+      for (var i = 0; i < movieIds.length; i++)
+        if (byId[movieIds[i]] case final asset?)
+          {
+            'fixture': i + 1,
+            'sizeKnown': asset.sizeKnown,
+            'size': asset.size,
+            'attempted': asset.resourceAnalysisAttempted,
+            'pendingReason': asset.resourcePendingReason,
+          }
+        else
+          {'fixture': i + 1, 'indexed': false},
+    ],
+  };
+}
+
+Map<String, int> _metadataDrift(
+  Map<String, PhotoAsset> previous,
+  List<PhotoAsset> current,
+) {
+  final changes = <String, int>{
+    'previousKnownSizes': previous.values.where((a) => a.sizeKnown).length,
+    'currentKnownSizes': current.where((a) => a.sizeKnown).length,
+    'previousHashes': previous.values.where((a) => a.hash != null).length,
+    'currentHashes': current.where((a) => a.hash != null).length,
+    'missingIds':
+        previous.length -
+        current.where((a) => previous.containsKey(a.id)).length,
+  };
+  void count(String field) =>
+      changes.update(field, (value) => value + 1, ifAbsent: () => 1);
+  for (final asset in current) {
+    final old = previous[asset.id];
+    if (old == null) {
+      count('newIds');
+      continue;
+    }
+    if (old.modifiedDate != asset.modifiedDate) count('modifiedDate');
+    if (old.createDate != asset.createDate) count('createDate');
+    if (old.width != asset.width || old.height != asset.height) {
+      count('dimensions');
+    }
+    if (old.type != asset.type) count('type');
+    if (old.durationSeconds != asset.durationSeconds) count('duration');
+    if (old.isScreenshot != asset.isScreenshot) count('isScreenshot');
+    if (old.title != asset.title) count('title');
+  }
+  return changes;
+}
+
 void _expectMovies(
   PhotoScannerService scanner,
   List<String> movies,
   Map<String, dynamic> sizes,
 ) {
-  expect(_hasMovies(scanner, movies), isTrue);
+  expect(
+    _hasMovies(scanner, movies),
+    isTrue,
+    reason:
+        'Fixture movie capacities remain pending: '
+        '${_sizeRoundDiagnostics(scanner, movies)}',
+  );
   for (final id in movies) {
     final asset = scanner.scanResult.largeFiles.firstWhere((a) => a.id == id);
     expect(asset.sizeKnown, isTrue);

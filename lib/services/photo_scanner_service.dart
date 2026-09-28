@@ -521,6 +521,7 @@ class PhotoScannerService extends ChangeNotifier {
     final count = _availableAssetCount;
     if (album == null || count == null || _assets.length != count) return false;
     final remaining = _assets.keys.toSet();
+    final refreshedMetadata = <String, AssetEntity>{};
     try {
       for (var start = 0; start < count; start += _scopeCheckPageSize) {
         if (_disposed ||
@@ -537,8 +538,11 @@ class PhotoScannerService extends ChangeNotifier {
           final cached = _assets[entity.id];
           if (cached == null ||
               !remaining.remove(entity.id) ||
-              !_sameEntityVersion(cached, entity)) {
+              !_sameContentVersion(cached, entity)) {
             return false;
+          }
+          if (!_sameDisplayMetadata(cached, entity)) {
+            refreshedMetadata[entity.id] = entity;
           }
         }
       }
@@ -551,21 +555,72 @@ class PhotoScannerService extends ChangeNotifier {
       final finalCount = await album.assetCountAsync.timeout(
         const Duration(seconds: 5),
       );
-      return !_continuousStopRequested && finalCount == count;
+      if (_disposed ||
+          _continuousStopRequested ||
+          _photoAccessRefreshPending ||
+          finalCount != count) {
+        return false;
+      }
+      for (final entry in refreshedMetadata.entries) {
+        final cached = _assets[entry.key]!;
+        _entities[entry.key] = entry.value;
+        _checkpointEntities[entry.key] = entry.value;
+        _setAsset(_withCurrentMetadata(cached, entry.value));
+      }
+      if (refreshedMetadata.isNotEmpty) {
+        final ordered = _assets.values.toList()
+          ..sort((a, b) => b.createDate.compareTo(a.createDate));
+        _orderedIds = ordered.map((asset) => asset.id).toList();
+      }
+      return true;
     } catch (_) {
       return false;
     }
   }
 
-  bool _sameEntityVersion(PhotoAsset cached, AssetEntity entity) =>
+  // PhotoKit's modified time, dimensions and media type version the original
+  // content. Title, creation date, duration and screenshot presentation can
+  // vary between fetches without changing the bytes behind a verified SHA.
+  bool _sameContentVersion(PhotoAsset cached, AssetEntity entity) =>
       cached.modifiedDate == entity.modifiedDateTime &&
-      cached.createDate == entity.createDateTime &&
       cached.width == entity.width &&
       cached.height == entity.height &&
+      cached.type == entity.type;
+
+  bool _sameDisplayMetadata(PhotoAsset cached, AssetEntity entity) =>
+      cached.createDate == entity.createDateTime &&
       cached.durationSeconds == entity.duration &&
-      cached.type == entity.type &&
       cached.isScreenshot == _isScreenshot(entity) &&
       cached.title == entity.title;
+
+  PhotoAsset _withCurrentMetadata(PhotoAsset cached, AssetEntity entity) =>
+      PhotoAsset(
+        id: cached.id,
+        title: entity.title,
+        width: entity.width,
+        height: entity.height,
+        size: cached.size,
+        sizeKnown: cached.sizeKnown,
+        analysisPending: cached.analysisPending,
+        analysisAttempted: cached.analysisAttempted,
+        resourceAnalysisPending: cached.resourceAnalysisPending,
+        resourceAnalysisAttempted: cached.resourceAnalysisAttempted,
+        previewDegraded: cached.previewDegraded,
+        qualityScore: cached.qualityScore,
+        qualityReasons: cached.qualityReasons,
+        pendingReason: cached.pendingReason,
+        resourcePendingReason: cached.resourcePendingReason,
+        createDate: entity.createDateTime,
+        modifiedDate: entity.modifiedDateTime,
+        durationSeconds: entity.duration,
+        type: entity.type,
+        thumbnail: cached.thumbnail,
+        hash: cached.hash,
+        isScreenshot: _isScreenshot(entity),
+        isBlurry: cached.isBlurry,
+        isDark: cached.isDark,
+        isOverexposed: cached.isOverexposed,
+      );
 
   Future<bool> _continuousSnapshotMatchesLibrary() async {
     if (_disposed || _continuousStopRequested || _photoAccessRefreshPending) {
@@ -750,7 +805,10 @@ class PhotoScannerService extends ChangeNotifier {
         if (!seen.add(entity.id)) return false;
         final current = indexed[entity.id];
         if (current == null) continue;
-        if (!_sameEntityVersion(current, entity)) {
+        // A changed presentation field also needs a fresh published snapshot.
+        // A continuous scan will re-index once after this check fails.
+        if (!_sameContentVersion(current, entity) ||
+            !_sameDisplayMetadata(current, entity)) {
           return false;
         }
         remaining.remove(entity.id);
@@ -973,8 +1031,12 @@ class PhotoScannerService extends ChangeNotifier {
           if (previous != null &&
               previous.modifiedDateTime == entity.modifiedDateTime &&
               cached != null &&
-              _sameEntityVersion(cached, entity)) {
-            _setAsset(cached);
+              _sameContentVersion(cached, entity)) {
+            _setAsset(
+              _sameDisplayMetadata(cached, entity)
+                  ? cached
+                  : _withCurrentMetadata(cached, entity),
+            );
             final signature = priorSignatures[entity.id];
             if (signature != null) _signatures[entity.id] = signature;
           }
