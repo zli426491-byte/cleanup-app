@@ -213,7 +213,7 @@ void main() {
       find.text(
         'The library is still being indexed. This category will update as indexing progresses.',
       ),
-      findsNWidgets(3),
+      findsNWidgets(4),
     );
     await tester.pumpWidget(const SizedBox());
     await _mount(tester, const HomeView());
