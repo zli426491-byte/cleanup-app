@@ -1081,6 +1081,9 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                 label: Text(
                   scanner.isScanning
                       ? context.l10n.scanPauseReview
+                      : _verifiedChecks(scanner) > 0 &&
+                            _pendingChecks(scanner) > 0
+                      ? context.l10n.scanContinue
                       : _selectedCategory == 1
                       ? context.l10n.scanCheckExactPhotos
                       : context.l10n.scanCheckFileSizes,
@@ -1157,8 +1160,10 @@ class _SmartCleanViewState extends State<SmartCleanView> {
                       : () => _verifyOriginals(scanner),
                   icon: const Icon(Icons.fact_check_outlined),
                   label: Text(
-                    _verificationTarget ==
-                            OriginalVerificationTarget.exactPhotos
+                    _verifiedChecks(scanner) > 0 && _pendingChecks(scanner) > 0
+                        ? context.l10n.scanContinue
+                        : _verificationTarget ==
+                              OriginalVerificationTarget.exactPhotos
                         ? context.l10n.scanCheckExactPhotos
                         : _verificationTarget ==
                               OriginalVerificationTarget.fileSizes
