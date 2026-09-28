@@ -271,9 +271,9 @@ void main() {
       expect(find.text('尚待原始素材驗證'), findsNWidgets(2));
       expect(find.text('尚待畫面分析'), findsOneWidget);
       expect(find.text('已完成 ✓'), findsNothing);
-      await tester.ensureVisible(find.text('查看已讀取照片'));
+      await tester.ensureVisible(find.text('整理已載入照片'));
       await tester.pump();
-      await tester.tap(find.text('查看已讀取照片'));
+      await tester.tap(find.text('整理已載入照片'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.byType(SmartCleanView), findsOneWidget);

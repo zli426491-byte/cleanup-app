@@ -76,7 +76,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     try {
       final permission = await PhotoManager.getPermissionState(
         requestOption: const PermissionRequestOption(),
-      ).timeout(const Duration(seconds: 5));
+      );
       if (!mounted || !permission.hasAccess) return;
       if (scanner.isScanning ||
           scanner.isDeleting ||

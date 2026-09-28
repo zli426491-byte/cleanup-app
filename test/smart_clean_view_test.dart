@@ -135,6 +135,11 @@ void main() {
       }
     });
     await tester.pumpAndSettle();
+    final continueReview = find.widgetWithText(FilledButton, '繼續審核');
+    if (continueReview.evaluate().isNotEmpty) {
+      await tester.tap(continueReview);
+      await tester.pumpAndSettle();
+    }
     await tester.ensureVisible(find.byIcon(Icons.close_rounded).first);
     await tester.tap(find.byIcon(Icons.close_rounded).first);
     await tester.pump();
