@@ -104,8 +104,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       return;
     }
     // A paused or deadline-limited preview keeps its checkpoint; the user
-    // continues it explicitly before originals are checked.
-    if (scanner.pendingAnalysisCount > 0) return;
+    // continues it explicitly before originals are checked. Previews that
+    // were tried but wait for iCloud do not hold the originals back.
+    if (!_previewsSettled(scanner)) return;
     if (scanner.pendingHashAssetCount <= 0 &&
         scanner.pendingSizeAssetCount <= 0) {
       return;
@@ -136,14 +137,14 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         scanner.availableAssetCount,
         scanner.pendingHashAssetCount,
         scanner.pendingSizeAssetCount,
+        scanner.attemptedAnalysisCount,
       ),
     );
     final scanner = context.read<PhotoScannerService>();
     _maybeCheckOriginals(scanner);
     final isPro = context.select<SubscriptionManager, bool>((sub) => sub.isPro);
     final index = CategoryIndex.of(scanner.scanResult);
-    final notStarted =
-        !_hasScanState(scanner) && !scanner.permissionDenied;
+    final notStarted = !_hasScanState(scanner) && !scanner.permissionDenied;
 
     return Scaffold(
       body: SafeArea(
@@ -151,10 +152,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         child: Column(
           children: [
             _Header(isPro: isPro),
-            _SpaceToClean(
-              bytes: sumBytes(index.suggested),
-              storage: _storage,
-            ),
+            _SpaceToClean(bytes: sumBytes(index.suggested), storage: _storage),
             Expanded(
               child: CustomScrollView(
                 key: const PageStorageKey('home-scroll'),
@@ -196,9 +194,15 @@ bool _originalsPending(PhotoScannerService scanner) {
   if (!scanner.nativeOriginalAnalysisAvailable) return false;
   final total = scanner.availableAssetCount;
   if (total == null || scanner.scannedAssetCount < total) return false;
-  if (scanner.pendingAnalysisCount > 0) return false;
+  if (!_previewsSettled(scanner)) return false;
   return scanner.pendingHashAssetCount > 0 || scanner.pendingSizeAssetCount > 0;
 }
+
+/// Every photo preview was tried at least once. Some may still wait for
+/// iCloud; those are retried from the paused card, not before originals.
+bool _previewsSettled(PhotoScannerService scanner) =>
+    scanner.pendingAnalysisCount == 0 ||
+    scanner.attemptedAnalysisCount >= scanner.totalPhotoCount;
 
 /// A cancelled scan, one stopped by its time budget, or a partial index can
 /// be continued from its checkpoint.
@@ -247,35 +251,36 @@ class _Header extends StatelessWidget {
                 label: l10n.settingsUpgrade,
                 excludeSemantics: true,
                 child: InkWell(
-                key: const ValueKey('home-pro'),
-                borderRadius: BorderRadius.circular(AppTheme.r50),
-                onTap: () => PaywallView.showUnlock(context, source: 'home_pro'),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.star_rounded,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        l10n.homeProBadge,
-                        style: const TextStyle(
+                  key: const ValueKey('home-pro'),
+                  borderRadius: BorderRadius.circular(AppTheme.r50),
+                  onTap: () =>
+                      PaywallView.showUnlock(context, source: 'home_pro'),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.star_rounded,
                           color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
+                          size: 18,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 4),
+                        Text(
+                          l10n.homeProBadge,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
               ),
             ),
           IconButton(
@@ -362,7 +367,8 @@ class _SpaceToClean extends StatelessWidget {
                             ),
                             if (cleanFraction > 0)
                               PositionedDirectional(
-                                start: c.maxWidth * (usedFraction - cleanFraction),
+                                start:
+                                    c.maxWidth * (usedFraction - cleanFraction),
                                 child: Container(
                                   width: c.maxWidth * cleanFraction,
                                   height: 8,

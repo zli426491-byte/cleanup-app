@@ -51,7 +51,12 @@ class _PhaseScanner extends PhotoScannerService {
 
 /// Previews are done; a bounded originals round left photos unchecked.
 class _OriginalsScanner extends PhotoScannerService {
+  _OriginalsScanner({this.cloudPending = 0});
+
+  /// Photos whose preview was tried but still waits for iCloud.
+  final int cloudPending;
   int verifyCalls = 0;
+  int previewRetries = 0;
   int verified = 700;
 
   @override
@@ -67,7 +72,9 @@ class _OriginalsScanner extends PhotoScannerService {
   @override
   int get totalPhotoCount => 10007;
   @override
-  int get pendingAnalysisCount => 0;
+  int get pendingAnalysisCount => cloudPending;
+  @override
+  int get attemptedAnalysisCount => totalPhotoCount;
   @override
   int get verifiedHashAssetCount => verified;
   @override
@@ -84,6 +91,10 @@ class _OriginalsScanner extends PhotoScannerService {
     verified += 800;
     notifyListeners();
   }
+
+  @override
+  Future<void> startContinuousScan({bool resume = false}) async =>
+      previewRetries++;
 }
 
 class _PairScanner extends PhotoScannerService {
@@ -255,23 +266,25 @@ void main() {
     },
   );
 
-  testWidgets('home continues the originals check after a bounded round', (
-    tester,
-  ) async {
-    final scanner = _OriginalsScanner();
-    await _mount(tester, scanner);
-    await tester.pump();
-    // Home starts the first round on its own.
-    expect(scanner.verifyCalls, 1);
-    final strings = tester.element(find.byType(HomeView)).l10n;
-    expect(find.text(strings.v2CheckPaused), findsOneWidget);
-    expect(find.text('1500 / 10007'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('home-scan-continue')));
-    await tester.pump();
-    expect(scanner.verifyCalls, 2);
-    expect(find.text('2300 / 10007'), findsOneWidget);
-    await tester.pumpWidget(const SizedBox());
-  });
+  for (final cloudPending in [0, 30]) {
+    testWidgets('home continues the originals check after a bounded round '
+        '(iCloud previews waiting: $cloudPending)', (tester) async {
+      final scanner = _OriginalsScanner(cloudPending: cloudPending);
+      await _mount(tester, scanner);
+      await tester.pump();
+      // Home starts the first round on its own.
+      expect(scanner.verifyCalls, 1);
+      final strings = tester.element(find.byType(HomeView)).l10n;
+      expect(find.text(strings.v2CheckPaused), findsOneWidget);
+      expect(find.text('1500 / 10007'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('home-scan-continue')));
+      await tester.pump();
+      expect(scanner.verifyCalls, 2);
+      expect(scanner.previewRetries, 0);
+      expect(find.text('2300 / 10007'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
 
   for (final withExact in [true, false]) {
     testWidgets(
@@ -298,7 +311,10 @@ void main() {
             findsOneWidget,
           );
         }
-        expect(find.byKey(const ValueKey('home-preview-unrelated')), findsNothing);
+        expect(
+          find.byKey(const ValueKey('home-preview-unrelated')),
+          findsNothing,
+        );
         // A pair confirmed as an exact duplicate is not repeated as similar.
         expect(
           find.descendant(
@@ -327,35 +343,38 @@ void main() {
   }
 
   for (final viewport in [const Size(390, 844), const Size(1180, 820)]) {
-    testWidgets('home keeps grouped photos first and adapts tiles to $viewport', (
-      tester,
-    ) async {
-      tester.view.physicalSize = viewport;
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      await _mount(tester, _PairScanner(withExact: true));
-      final duplicates = find.byKey(const ValueKey('home-category-duplicates'));
-      final videos = find.byKey(const ValueKey('home-category-videos'));
-      final other = find.byKey(const ValueKey('home-category-other'));
-      expect(
-        tester.getTopLeft(duplicates).dy,
-        lessThan(tester.getTopLeft(videos).dy),
-      );
-      // Two columns on iPhone; iPad adds columns instead of stretching tiles.
-      final tileWidth = tester.getSize(videos).width;
-      expect(tileWidth, lessThanOrEqualTo(viewport.width / 2));
-      expect(tileWidth, lessThan(260));
-      expect(tester.getSize(other).width, tileWidth);
-      expect(
-        tester
-            .getSize(find.byKey(const ValueKey('home-preview-pair-a')))
-            .height,
-        greaterThan(140),
-      );
-      expect(tester.takeException(), isNull);
-      await tester.pumpWidget(const SizedBox());
-    });
+    testWidgets(
+      'home keeps grouped photos first and adapts tiles to $viewport',
+      (tester) async {
+        tester.view.physicalSize = viewport;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await _mount(tester, _PairScanner(withExact: true));
+        final duplicates = find.byKey(
+          const ValueKey('home-category-duplicates'),
+        );
+        final videos = find.byKey(const ValueKey('home-category-videos'));
+        final other = find.byKey(const ValueKey('home-category-other'));
+        expect(
+          tester.getTopLeft(duplicates).dy,
+          lessThan(tester.getTopLeft(videos).dy),
+        );
+        // Two columns on iPhone; iPad adds columns instead of stretching tiles.
+        final tileWidth = tester.getSize(videos).width;
+        expect(tileWidth, lessThanOrEqualTo(viewport.width / 2));
+        expect(tileWidth, lessThan(260));
+        expect(tester.getSize(other).width, tileWidth);
+        expect(
+          tester
+              .getSize(find.byKey(const ValueKey('home-preview-pair-a')))
+              .height,
+          greaterThan(140),
+        );
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
   }
 
   for (final locale in AppLocalizations.supportedLocales) {
