@@ -167,9 +167,9 @@ class InfoPill extends StatelessWidget {
                 Text(
                   detail!,
                   maxLines: 1,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.75),
-                    fontSize: 10,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
                     fontWeight: FontWeight.w500,
                   ),
                 ),

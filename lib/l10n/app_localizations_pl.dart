@@ -1947,4 +1947,11 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get v2CheckPaused => 'Sprawdzanie duplikatów wstrzymane';
+
+  @override
+  String get v2StillChecking => 'Wciąż sprawdzamy zdjęcia';
+
+  @override
+  String get v2StillCheckingBody =>
+      'Wyniki pojawią się tutaj, gdy skanowanie na ekranie głównym będzie trwać.';
 }

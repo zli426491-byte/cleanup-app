@@ -1993,4 +1993,11 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get v2CheckPaused => 'Verificação de duplicados em pausa';
+
+  @override
+  String get v2StillChecking => 'Ainda estamos a verificar as fotos';
+
+  @override
+  String get v2StillCheckingBody =>
+      'Os resultados aparecem aqui à medida que a análise continua no Início.';
 }

@@ -1963,4 +1963,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get v2CheckPaused => 'Duplicate check paused';
+
+  @override
+  String get v2StillChecking => 'Still checking your photos';
+
+  @override
+  String get v2StillCheckingBody =>
+      'Results appear here as the scan continues on Home.';
 }

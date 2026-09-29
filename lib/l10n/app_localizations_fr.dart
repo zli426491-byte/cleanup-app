@@ -1995,4 +1995,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get v2CheckPaused => 'Vérification des doublons en pause';
+
+  @override
+  String get v2StillChecking => 'Vérification de vos photos en cours';
+
+  @override
+  String get v2StillCheckingBody =>
+      'Les résultats s’affichent ici à mesure que l’analyse se poursuit sur l’accueil.';
 }

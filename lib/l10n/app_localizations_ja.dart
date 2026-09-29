@@ -1800,4 +1800,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get v2CheckPaused => '重複チェックを一時停止中';
+
+  @override
+  String get v2StillChecking => '写真をまだ確認しています';
+
+  @override
+  String get v2StillCheckingBody => 'ホームでスキャンが進むと、ここに結果が表示されます。';
 }

@@ -341,6 +341,7 @@ void main() {
       find.byKey(const ValueKey('group-card-duplicate:pair-19')),
       findsNothing,
     );
-    expect(find.text('Delete 20 KB'), findsOneWidget);
+    // The button counts the selected items (one per pair).
+    expect(find.text('Delete 20 Items'), findsOneWidget);
   });
 }

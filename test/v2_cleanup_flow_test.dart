@@ -7,6 +7,7 @@ import 'package:cleanup_app/services/photo_scanner_service.dart';
 import 'package:cleanup_app/services/subscription_manager.dart';
 import 'package:cleanup_app/utils/constants.dart';
 import 'package:cleanup_app/views/paywall/paywall_view.dart';
+import 'package:cleanup_app/views/v2/category_grid_view.dart';
 import 'package:cleanup_app/views/v2/cleanup_category.dart';
 import 'package:cleanup_app/views/v2/congratulations_view.dart';
 import 'package:cleanup_app/views/v2/daily_limit_sheet.dart';
@@ -677,6 +678,22 @@ void main() {
     });
   });
 
+  testWidgets('an empty category says it is still checking during a scan', (
+    tester,
+  ) async {
+    final scanner = _Scanner(_result())..scanning = true;
+    final store = _Store(pro: true);
+    const view = CategoryGridView(category: CleanupCategory.blurred);
+    await _host(tester, scanner, store, home: view);
+    await tester.pump();
+    final strings = tester.element(find.byType(CategoryGridView)).l10n;
+    expect(find.text(strings.v2StillChecking), findsOneWidget);
+    expect(find.text(strings.v2EmptyCategory), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    scanner.dispose();
+    store.dispose();
+  });
+
   testWidgets('group review keeps the best shot and preselects the rest', (
     tester,
   ) async {
@@ -711,12 +728,13 @@ void main() {
     expect(selected('d'), isFalse);
     expect(selected('b'), isTrue);
     expect(selected('c'), isTrue);
-    // Two 4 MB suggestions are ready to delete.
-    expect(find.text('Delete 8 MB'), findsOneWidget);
+    // Two suggestions are ready; the button counts items, not megabytes.
+    final strings = tester.element(find.byType(GroupReviewView)).l10n;
+    expect(find.text(strings.v2DeleteCount(2)), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('group-tile-c')));
     await tester.pump();
     expect(selected('c'), isFalse);
-    expect(find.text('Delete 4 MB'), findsOneWidget);
+    expect(find.text(strings.v2DeleteCount(1)), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     semantics.dispose();
     scanner.dispose();

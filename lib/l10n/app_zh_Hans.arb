@@ -483,5 +483,7 @@
   "v2DailyLimitRemaining": "{count, plural, other{今天还能免费删除 {count} 项。请减少选择，或解锁 Pro。}}",
   "v2SeeProOptions": "查看 Pro 方案",
   "v2SelectionOverLimitTitle": "超过今日可免费删除的数量",
-  "v2CheckPaused": "重复项检查已暂停"
+  "v2CheckPaused": "重复项检查已暂停",
+  "v2StillChecking": "仍在检查你的照片",
+  "v2StillCheckingBody": "首页继续扫描时，结果会显示在这里。"
 }

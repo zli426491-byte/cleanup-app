@@ -1764,6 +1764,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get v2CheckPaused => '重复项检查已暂停';
+
+  @override
+  String get v2StillChecking => '仍在检查你的照片';
+
+  @override
+  String get v2StillCheckingBody => '首页继续扫描时，结果会显示在这里。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -3526,6 +3532,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get v2CheckPaused => '重复项检查已暂停';
+
+  @override
+  String get v2StillChecking => '仍在检查你的照片';
+
+  @override
+  String get v2StillCheckingBody => '首页继续扫描时，结果会显示在这里。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5251,4 +5263,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get v2CheckPaused => '重複項目檢查已暫停';
+
+  @override
+  String get v2StillChecking => '仍在檢查你的照片';
+
+  @override
+  String get v2StillCheckingBody => '首頁繼續掃描時，結果會顯示在這裡。';
 }

@@ -1875,4 +1875,11 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get v2CheckPaused => 'Đã tạm dừng kiểm tra trùng lặp';
+
+  @override
+  String get v2StillChecking => 'Vẫn đang kiểm tra ảnh của bạn';
+
+  @override
+  String get v2StillCheckingBody =>
+      'Kết quả sẽ hiện ở đây khi quá trình quét tiếp tục ở Trang chủ.';
 }

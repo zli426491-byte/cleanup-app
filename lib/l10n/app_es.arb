@@ -483,5 +483,7 @@
   "v2DailyLimitRemaining": "{count, plural, one{Hoy puedes eliminar 1 elemento más gratis. Selecciona menos o desbloquea Pro.} other{Hoy puedes eliminar {count} elementos más gratis. Selecciona menos o desbloquea Pro.}}",
   "v2SeeProOptions": "Ver opciones Pro",
   "v2SelectionOverLimitTitle": "Demasiados elementos para hoy",
-  "v2CheckPaused": "Revisión de duplicados en pausa"
+  "v2CheckPaused": "Revisión de duplicados en pausa",
+  "v2StillChecking": "Seguimos revisando tus fotos",
+  "v2StillCheckingBody": "Los resultados aparecerán aquí mientras el análisis continúa en Inicio."
 }

@@ -1251,6 +1251,37 @@ s('v2CheckPaused', en='Duplicate check paused', ar='توقف فحص التكرا
   vi='Đã tạm dừng kiểm tra trùng lặp', zh_Hans='重复项检查已暂停',
   zh_Hant='重複項目檢查已暫停')
 
+s('v2StillChecking', en='Still checking your photos', ar='ما زلنا نفحص صورك',
+  de='Deine Fotos werden noch geprüft', es='Seguimos revisando tus fotos',
+  fr='Vérification de vos photos en cours', he='עדיין בודקים את התמונות שלך',
+  id='Masih memeriksa foto Anda', it='Stiamo ancora controllando le foto',
+  ja='写真をまだ確認しています', ko='사진을 아직 확인하고 있습니다',
+  pl='Wciąż sprawdzamy zdjęcia', pt='Ainda estamos a verificar as fotos',
+  ro='Încă verificăm fotografiile', ru='Фото ещё проверяются',
+  th='กำลังตรวจรูปภาพอยู่', tr='Fotoğraflarınız hâlâ kontrol ediliyor',
+  vi='Vẫn đang kiểm tra ảnh của bạn', zh_Hans='仍在检查你的照片',
+  zh_Hant='仍在檢查你的照片')
+s('v2StillCheckingBody',
+  en='Results appear here as the scan continues on Home.',
+  ar='تظهر النتائج هنا مع استمرار الفحص في الصفحة الرئيسية.',
+  de='Ergebnisse erscheinen hier, während der Scan auf der Startseite weiterläuft.',
+  es='Los resultados aparecerán aquí mientras el análisis continúa en Inicio.',
+  fr='Les résultats s’affichent ici à mesure que l’analyse se poursuit sur l’accueil.',
+  he='התוצאות יופיעו כאן בזמן שהסריקה ממשיכה במסך הבית.',
+  id='Hasil akan muncul di sini selama pemindaian berlanjut di Beranda.',
+  it='I risultati appariranno qui mentre la scansione prosegue nella Home.',
+  ja='ホームでスキャンが進むと、ここに結果が表示されます。',
+  ko='홈에서 스캔이 진행되면 여기에 결과가 표시됩니다.',
+  pl='Wyniki pojawią się tutaj, gdy skanowanie na ekranie głównym będzie trwać.',
+  pt='Os resultados aparecem aqui à medida que a análise continua no Início.',
+  ro='Rezultatele apar aici pe măsură ce scanarea continuă în ecranul principal.',
+  ru='Результаты появятся здесь по мере сканирования на главном экране.',
+  th='ผลลัพธ์จะแสดงที่นี่ระหว่างการสแกนที่หน้าหลัก',
+  tr='Tarama Ana Sayfa’da sürdükçe sonuçlar burada görünür.',
+  vi='Kết quả sẽ hiện ở đây khi quá trình quét tiếp tục ở Trang chủ.',
+  zh_Hans='首页继续扫描时，结果会显示在这里。',
+  zh_Hant='首頁繼續掃描時，結果會顯示在這裡。')
+
 
 RTL = {'ar', 'he'}
 FSI, PDI = '⁨', '⁩'

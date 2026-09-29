@@ -1971,4 +1971,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get v2CheckPaused => 'Duplikatprüfung pausiert';
+
+  @override
+  String get v2StillChecking => 'Deine Fotos werden noch geprüft';
+
+  @override
+  String get v2StillCheckingBody =>
+      'Ergebnisse erscheinen hier, während der Scan auf der Startseite weiterläuft.';
 }

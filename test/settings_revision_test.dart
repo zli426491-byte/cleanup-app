@@ -154,8 +154,15 @@ void main() {
           final sub = _Subscription()..confirmed = true;
           final locales = LocaleController(initialLocale: option.locale);
           await mount(tester, sub, locales, scale: 2);
-          final language = find.widgetWithIcon(ListTile, Icons.language);
+          final language = find.byKey(const ValueKey('settings-language'));
+          // v2 rows are taller at 200% text; bring the row fully on screen.
+          await tester.scrollUntilVisible(
+            language,
+            80,
+            scrollable: find.byType(Scrollable).first,
+          );
           await tester.ensureVisible(language);
+          await tester.pumpAndSettle();
           await tester.tap(language);
           await tester.pumpAndSettle();
           final selected = find.descendant(

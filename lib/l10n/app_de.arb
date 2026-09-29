@@ -483,5 +483,7 @@
   "v2DailyLimitRemaining": "{count, plural, one{Heute kannst du noch 1 Objekt gratis löschen. Wähle weniger aus oder schalte Pro frei.} other{Heute kannst du noch {count} Objekte gratis löschen. Wähle weniger aus oder schalte Pro frei.}}",
   "v2SeeProOptions": "Pro-Optionen ansehen",
   "v2SelectionOverLimitTitle": "Zu viele Objekte für heute",
-  "v2CheckPaused": "Duplikatprüfung pausiert"
+  "v2CheckPaused": "Duplikatprüfung pausiert",
+  "v2StillChecking": "Deine Fotos werden noch geprüft",
+  "v2StillCheckingBody": "Ergebnisse erscheinen hier, während der Scan auf der Startseite weiterläuft."
 }

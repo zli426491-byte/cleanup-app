@@ -260,7 +260,6 @@ class _GroupReviewViewState extends State<GroupReviewView> {
       for (final a in all)
         if (_selected.contains(a.id) && _isReady(a)) a,
     ];
-    final selectedBytes = sumBytes(selectedAssets);
     final multi = widget.sections.length > 1;
     final allOthers = {
       for (final section in widget.sections)
@@ -362,9 +361,7 @@ class _GroupReviewViewState extends State<GroupReviewView> {
                 key: const ValueKey('group-delete'),
                 icon: Icons.delete_outline_rounded,
                 loading: deleting,
-                label: selectedBytes > 0
-                    ? l10n.v2DeleteSize(formatBytes(selectedBytes))
-                    : l10n.v2DeleteCount(selectedAssets.length),
+                label: l10n.v2DeleteCount(selectedAssets.length),
                 onPressed: () => _delete(selectedAssets),
               ),
             ),
@@ -656,7 +653,7 @@ class _EmptyGroups extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final checking = context.select<PhotoScannerService, bool>(
-      (s) => s.isScanning,
+      resultsStillComing,
     );
     return Padding(
       padding: const EdgeInsets.all(32),
@@ -684,19 +681,19 @@ class _EmptyGroups extends StatelessWidget {
           const SizedBox(height: 20),
           Text(
             checking
-                ? context.l10n.v2CheckingDuplicates
+                ? context.l10n.v2StillChecking
                 : context.l10n.v2EmptyCategory,
             textAlign: TextAlign.center,
             style: AppTheme.heading2,
           ),
-          if (!checking) ...[
-            const SizedBox(height: 6),
-            Text(
-              context.l10n.v2EmptyCategoryBody,
-              textAlign: TextAlign.center,
-              style: AppTheme.caption,
-            ),
-          ],
+          const SizedBox(height: 6),
+          Text(
+            checking
+                ? context.l10n.v2StillCheckingBody
+                : context.l10n.v2EmptyCategoryBody,
+            textAlign: TextAlign.center,
+            style: AppTheme.caption,
+          ),
         ],
       ),
     );

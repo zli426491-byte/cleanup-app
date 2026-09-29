@@ -1884,4 +1884,11 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get v2CheckPaused => 'Pemeriksaan duplikat dijeda';
+
+  @override
+  String get v2StillChecking => 'Masih memeriksa foto Anda';
+
+  @override
+  String get v2StillCheckingBody =>
+      'Hasil akan muncul di sini selama pemindaian berlanjut di Beranda.';
 }

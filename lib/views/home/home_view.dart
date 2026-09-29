@@ -806,7 +806,7 @@ class _WideCategoryCard extends StatelessWidget {
                 child: Text(
                   title,
                   style: AppTheme.heading2.copyWith(
-                    color: AppTheme.textMuted.withValues(alpha: 0.7),
+                    color: AppTheme.textSecondary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),

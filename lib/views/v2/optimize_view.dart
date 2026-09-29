@@ -183,9 +183,11 @@ class VideoCompressListView extends StatelessWidget {
                     SliverPadding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                       sliver: SliverGrid(
+                        // Two columns on phones, more on iPad so thumbnails
+                        // stay a comparable size.
                         gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 220,
                               mainAxisSpacing: 10,
                               crossAxisSpacing: 10,
                               childAspectRatio: 0.82,

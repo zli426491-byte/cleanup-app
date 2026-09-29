@@ -131,20 +131,20 @@ void main() {
         await tester.pump();
         final card = find.byKey(ValueKey('home-category-${category.key}'));
         await tester.ensureVisible(card);
-        await tester.pumpAndSettle();
+        await _settle(tester);
         await tester.tap(card);
-        await tester.pumpAndSettle();
+        await _settle(tester);
         expect(find.byType(CategoryIntroView), findsOneWidget);
         await tester.tap(find.byKey(const ValueKey('intro-lets-go')));
-        await tester.pumpAndSettle();
+        await _settle(tester);
         expect(find.byType(category.value), findsOneWidget);
         expect(find.byType(CategoryIntroView), findsNothing);
 
         // The explainer is shown only on the first visit.
         await tester.pageBack();
-        await tester.pumpAndSettle();
+        await _settle(tester);
         await tester.tap(card);
-        await tester.pumpAndSettle();
+        await _settle(tester);
         expect(find.byType(CategoryIntroView), findsNothing);
         expect(find.byType(category.value), findsOneWidget);
         expect(tester.takeException(), isNull);
@@ -406,4 +406,12 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );
+}
+
+/// The partial scan keeps an honest "still checking" spinner running on
+/// empty categories, so these tests pump route transitions explicitly.
+Future<void> _settle(WidgetTester tester) async {
+  for (var i = 0; i < 12; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
 }

@@ -1886,4 +1886,11 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get v2CheckPaused => 'Kopya kontrolü duraklatıldı';
+
+  @override
+  String get v2StillChecking => 'Fotoğraflarınız hâlâ kontrol ediliyor';
+
+  @override
+  String get v2StillCheckingBody =>
+      'Tarama Ana Sayfa’da sürdükçe sonuçlar burada görünür.';
 }

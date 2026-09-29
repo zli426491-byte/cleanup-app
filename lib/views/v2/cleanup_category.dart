@@ -236,3 +236,19 @@ class CategoryIndex {
     return out;
   }
 }
+
+/// True while the scan can still add results: it is running, the index or
+/// previews are unfinished, or originals (exact copies, sizes) remain.
+bool resultsStillComing(PhotoScannerService s) {
+  if (s.isScanning) return true;
+  // Nothing scanned yet: Home asks to start; there is nothing "coming".
+  if (s.scannedAssetCount == 0) return false;
+  final total = s.availableAssetCount;
+  if (total != null && s.scannedAssetCount < total) return true;
+  if (s.pendingAnalysisCount > 0 &&
+      s.attemptedAnalysisCount < s.totalPhotoCount) {
+    return true;
+  }
+  return s.nativeOriginalAnalysisAvailable &&
+      (s.pendingHashAssetCount > 0 || s.pendingSizeAssetCount > 0);
+}

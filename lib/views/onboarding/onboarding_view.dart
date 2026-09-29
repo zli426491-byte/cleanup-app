@@ -178,7 +178,8 @@ class _Welcome extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: LinearProgressIndicator(
-                    value: known ? storage.usedPercentage : 0.9,
+                    // Unknown capacity shows an empty, neutral bar.
+                    value: known ? storage.usedPercentage : 0,
                     minHeight: 16,
                     color: AppTheme.danger,
                     backgroundColor: AppTheme.primaryLight,

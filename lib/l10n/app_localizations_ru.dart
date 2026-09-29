@@ -1958,4 +1958,11 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get v2CheckPaused => 'Проверка дубликатов приостановлена';
+
+  @override
+  String get v2StillChecking => 'Фото ещё проверяются';
+
+  @override
+  String get v2StillCheckingBody =>
+      'Результаты появятся здесь по мере сканирования на главном экране.';
 }

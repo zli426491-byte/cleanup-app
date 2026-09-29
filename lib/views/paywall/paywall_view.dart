@@ -231,15 +231,18 @@ class _PaywallViewState extends State<PaywallView> {
                                 style: AppTheme.small.copyWith(fontSize: 11),
                               ),
                             ),
+                          // Terms, Privacy and Restore stay reachable in the
+                          // scroll area, so large text never squeezes the
+                          // purchase button.
+                          _footer(sub),
                         ],
                       ),
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
                     child: purchaseButton,
                   ),
-                  _footer(sub),
                 ],
               ),
             ),
@@ -440,15 +443,17 @@ class _PaywallViewState extends State<PaywallView> {
           style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
         ),
       ),
-      if (widget.variant == PaywallVariant.trial)
-        TextButton(
-          onPressed: () => launchUrl(Uri.parse(AppConstants.privacyPolicyUrl)),
-          child: Text(
-            context.l10n.paywallPrivacyPolicy,
-            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-          ),
-        )
-      else
+      // Terms and Privacy on every paywall; B also restores here (A has
+      // Restore in its top bar).
+      TextButton(
+        key: const ValueKey('paywall-privacy'),
+        onPressed: () => launchUrl(Uri.parse(AppConstants.privacyPolicyUrl)),
+        child: Text(
+          context.l10n.paywallPrivacyPolicy,
+          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+        ),
+      ),
+      if (widget.variant == PaywallVariant.unlock)
         TextButton(
           onPressed: sub.isPlaceholder || sub.isLoading
               ? null

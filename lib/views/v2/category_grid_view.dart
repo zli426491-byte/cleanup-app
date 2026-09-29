@@ -367,9 +367,11 @@ class _CategoryGridViewState extends State<CategoryGridView> {
                     SliverPadding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
                       sliver: SliverGrid(
+                        // Two columns on phones, more on iPad so thumbnails
+                        // stay a comparable size.
                         gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 220,
                               mainAxisSpacing: 10,
                               crossAxisSpacing: 10,
                               childAspectRatio: 0.82,
@@ -530,29 +532,48 @@ class _EmptyCategory extends StatelessWidget {
   final CleanupCategory category;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(32),
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 120,
-          height: 120,
-          decoration: BoxDecoration(
-            color: AppTheme.primaryLight,
-            borderRadius: BorderRadius.circular(28),
+  Widget build(BuildContext context) {
+    // Never call a category clean while the scan can still add to it.
+    final checking = context.select<PhotoScannerService, bool>(
+      resultsStillComing,
+    );
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryLight,
+              borderRadius: BorderRadius.circular(28),
+            ),
+            child: checking
+                ? const Padding(
+                    padding: EdgeInsets.all(40),
+                    child: CircularProgressIndicator(strokeWidth: 3),
+                  )
+                : Icon(category.icon, size: 56, color: AppTheme.primaryMuted),
           ),
-          child: Icon(category.icon, size: 56, color: AppTheme.primaryMuted),
-        ),
-        const SizedBox(height: 20),
-        Text(context.l10n.v2EmptyCategory, style: AppTheme.heading2),
-        const SizedBox(height: 6),
-        Text(
-          context.l10n.v2EmptyCategoryBody,
-          textAlign: TextAlign.center,
-          style: AppTheme.caption,
-        ),
-      ],
-    ),
-  );
+          const SizedBox(height: 20),
+          Text(
+            checking
+                ? context.l10n.v2StillChecking
+                : context.l10n.v2EmptyCategory,
+            textAlign: TextAlign.center,
+            style: AppTheme.heading2,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            checking
+                ? context.l10n.v2StillCheckingBody
+                : context.l10n.v2EmptyCategoryBody,
+            textAlign: TextAlign.center,
+            style: AppTheme.caption,
+          ),
+        ],
+      ),
+    );
+  }
 }

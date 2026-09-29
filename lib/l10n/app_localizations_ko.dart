@@ -1818,4 +1818,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get v2CheckPaused => '중복 확인 일시 정지됨';
+
+  @override
+  String get v2StillChecking => '사진을 아직 확인하고 있습니다';
+
+  @override
+  String get v2StillCheckingBody => '홈에서 스캔이 진행되면 여기에 결과가 표시됩니다.';
 }

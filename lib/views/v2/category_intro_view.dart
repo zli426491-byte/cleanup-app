@@ -169,13 +169,15 @@ class _SwipeDemo extends StatelessWidget {
     final l10n = context.l10n;
     // Labels sit in the free corners so they never cover the cards:
     // "Right to Keep" above the kept card, "Left to Delete" below the other.
+    // Swipes are physical (right keeps, left deletes) in every language, so
+    // the demo uses physical left/right even in Arabic and Hebrew.
     return SizedBox(
       height: 400,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          PositionedDirectional(
-            end: 28,
+          Positioned(
+            right: 28,
             top: 0,
             child: _DirectionLabel(
               arrowLeft: false,
@@ -184,8 +186,8 @@ class _SwipeDemo extends StatelessWidget {
               color: AppTheme.success,
             ),
           ),
-          PositionedDirectional(
-            start: -40,
+          Positioned(
+            left: -40,
             top: 40,
             child: Transform.rotate(
               angle: -0.14,
@@ -195,8 +197,8 @@ class _SwipeDemo extends StatelessWidget {
               ),
             ),
           ),
-          PositionedDirectional(
-            end: -40,
+          Positioned(
+            right: -40,
             top: 120,
             child: Transform.rotate(
               angle: 0.12,
@@ -207,8 +209,8 @@ class _SwipeDemo extends StatelessWidget {
               ),
             ),
           ),
-          PositionedDirectional(
-            start: 28,
+          Positioned(
+            left: 28,
             bottom: 0,
             child: _DirectionLabel(
               arrowLeft: true,

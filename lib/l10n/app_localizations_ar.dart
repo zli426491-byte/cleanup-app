@@ -1961,4 +1961,11 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get v2CheckPaused => 'توقف فحص التكرارات مؤقتًا';
+
+  @override
+  String get v2StillChecking => 'ما زلنا نفحص صورك';
+
+  @override
+  String get v2StillCheckingBody =>
+      'تظهر النتائج هنا مع استمرار الفحص في الصفحة الرئيسية.';
 }

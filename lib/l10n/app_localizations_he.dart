@@ -1899,4 +1899,11 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get v2CheckPaused => 'בדיקת הכפילויות מושהית';
+
+  @override
+  String get v2StillChecking => 'עדיין בודקים את התמונות שלך';
+
+  @override
+  String get v2StillCheckingBody =>
+      'התוצאות יופיעו כאן בזמן שהסריקה ממשיכה במסך הבית.';
 }

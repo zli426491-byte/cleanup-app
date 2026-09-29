@@ -211,6 +211,29 @@ void main() {
     store.dispose();
   });
 
+  for (final onboarding in [true, false]) {
+    testWidgets('paywall ${onboarding ? 'A' : 'B'} links Terms and Privacy', (
+      tester,
+    ) async {
+      final store = _Store(eligible: false);
+      final l10n = await _pump(
+        tester,
+        store,
+        PaywallView(fromOnboarding: onboarding),
+      );
+      expect(
+        find.byKey(const ValueKey('paywall-privacy'), skipOffstage: false),
+        findsOneWidget,
+      );
+      expect(
+        find.text(l10n.paywallTerms, skipOffstage: false),
+        findsOneWidget,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      store.dispose();
+    });
+  }
+
   testWidgets('the unlock paywall has no extra free-continue button', (
     tester,
   ) async {

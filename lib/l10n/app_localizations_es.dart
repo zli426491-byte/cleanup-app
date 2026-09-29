@@ -1980,4 +1980,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get v2CheckPaused => 'Revisión de duplicados en pausa';
+
+  @override
+  String get v2StillChecking => 'Seguimos revisando tus fotos';
+
+  @override
+  String get v2StillCheckingBody =>
+      'Los resultados aparecerán aquí mientras el análisis continúa en Inicio.';
 }

@@ -483,5 +483,7 @@
   "v2DailyLimitRemaining": "{count, plural, one{Dziś możesz jeszcze usunąć za darmo {count} element. Zaznacz mniej lub odblokuj Pro.} few{Dziś możesz jeszcze usunąć za darmo {count} elementy. Zaznacz mniej lub odblokuj Pro.} many{Dziś możesz jeszcze usunąć za darmo {count} elementów. Zaznacz mniej lub odblokuj Pro.} other{Dziś możesz jeszcze usunąć za darmo {count} elementu. Zaznacz mniej lub odblokuj Pro.}}",
   "v2SeeProOptions": "Zobacz opcje Pro",
   "v2SelectionOverLimitTitle": "Za dużo elementów na dziś",
-  "v2CheckPaused": "Sprawdzanie duplikatów wstrzymane"
+  "v2CheckPaused": "Sprawdzanie duplikatów wstrzymane",
+  "v2StillChecking": "Wciąż sprawdzamy zdjęcia",
+  "v2StillCheckingBody": "Wyniki pojawią się tutaj, gdy skanowanie na ekranie głównym będzie trwać."
 }

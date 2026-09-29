@@ -483,5 +483,7 @@
   "v2DailyLimitRemaining": "{count, plural, other{Hari ini Anda masih bisa menghapus {count} item gratis. Pilih lebih sedikit atau buka Pro.}}",
   "v2SeeProOptions": "Lihat opsi Pro",
   "v2SelectionOverLimitTitle": "Terlalu banyak item untuk hari ini",
-  "v2CheckPaused": "Pemeriksaan duplikat dijeda"
+  "v2CheckPaused": "Pemeriksaan duplikat dijeda",
+  "v2StillChecking": "Masih memeriksa foto Anda",
+  "v2StillCheckingBody": "Hasil akan muncul di sini selama pemindaian berlanjut di Beranda."
 }

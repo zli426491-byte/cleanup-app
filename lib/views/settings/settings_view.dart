@@ -10,6 +10,7 @@ import '../../models/storage_info.dart';
 import '../../utils/constants.dart';
 import '../../utils/app_theme.dart';
 import '../paywall/paywall_view.dart';
+import '../v2/ui_kit.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key});
@@ -127,155 +128,120 @@ class _SettingsViewState extends State<SettingsView> {
   Widget build(BuildContext context) {
     final sub = context.watch<SubscriptionManager>();
     final localeController = context.watch<LocaleController>();
+    final l10n = context.l10n;
+    final storage = _storage;
 
     return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.settingsTitle)),
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
-          child: ListView(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.workspace_premium_outlined,
-                          color: AppTheme.primary,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            sub.isPro
-                                ? context.l10n.settingsProPlan
-                                : !sub.hasCheckedSubscription
-                                ? (sub.isLoading
-                                      ? context
-                                            .l10n
-                                            .settingsCheckingSubscription
-                                      : context
-                                            .l10n
-                                            .settingsSubscriptionUnknown)
-                                : context.l10n.settingsFreePlan,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (!sub.isPro) ...[
-                      const SizedBox(height: 12),
-                      if (!sub.hasCheckedSubscription && !sub.isPlaceholder)
-                        TextButton.icon(
-                          onPressed: sub.isLoading ? null : sub.retry,
-                          icon: const Icon(Icons.refresh),
-                          label: Text(context.l10n.paywallReloadPlans),
-                        ),
-                      if (sub.hasCheckedSubscription)
-                        OutlinedButton(
-                          onPressed: sub.isLoading
-                              ? null
-                              : () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const PaywallView(),
-                                  ),
-                                ),
-                          child: Text(context.l10n.settingsUpgrade),
-                        ),
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: 32),
+              children: [
+                const PageTopBar(),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                  child: Text(l10n.settingsTitle, style: AppTheme.largeTitle),
+                ),
+                _PlanCard(sub: sub),
+                if (storage != null && !storage.isEstimate)
+                  _Section(
+                    title: l10n.settingsStorage,
+                    rows: [
+                      _Row(
+                        icon: Icons.storage_rounded,
+                        title: l10n.settingsStorageTotal,
+                        value: storage.totalSpaceFormatted,
+                      ),
+                      _Row(
+                        icon: Icons.pie_chart_rounded,
+                        title: l10n.settingsStorageUsed,
+                        value: storage.usedSpaceFormatted,
+                      ),
+                      _Row(
+                        icon: Icons.check_circle_rounded,
+                        title: l10n.settingsStorageAvailable,
+                        value: storage.freeSpaceFormatted,
+                        valueColor: AppTheme.success,
+                      ),
                     ],
+                  ),
+                _Section(
+                  title: l10n.settingsGeneral,
+                  rows: [
+                    _Row(
+                      key: const ValueKey('settings-language'),
+                      icon: Icons.language_rounded,
+                      title: l10n.settingsLanguage,
+                      value: localeController.locale == null
+                          ? l10n.settingsSystemLanguage
+                          : localeController.localeLabel,
+                      onTap: () => _chooseLanguage(localeController),
+                    ),
+                    _Row(
+                      key: const ValueKey('settings-manage-subscription'),
+                      icon: Icons.manage_accounts_rounded,
+                      title: l10n.settingsManageSubscription,
+                      onTap: _manageSubscription,
+                    ),
+                    _Row(
+                      icon: Icons.restore_rounded,
+                      title: sub.isLoading
+                          ? l10n.settingsProcessingSubscription
+                          : l10n.settingsRestorePurchases,
+                      onTap: sub.isLoading ? null : () => _restore(sub),
+                    ),
                   ],
                 ),
-              ),
-              const Divider(),
-
-              if (_storage != null && !_storage!.isEstimate) ...[
-                _settingsHeader(context.l10n.settingsStorage),
-                _settingsRow(
-                  context.l10n.settingsStorageTotal,
-                  _storage!.totalSpaceFormatted,
-                ),
-                _settingsRow(
-                  context.l10n.settingsStorageUsed,
-                  _storage!.usedSpaceFormatted,
-                ),
-                _settingsRow(
-                  context.l10n.settingsStorageAvailable,
-                  _storage!.freeSpaceFormatted,
-                  valueColor: AppTheme.success,
-                ),
-                const Divider(),
-              ],
-
-              _settingsHeader(context.l10n.settingsGeneral),
-              ListTile(
-                leading: const Icon(Icons.language),
-                title: Text(context.l10n.settingsLanguage),
-                subtitle: Text(
-                  localeController.locale == null
-                      ? context.l10n.settingsSystemLanguage
-                      : localeController.localeLabel,
-                ),
-                onTap: () => _chooseLanguage(localeController),
-              ),
-              ListTile(
-                key: const ValueKey('settings-manage-subscription'),
-                leading: const Icon(Icons.manage_accounts_outlined),
-                title: Text(context.l10n.settingsManageSubscription),
-                onTap: _manageSubscription,
-              ),
-              ListTile(
-                title: Text(
-                  sub.isLoading
-                      ? context.l10n.settingsProcessingSubscription
-                      : context.l10n.settingsRestorePurchases,
-                ),
-                onTap: sub.isLoading
-                    ? null
-                    : () async {
-                        final restored = await sub.restorePurchases();
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              restored
-                                  ? context.l10n.settingsRestoredPro
-                                  : context.localizeServiceMessage(
-                                      sub.statusMessage,
-                                    ),
-                            ),
-                          ),
-                        );
+                _Section(
+                  title: l10n.settingsAbout,
+                  rows: [
+                    _Row(
+                      icon: Icons.privacy_tip_rounded,
+                      title: l10n.settingsPrivacyPolicy,
+                      onTap: () =>
+                          launchUrl(Uri.parse(AppConstants.privacyPolicyUrl)),
+                    ),
+                    _Row(
+                      icon: Icons.description_rounded,
+                      title: l10n.settingsTerms,
+                      onTap: () => launchUrl(Uri.parse(AppConstants.termsUrl)),
+                    ),
+                    _Row(
+                      icon: Icons.star_rounded,
+                      title: l10n.settingsRateApp,
+                      onTap: () async {
+                        final review = InAppReview.instance;
+                        if (await review.isAvailable()) review.requestReview();
                       },
-              ),
-              ListTile(
-                title: Text(context.l10n.settingsPrivacyPolicy),
-                onTap: () =>
-                    launchUrl(Uri.parse(AppConstants.privacyPolicyUrl)),
-              ),
-              ListTile(
-                title: Text(context.l10n.settingsTerms),
-                onTap: () => launchUrl(Uri.parse(AppConstants.termsUrl)),
-              ),
-              ListTile(
-                title: Text(context.l10n.settingsRateApp),
-                onTap: () async {
-                  final review = InAppReview.instance;
-                  if (await review.isAvailable()) review.requestReview();
-                },
-              ),
-              const Divider(),
-
-              _settingsHeader(context.l10n.settingsAbout),
-              _settingsRow(
-                context.l10n.settingsVersion,
-                _version ?? context.l10n.settingsLoading,
-              ),
-            ],
+                    ),
+                    _Row(
+                      icon: Icons.info_rounded,
+                      title: l10n.settingsVersion,
+                      value: _version ?? l10n.settingsLoading,
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _restore(SubscriptionManager sub) async {
+    final restored = await sub.restorePurchases();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          restored
+              ? context.l10n.settingsRestoredPro
+              : context.localizeServiceMessage(sub.statusMessage),
         ),
       ),
     );
@@ -305,28 +271,198 @@ class _SettingsViewState extends State<SettingsView> {
       SnackBar(content: Text(context.l10n.settingsManageUnavailable)),
     );
   }
+}
 
-  Widget _settingsHeader(String title) {
+/// Blue plan banner: current plan and, for free users, the upgrade action.
+class _PlanCard extends StatelessWidget {
+  const _PlanCard({required this.sub});
+  final SubscriptionManager sub;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final status = sub.isPro
+        ? l10n.settingsProPlan
+        : !sub.hasCheckedSubscription
+        ? (sub.isLoading
+              ? l10n.settingsCheckingSubscription
+              : l10n.settingsSubscriptionUnknown)
+        : l10n.settingsFreePlan;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.bold,
-          color: AppTheme.textSecondary,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: AppTheme.bannerGradient,
+          borderRadius: BorderRadius.circular(AppTheme.r20),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.workspace_premium_rounded,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      status,
+                      style: AppTheme.heading2.copyWith(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+              if (!sub.isPro) ...[
+                const SizedBox(height: 14),
+                if (!sub.hasCheckedSubscription && !sub.isPlaceholder)
+                  TextButton.icon(
+                    style: TextButton.styleFrom(foregroundColor: Colors.white),
+                    onPressed: sub.isLoading ? null : sub.retry,
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: Text(l10n.paywallReloadPlans),
+                  ),
+                if (sub.hasCheckedSubscription)
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppTheme.primary,
+                        minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: sub.isLoading
+                          ? null
+                          : () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const PaywallView(),
+                              ),
+                            ),
+                      child: Text(
+                        l10n.settingsUpgrade,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+              ],
+            ],
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _settingsRow(String label, String value, {Color? valueColor}) {
-    return ListTile(
-      title: Text(label),
-      subtitle: Text(
-        value,
-        style: TextStyle(color: valueColor ?? Colors.grey[600]),
+class _Section extends StatelessWidget {
+  const _Section({required this.title, required this.rows});
+  final String title;
+  final List<Widget> rows;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsetsDirectional.only(start: 4, bottom: 8),
+          child: Semantics(
+            header: true,
+            child: Text(
+              title,
+              style: AppTheme.caption.copyWith(
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+        TintCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              for (var i = 0; i < rows.length; i++) ...[
+                if (i > 0)
+                  const Divider(
+                    height: 1,
+                    indent: 52,
+                    color: AppTheme.divider,
+                  ),
+                rows[i],
+              ],
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _Row extends StatelessWidget {
+  const _Row({
+    super.key,
+    required this.icon,
+    required this.title,
+    this.value,
+    this.valueColor,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? value;
+  final Color? valueColor;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: onTap != null,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppTheme.r20),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 52),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            children: [
+              Icon(icon, color: AppTheme.primary, size: 22),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTheme.body.copyWith(color: AppTheme.textTitle),
+                ),
+              ),
+              if (value != null) ...[
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    value!,
+                    textAlign: TextAlign.end,
+                    style: AppTheme.caption.copyWith(
+                      color: valueColor ?? AppTheme.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+              if (onTap != null)
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppTheme.textMuted,
+                ),
+            ],
+          ),
+        ),
       ),
-    );
-  }
+    ),
+  );
 }

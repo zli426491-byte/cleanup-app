@@ -483,5 +483,7 @@
   "v2DailyLimitRemaining": "{count, plural, one{Oggi puoi eliminare ancora 1 elemento gratis. Selezionane meno o sblocca Pro.} other{Oggi puoi eliminare ancora {count} elementi gratis. Selezionane meno o sblocca Pro.}}",
   "v2SeeProOptions": "Vedi le opzioni Pro",
   "v2SelectionOverLimitTitle": "Troppi elementi per oggi",
-  "v2CheckPaused": "Controllo duplicati in pausa"
+  "v2CheckPaused": "Controllo duplicati in pausa",
+  "v2StillChecking": "Stiamo ancora controllando le foto",
+  "v2StillCheckingBody": "I risultati appariranno qui mentre la scansione prosegue nella Home."
 }

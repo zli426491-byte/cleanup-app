@@ -483,5 +483,7 @@
   "v2DailyLimitRemaining": "{count, plural, other{Bugün {count} öge daha ücretsiz silebilirsiniz. Daha az seçin veya Pro’ya geçin.}}",
   "v2SeeProOptions": "Pro seçeneklerini gör",
   "v2SelectionOverLimitTitle": "Bugün için çok fazla öge",
-  "v2CheckPaused": "Kopya kontrolü duraklatıldı"
+  "v2CheckPaused": "Kopya kontrolü duraklatıldı",
+  "v2StillChecking": "Fotoğraflarınız hâlâ kontrol ediliyor",
+  "v2StillCheckingBody": "Tarama Ana Sayfa’da sürdükçe sonuçlar burada görünür."
 }

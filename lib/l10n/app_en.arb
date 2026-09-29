@@ -1247,5 +1247,7 @@
   },
   "v2SeeProOptions": "See Pro Options",
   "v2SelectionOverLimitTitle": "Too many items for today",
-  "v2CheckPaused": "Duplicate check paused"
+  "v2CheckPaused": "Duplicate check paused",
+  "v2StillChecking": "Still checking your photos",
+  "v2StillCheckingBody": "Results appear here as the scan continues on Home."
 }

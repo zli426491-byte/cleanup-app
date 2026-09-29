@@ -1861,4 +1861,11 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get v2CheckPaused => 'หยุดตรวจรายการซ้ำชั่วคราว';
+
+  @override
+  String get v2StillChecking => 'กำลังตรวจรูปภาพอยู่';
+
+  @override
+  String get v2StillCheckingBody =>
+      'ผลลัพธ์จะแสดงที่นี่ระหว่างการสแกนที่หน้าหลัก';
 }

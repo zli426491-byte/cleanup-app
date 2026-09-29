@@ -1926,4 +1926,11 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get v2CheckPaused => 'Controllo duplicati in pausa';
+
+  @override
+  String get v2StillChecking => 'Stiamo ancora controllando le foto';
+
+  @override
+  String get v2StillCheckingBody =>
+      'I risultati appariranno qui mentre la scansione prosegue nella Home.';
 }

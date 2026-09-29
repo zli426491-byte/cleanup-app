@@ -483,5 +483,7 @@
   "v2DailyLimitRemaining": "{count, plural, other{วันนี้ลบฟรีได้อีก {count} รายการ เลือกให้น้อยลงหรือปลดล็อก Pro}}",
   "v2SeeProOptions": "ดูตัวเลือก Pro",
   "v2SelectionOverLimitTitle": "เลือกเกินจำนวนของวันนี้",
-  "v2CheckPaused": "หยุดตรวจรายการซ้ำชั่วคราว"
+  "v2CheckPaused": "หยุดตรวจรายการซ้ำชั่วคราว",
+  "v2StillChecking": "กำลังตรวจรูปภาพอยู่",
+  "v2StillCheckingBody": "ผลลัพธ์จะแสดงที่นี่ระหว่างการสแกนที่หน้าหลัก"
 }

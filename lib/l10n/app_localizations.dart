@@ -3035,6 +3035,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Duplicate check paused'**
   String get v2CheckPaused;
+
+  /// No description provided for @v2StillChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Still checking your photos'**
+  String get v2StillChecking;
+
+  /// No description provided for @v2StillCheckingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Results appear here as the scan continues on Home.'**
+  String get v2StillCheckingBody;
 }
 
 class _AppLocalizationsDelegate

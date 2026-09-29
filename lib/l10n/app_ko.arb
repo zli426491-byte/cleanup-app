@@ -483,5 +483,7 @@
   "v2DailyLimitRemaining": "{count, plural, other{오늘은 {count}개 더 무료로 삭제할 수 있습니다. 선택을 줄이거나 Pro를 이용하세요.}}",
   "v2SeeProOptions": "Pro 옵션 보기",
   "v2SelectionOverLimitTitle": "오늘 한도를 넘는 선택입니다",
-  "v2CheckPaused": "중복 확인 일시 정지됨"
+  "v2CheckPaused": "중복 확인 일시 정지됨",
+  "v2StillChecking": "사진을 아직 확인하고 있습니다",
+  "v2StillCheckingBody": "홈에서 스캔이 진행되면 여기에 결과가 표시됩니다."
 }

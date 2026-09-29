@@ -1945,4 +1945,11 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get v2CheckPaused => 'Verificarea duplicatelor este în pauză';
+
+  @override
+  String get v2StillChecking => 'Încă verificăm fotografiile';
+
+  @override
+  String get v2StillCheckingBody =>
+      'Rezultatele apar aici pe măsură ce scanarea continuă în ecranul principal.';
 }
