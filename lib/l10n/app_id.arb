@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Anda telah menghapus",
   "v2CongratsSaved": "{minutes, plural, other{Menghemat sekitar {minutes} menit}}",
   "v2CongratsUsing": "dengan {appName}",
-  "v2CongratsRecentlyDeleted": "Perkiraan ukuran asli file: {size}. Periksa Penyimpanan iPhone untuk ruang yang benar-benar kosong; Baru Dihapus mungkin masih memakai ruang.",
+  "v2CongratsRecentlyDeleted": "Kosongkan album “Baru Dihapus” di iPhone Anda untuk membebaskan {size}.",
   "v2Great": "Mantap",
   "v2UnlockTitle": "Buka akses tanpa batas",
   "v2UnlockFeature1": "Temukan foto mirip seketika",
@@ -477,5 +477,9 @@
   "v2ScanPaused": "Pemindaian dijeda",
   "v2ContinueScan": "Lanjutkan",
   "v2PauseScan": "Jeda pemindaian",
-  "v2ContinueFreeCleanup": "Lanjutkan pembersihan gratis ({count} tersisa)"
+  "v2ContinueFreeCleanup": "Lanjutkan pembersihan gratis ({count} tersisa)",
+  "v2DailyLimitTitle": "Batas penghapusan harian tercapai",
+  "v2DailyLimitBody": "Versi gratis dapat menghapus {limit} item per hari. Buka Pro untuk menghapus batas.",
+  "v2DailyLimitRemaining": "{count, plural, other{Hari ini Anda masih bisa menghapus {count} item gratis. Pilih lebih sedikit atau buka Pro.}}",
+  "v2SeeProOptions": "Lihat opsi Pro"
 }

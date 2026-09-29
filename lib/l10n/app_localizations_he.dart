@@ -1672,7 +1672,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'גודל הקבצים המקורי המשוער: $size. בדקו באחסון ה‑iPhone כמה מקום פונה בפועל; הפריטים ב״נמחקו לאחרונה״ עשויים עדיין לתפוס מקום.';
+    return 'רוקנו את האלבום „נמחקו לאחרונה” כדי לפנות \u2068$size\u2069.';
   }
 
   @override
@@ -1868,4 +1868,30 @@ class AppLocalizationsHe extends AppLocalizations {
   String v2ContinueFreeCleanup(int count) {
     return 'המשך ניקוי בחינם ($count נותרו)';
   }
+
+  @override
+  String get v2DailyLimitTitle => 'הגעתם למגבלת המחיקה היומית';
+
+  @override
+  String v2DailyLimitBody(int limit) {
+    return 'בגרסה החינמית אפשר למחוק $limit פריטים ביום. פתחו את Pro כדי להסיר את המגבלה.';
+  }
+
+  @override
+  String v2DailyLimitRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'היום אפשר למחוק בחינם עוד $count פריטים. בחרו פחות פריטים או פתחו את Pro.',
+      two:
+          'היום אפשר למחוק בחינם עוד שני פריטים. בחרו פחות פריטים או פתחו את Pro.',
+      one:
+          'היום אפשר למחוק בחינם עוד פריט אחד. בחרו פחות פריטים או פתחו את Pro.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SeeProOptions => 'הצגת אפשרויות Pro';
 }

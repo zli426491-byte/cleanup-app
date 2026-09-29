@@ -1647,7 +1647,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'ขนาดไฟล์ต้นฉบับโดยประมาณ: $size ตรวจสอบพื้นที่ที่เพิ่มขึ้นจริงในพื้นที่จัดเก็บข้อมูล iPhone เพราะรายการที่เพิ่งลบอาจยังใช้พื้นที่อยู่';
+    return 'ล้างอัลบั้ม \"ที่เพิ่งลบ\" บน iPhone เพื่อเพิ่มพื้นที่ $size';
   }
 
   @override
@@ -1835,4 +1835,25 @@ class AppLocalizationsTh extends AppLocalizations {
   String v2ContinueFreeCleanup(int count) {
     return 'ทำความสะอาดฟรีต่อ (เหลือ $count ครั้ง)';
   }
+
+  @override
+  String get v2DailyLimitTitle => 'ถึงขีดจำกัดการลบรายวันแล้ว';
+
+  @override
+  String v2DailyLimitBody(int limit) {
+    return 'เวอร์ชันฟรีลบได้วันละ $limit รายการ ปลดล็อก Pro เพื่อยกเลิกขีดจำกัด';
+  }
+
+  @override
+  String v2DailyLimitRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'วันนี้ลบฟรีได้อีก $count รายการ เลือกให้น้อยลงหรือปลดล็อก Pro',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SeeProOptions => 'ดูตัวเลือก Pro';
 }

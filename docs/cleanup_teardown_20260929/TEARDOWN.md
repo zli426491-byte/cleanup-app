@@ -73,6 +73,14 @@
 - 軟牆：刪除、聯絡人合併讓你先用（體驗到爽點再收費）；影片壓縮是硬牆。
 - 權限順序：ATT → 相簿（按鈕後）→ 通知（進首頁後）→ 聯絡人（進分頁時）。
 
+## 4b. 第二次實測（2026-09-29，同一台 iPhone 15 Pro / iOS 17.1）
+
+- 免費刪除規則：**每天 5 個項目**（影片、照片合計），第 6 個出現 `41_daily_removal_limit.png`：「You've reached your daily removal limit — You can only delete 5 Photos/day with the free version. Unlock Pro to remove the boundaries.」＋「See Pro Options」＋右上 X。
+- 每次按刪除都先出付費牆 B；按左上 X 直接進 iOS 系統刪除確認（不需額外按鈕）。
+- 引導後付費牆 A 的 X **延遲數秒才出現**；引導第 2 步換成「Optimize iPhone Storage」（A/B 測試）。
+- 刪除第 2 次成功後跳 App Store 評分邀請（系統 `SKStoreReviewController`）。
+- 美區 IAP：Cleanup Pro 1 Week $7.99（另有 $5.95–$11.99 價格測試）、1 Year $29.99；7 天免費試用只在週方案。
+
 ## 5. 與 Codex 版（build 45）的主要差距
 1. 視覺：綠色 Material 風格 vs Cleanup 的白底、淡藍卡片、系統藍、iOS 大標題。
 2. 首頁：Codex 版是圓環圖 + 技術狀態；Cleanup 是「XX MB Space to Clean」+ 分類卡片牆。

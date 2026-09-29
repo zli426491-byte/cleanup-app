@@ -35,7 +35,7 @@ Future<void> main() async {
           report['workloadLargeVideos'] != 2 ||
           report['usesRealPhotosLibrary'] != true ||
           report['usesRealFlutterScannerAndNativeBridge'] != true ||
-          report['usesHomeScanAndToolNavigation'] != true ||
+          report['usesV2HomeScanStartAndResume'] != true ||
           report['usesMockChannelsOrFakeSizes'] != false ||
           report['exactDuplicatePairDetected'] != true ||
           report['differentPhotosNotGroupedWithExactPair'] != true ||

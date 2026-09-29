@@ -9,6 +9,7 @@ import 'package:cleanup_app/utils/constants.dart';
 import 'package:cleanup_app/views/paywall/paywall_view.dart';
 import 'package:cleanup_app/views/v2/cleanup_category.dart';
 import 'package:cleanup_app/views/v2/congratulations_view.dart';
+import 'package:cleanup_app/views/v2/daily_limit_sheet.dart';
 import 'package:cleanup_app/views/v2/delete_flow.dart';
 import 'package:cleanup_app/views/v2/group_review_view.dart';
 import 'package:flutter/material.dart';
@@ -212,7 +213,10 @@ void main() {
   });
 
   group('DeleteFlow', () {
-    tearDown(() => FreeCleanupQuota.debugSetInt = null);
+    tearDown(() {
+      FreeCleanupQuota.debugSetInt = null;
+      FreeCleanupQuota.now = DateTime.now;
+    });
 
     testWidgets('a refund that cannot be saved is reported to the user', (
       tester,
@@ -231,7 +235,7 @@ void main() {
       );
       final run = DeleteFlow.run(context, [selected], source: 'test');
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('paywall-continue-free')));
+      await tester.tap(find.byKey(const ValueKey('paywall-close')));
       await tester.pumpAndSettle();
       expect(await run, isEmpty);
       await tester.pump();
@@ -296,29 +300,7 @@ void main() {
       pro.dispose();
     });
 
-    testWidgets(
-      'closing the paywall cancels deletion and preserves free quota',
-      (tester) async {
-        final scanner = _Scanner(_result());
-        final store = _Store();
-        final context = await _host(tester, scanner, store);
-        final run = DeleteFlow.run(context, [_photo('c')], source: 'test');
-        await tester.pumpAndSettle();
-        expect(find.byType(PaywallView), findsOneWidget);
-        expect(scanner.requested, isEmpty);
-        await tester.tap(find.byKey(const ValueKey('paywall-close')));
-        await tester.pumpAndSettle();
-        expect(await run, isEmpty);
-        expect(scanner.deleteCalls, isEmpty);
-        expect(find.byType(CongratulationsView), findsNothing);
-        expect(await FreeCleanupQuota.remaining(), AppConstants.maxFreeDeletes);
-        await tester.pumpWidget(const SizedBox());
-        scanner.dispose();
-        store.dispose();
-      },
-    );
-
-    testWidgets('explicit free continuation deletes and spends one cleanup', (
+    testWidgets('closing the unlock offer continues and spends one item of today', (
       tester,
     ) async {
       final scanner = _Scanner(_result());
@@ -330,7 +312,7 @@ void main() {
       final run = DeleteFlow.run(context, [selected], source: 'test');
       await tester.pumpAndSettle();
       expect(scanner.deleteCalls, isEmpty);
-      await tester.tap(find.byKey(const ValueKey('paywall-continue-free')));
+      await tester.tap(find.byKey(const ValueKey('paywall-close')));
       await tester.pumpAndSettle();
       expect(scanner.requested, ['c']);
       expect(identical(scanner.deleteCalls.single.single, selected), isTrue);
@@ -358,7 +340,7 @@ void main() {
         final run = DeleteFlow.run(context, [selected], source: 'test');
         await tester.pumpAndSettle();
         scanner.result = _withModifiedAsset(scanner.result, 'c');
-        await tester.tap(find.byKey(const ValueKey('paywall-continue-free')));
+        await tester.tap(find.byKey(const ValueKey('paywall-close')));
         await tester.pumpAndSettle();
         expect(await run, isEmpty);
         expect(scanner.deleteCalls, isEmpty);
@@ -370,7 +352,7 @@ void main() {
       },
     );
 
-    testWidgets('simultaneous free delete requests spend only one quota', (
+    testWidgets('simultaneous free delete requests spend only one allowance', (
       tester,
     ) async {
       final scanner = _Scanner(_result());
@@ -381,7 +363,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(await second, isEmpty);
       expect(scanner.deleteCalls, isEmpty);
-      await tester.tap(find.byKey(const ValueKey('paywall-continue-free')));
+      await tester.tap(find.byKey(const ValueKey('paywall-close')));
       await tester.pumpAndSettle();
       expect(scanner.deleteCalls.length, 1);
       expect(scanner.requested, ['b']);
@@ -397,7 +379,7 @@ void main() {
       store.dispose();
     });
 
-    testWidgets('a free user cannot exceed five successful cleanups', (
+    testWidgets('a free user cannot delete more than five items a day', (
       tester,
     ) async {
       final scanner = _Scanner(_result());
@@ -407,7 +389,7 @@ void main() {
         final selected = scanner.scanResult.allAssets[i];
         final run = DeleteFlow.run(context, [selected], source: 'test');
         await tester.pumpAndSettle();
-        await tester.tap(find.byKey(const ValueKey('paywall-continue-free')));
+        await tester.tap(find.byKey(const ValueKey('paywall-close')));
         await tester.pumpAndSettle();
         expect(scanner.deleteCalls.length, i + 1);
         expect(identical(scanner.deleteCalls.last.single, selected), isTrue);
@@ -423,9 +405,10 @@ void main() {
         scanner.scanResult.allAssets.last,
       ], source: 'test');
       await tester.pumpAndSettle();
-      expect(find.byType(PaywallView), findsOneWidget);
-      expect(find.byKey(const ValueKey('paywall-continue-free')), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('paywall-close')));
+      // The sixth item of the day meets the daily limit, not the paywall.
+      expect(find.byType(PaywallView), findsNothing);
+      expect(find.byType(DailyLimitSheet), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('daily-limit-close')));
       await tester.pumpAndSettle();
       expect(await sixth, isEmpty);
       expect(scanner.deleteCalls.length, AppConstants.maxFreeDeletes);
@@ -436,26 +419,108 @@ void main() {
     });
 
     testWidgets(
-      'with no free cleanups left, closing the paywall deletes nothing',
+      'with the daily allowance used up, the limit sheet deletes nothing',
       (tester) async {
+        FreeCleanupQuota.now = () => DateTime(2026, 9, 29, 23, 59);
         SharedPreferences.setMockInitialValues({
-          'v2.freeCleanupsUsed': AppConstants.maxFreeDeletes,
+          'v2.freeDeletes.count': AppConstants.maxFreeDeletes,
+          'v2.freeDeletes.day': '2026-09-29',
         });
         final scanner = _Scanner(_result());
         final store = _Store();
         final context = await _host(tester, scanner, store);
         final run = DeleteFlow.run(context, [_photo('c')], source: 'test');
         await tester.pumpAndSettle();
-        await tester.tap(find.byKey(const ValueKey('paywall-close')));
+        expect(find.byType(PaywallView), findsNothing);
+        final strings = tester.element(find.byType(DailyLimitSheet)).l10n;
+        expect(find.text(strings.v2DailyLimitTitle), findsOneWidget);
+        expect(
+          find.text(strings.v2DailyLimitBody(AppConstants.maxFreeDeletes)),
+          findsOneWidget,
+        );
+        await tester.tap(find.byKey(const ValueKey('daily-limit-close')));
         await tester.pumpAndSettle();
         expect(await run, isEmpty);
-        expect(scanner.requested, isEmpty);
+        expect(scanner.deleteCalls, isEmpty);
         expect(find.byType(CongratulationsView), findsNothing);
         await tester.pumpWidget(const SizedBox());
         scanner.dispose();
         store.dispose();
       },
     );
+
+    test('the allowance resets on a new calendar day', () async {
+      FreeCleanupQuota.now = () => DateTime(2026, 9, 28, 23, 59);
+      SharedPreferences.setMockInitialValues({
+        'v2.freeDeletes.count': AppConstants.maxFreeDeletes,
+        'v2.freeDeletes.day': '2026-09-28',
+      });
+      expect(await FreeCleanupQuota.remaining(), 0);
+      expect(await FreeCleanupQuota.reserve(1), isFalse);
+      FreeCleanupQuota.now = () => DateTime(2026, 9, 29, 0, 1);
+      expect(await FreeCleanupQuota.remaining(), AppConstants.maxFreeDeletes);
+      expect(await FreeCleanupQuota.reserve(2), isTrue);
+      expect(
+        await FreeCleanupQuota.remaining(),
+        AppConstants.maxFreeDeletes - 2,
+      );
+    });
+
+    testWidgets('a selection larger than the daily allowance is not deleted', (
+      tester,
+    ) async {
+      final scanner = _Scanner(_result());
+      final store = _Store();
+      final context = await _host(tester, scanner, store);
+      // Six items with five free deletions left today.
+      final run = DeleteFlow.run(
+        context,
+        scanner.scanResult.allAssets,
+        source: 'test',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('paywall-close')));
+      await tester.pumpAndSettle();
+      final strings = tester.element(find.byType(DailyLimitSheet)).l10n;
+      expect(
+        find.text(strings.v2DailyLimitRemaining(AppConstants.maxFreeDeletes)),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const ValueKey('daily-limit-close')));
+      await tester.pumpAndSettle();
+      expect(await run, isEmpty);
+      expect(scanner.deleteCalls, isEmpty);
+      expect(await FreeCleanupQuota.remaining(), AppConstants.maxFreeDeletes);
+      await tester.pumpWidget(const SizedBox());
+      scanner.dispose();
+      store.dispose();
+    });
+
+    testWidgets('a partly cancelled free deletion refunds the kept items', (
+      tester,
+    ) async {
+      final scanner = _Scanner(_result())..deleteResult = {'b'};
+      final store = _Store();
+      final context = await _host(tester, scanner, store);
+      final selected = scanner.scanResult.allAssets
+          .where((a) => a.id == 'b' || a.id == 'c' || a.id == 'd')
+          .toList();
+      final run = DeleteFlow.run(context, selected, source: 'test');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('paywall-close')));
+      await tester.pumpAndSettle();
+      expect(scanner.requested, ['b', 'c', 'd']);
+      expect(
+        await FreeCleanupQuota.remaining(),
+        AppConstants.maxFreeDeletes - 1,
+      );
+      await tester.tap(find.byKey(const ValueKey('congrats-great')));
+      await tester.pumpAndSettle();
+      expect(await run, {'b'});
+      await tester.pumpWidget(const SizedBox());
+      scanner.dispose();
+      store.dispose();
+    });
 
     testWidgets('a free cleanup reserved before a cancelled deletion is refunded', (
       tester,
@@ -468,7 +533,7 @@ void main() {
       );
       final run = DeleteFlow.run(context, [selected], source: 'test');
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('paywall-continue-free')));
+      await tester.tap(find.byKey(const ValueKey('paywall-close')));
       await tester.pumpAndSettle();
       expect(scanner.requested, ['c']);
       expect(await run, isEmpty);
@@ -489,7 +554,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(await deleted, isEmpty);
       expect(find.byType(CongratulationsView), findsNothing);
-      // A free cleanup is only spent when something was really deleted.
+      // Free deletions are only spent when something was really deleted.
       expect(await FreeCleanupQuota.remaining(), AppConstants.maxFreeDeletes);
       await tester.pumpWidget(const SizedBox());
       scanner.dispose();

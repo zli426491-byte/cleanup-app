@@ -1667,7 +1667,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Perkiraan ukuran asli file: $size. Periksa Penyimpanan iPhone untuk ruang yang benar-benar kosong; Baru Dihapus mungkin masih memakai ruang.';
+    return 'Kosongkan album “Baru Dihapus” di iPhone Anda untuk membebaskan $size.';
   }
 
   @override
@@ -1856,4 +1856,26 @@ class AppLocalizationsId extends AppLocalizations {
   String v2ContinueFreeCleanup(int count) {
     return 'Lanjutkan pembersihan gratis ($count tersisa)';
   }
+
+  @override
+  String get v2DailyLimitTitle => 'Batas penghapusan harian tercapai';
+
+  @override
+  String v2DailyLimitBody(int limit) {
+    return 'Versi gratis dapat menghapus $limit item per hari. Buka Pro untuk menghapus batas.';
+  }
+
+  @override
+  String v2DailyLimitRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Hari ini Anda masih bisa menghapus $count item gratis. Pilih lebih sedikit atau buka Pro.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SeeProOptions => 'Lihat opsi Pro';
 }

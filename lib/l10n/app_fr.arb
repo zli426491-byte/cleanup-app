@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Vous avez supprimé",
   "v2CongratsSaved": "{minutes, plural, one{Environ {minutes} minute gagnée} other{Environ {minutes} minutes gagnées}}",
   "v2CongratsUsing": "avec {appName}",
-  "v2CongratsRecentlyDeleted": "Taille d’origine estimée des fichiers : {size}. Consultez Stockage iPhone pour l’espace réellement libéré ; Supprimés récemment peut encore occuper de l’espace.",
+  "v2CongratsRecentlyDeleted": "Videz l’album « Supprimés récemment » pour libérer {size}.",
   "v2Great": "Super",
   "v2UnlockTitle": "Débloquez l’accès illimité",
   "v2UnlockFeature1": "Trouvez instantanément les photos similaires",
@@ -477,5 +477,9 @@
   "v2ScanPaused": "Analyse en pause",
   "v2ContinueScan": "Reprendre",
   "v2PauseScan": "Mettre en pause",
-  "v2ContinueFreeCleanup": "Continuer le nettoyage gratuit ({count} restant)"
+  "v2ContinueFreeCleanup": "Continuer le nettoyage gratuit ({count} restant)",
+  "v2DailyLimitTitle": "Limite quotidienne de suppression atteinte",
+  "v2DailyLimitBody": "La version gratuite permet de supprimer {limit} éléments par jour. Débloquez Pro pour lever la limite.",
+  "v2DailyLimitRemaining": "{count, plural, one{Vous pouvez encore supprimer {count} élément gratuitement aujourd’hui. Sélectionnez-en moins ou débloquez Pro.} other{Vous pouvez encore supprimer {count} éléments gratuitement aujourd’hui. Sélectionnez-en moins ou débloquez Pro.}}",
+  "v2SeeProOptions": "Voir les offres Pro"
 }

@@ -1670,7 +1670,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Tahmini özgün dosya boyutu: $size. Gerçekte açılan alanı iPhone Saklama Alanı’nda kontrol edin; Son Silinenler hâlâ yer kaplayabilir.';
+    return '$size yer açmak için iPhone’unuzdaki “Son Silinenler” albümünü boşaltın.';
   }
 
   @override
@@ -1858,4 +1858,26 @@ class AppLocalizationsTr extends AppLocalizations {
   String v2ContinueFreeCleanup(int count) {
     return 'Ücretsiz temizliğe devam et ($count hak kaldı)';
   }
+
+  @override
+  String get v2DailyLimitTitle => 'Günlük silme sınırına ulaştınız';
+
+  @override
+  String v2DailyLimitBody(int limit) {
+    return 'Ücretsiz sürümde günde $limit öge silebilirsiniz. Sınırı kaldırmak için Pro’ya geçin.';
+  }
+
+  @override
+  String v2DailyLimitRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Bugün $count öge daha ücretsiz silebilirsiniz. Daha az seçin veya Pro’ya geçin.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SeeProOptions => 'Pro seçeneklerini gör';
 }

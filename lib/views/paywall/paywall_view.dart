@@ -21,24 +21,21 @@ import '../v2/ui_kit.dart';
 /// B: when a free user starts a Pro action ("Unlock Unlimited Access").
 enum PaywallVariant { trial, unlock }
 
-/// Explicit result from the in-app unlock offer. Closing the offer is never
-/// consent to continue a pending deletion.
-enum PaywallUnlockResult { cancelled, continueFree, purchased }
+/// Result of the in-app unlock offer. In the delete flow, closing the offer
+/// (like the reference app's X) continues within today's free allowance;
+/// the allowance, not this result, limits free deletions.
+enum PaywallUnlockResult { cancelled, purchased }
 
 class PaywallView extends StatefulWidget {
   final bool fromOnboarding;
   final PaywallVariant variant;
   final String? source;
 
-  /// Free cleanups available through the explicit continuation action (B only).
-  final int? freeCleanupsLeft;
-
   const PaywallView({
     super.key,
     this.fromOnboarding = false,
     PaywallVariant? variant,
     this.source,
-    this.freeCleanupsLeft,
   }) : variant =
            variant ??
            (fromOnboarding ? PaywallVariant.trial : PaywallVariant.unlock);
@@ -47,7 +44,6 @@ class PaywallView extends StatefulWidget {
   static Future<PaywallUnlockResult> showUnlock(
     BuildContext context, {
     required String source,
-    int? freeCleanupsLeft,
   }) async =>
       await Navigator.of(context).push<PaywallUnlockResult>(
         MaterialPageRoute<PaywallUnlockResult>(
@@ -55,7 +51,6 @@ class PaywallView extends StatefulWidget {
           builder: (_) => PaywallView(
             variant: PaywallVariant.unlock,
             source: source,
-            freeCleanupsLeft: freeCleanupsLeft,
           ),
         ),
       ) ??
@@ -244,31 +239,6 @@ class _PaywallViewState extends State<PaywallView> {
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
                     child: purchaseButton,
                   ),
-                  if (widget.variant == PaywallVariant.unlock &&
-                      widget.freeCleanupsLeft != null &&
-                      widget.freeCleanupsLeft! > 0 &&
-                      !sub.isPro)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton(
-                          key: const ValueKey('paywall-continue-free'),
-                          onPressed: _isPurchasing || _isDismissing
-                              ? null
-                              : () => _dismiss(
-                                  context,
-                                  result: PaywallUnlockResult.continueFree,
-                                ),
-                          child: Text(
-                            context.l10n.v2ContinueFreeCleanup(
-                              widget.freeCleanupsLeft!,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                    ),
                   _footer(sub),
                 ],
               ),

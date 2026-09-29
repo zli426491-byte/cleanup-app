@@ -1721,7 +1721,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Оценочный исходный размер файлов: $size. Фактически освобождённое место проверьте в хранилище iPhone; «Недавно удалённые» могут всё ещё занимать место.';
+    return 'Очистите альбом «Недавно удалённые», чтобы освободить $size.';
   }
 
   @override
@@ -1925,4 +1925,32 @@ class AppLocalizationsRu extends AppLocalizations {
   String v2ContinueFreeCleanup(int count) {
     return 'Продолжить бесплатную очистку (осталось $count)';
   }
+
+  @override
+  String get v2DailyLimitTitle => 'Достигнут дневной лимит удаления';
+
+  @override
+  String v2DailyLimitBody(int limit) {
+    return 'В бесплатной версии можно удалять $limit объектов в день. Откройте Pro, чтобы снять лимит.';
+  }
+
+  @override
+  String v2DailyLimitRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Сегодня можно бесплатно удалить ещё $count объекта. Выберите меньше или откройте Pro.',
+      many:
+          'Сегодня можно бесплатно удалить ещё $count объектов. Выберите меньше или откройте Pro.',
+      few:
+          'Сегодня можно бесплатно удалить ещё $count объекта. Выберите меньше или откройте Pro.',
+      one:
+          'Сегодня можно бесплатно удалить ещё $count объект. Выберите меньше или откройте Pro.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SeeProOptions => 'Посмотреть Pro';
 }

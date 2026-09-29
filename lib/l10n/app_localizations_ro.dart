@@ -1714,7 +1714,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Dimensiunea originală estimată a fișierelor: $size. Verifică Stocare iPhone pentru spațiul eliberat efectiv; Șterse recent poate ocupa în continuare spațiu.';
+    return 'Golește albumul „Șterse recent” ca să eliberezi $size.';
   }
 
   @override
@@ -1913,4 +1913,30 @@ class AppLocalizationsRo extends AppLocalizations {
   String v2ContinueFreeCleanup(int count) {
     return 'Continuă curățarea gratuită ($count rămase)';
   }
+
+  @override
+  String get v2DailyLimitTitle => 'Ai atins limita zilnică de ștergere';
+
+  @override
+  String v2DailyLimitBody(int limit) {
+    return 'Versiunea gratuită permite ștergerea a $limit elemente pe zi. Deblochează Pro pentru a elimina limita.';
+  }
+
+  @override
+  String v2DailyLimitRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Azi mai poți șterge gratuit $count de elemente. Selectează mai puține sau deblochează Pro.',
+      few:
+          'Azi mai poți șterge gratuit $count elemente. Selectează mai puține sau deblochează Pro.',
+      one:
+          'Azi mai poți șterge gratuit 1 element. Selectează mai puține sau deblochează Pro.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SeeProOptions => 'Vezi opțiunile Pro';
 }

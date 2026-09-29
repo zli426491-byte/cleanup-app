@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Du hast gelöscht:",
   "v2CongratsSaved": "{minutes, plural, one{Etwa 1 Minute gespart} other{Etwa {minutes} Minuten gespart}}",
   "v2CongratsUsing": "mit {appName}",
-  "v2CongratsRecentlyDeleted": "Geschätzte Originalgröße der Dateien: {size}. Den tatsächlich freien Speicher siehst du unter iPhone-Speicher; „Zuletzt gelöscht“ kann weiterhin Platz belegen.",
+  "v2CongratsRecentlyDeleted": "Leere das Album „Zuletzt gelöscht“, um {size} freizugeben.",
   "v2Great": "Super",
   "v2UnlockTitle": "Unbegrenzten Zugang freischalten",
   "v2UnlockFeature1": "Ähnliche Fotos sofort finden",
@@ -477,5 +477,9 @@
   "v2ScanPaused": "Scan pausiert",
   "v2ContinueScan": "Fortsetzen",
   "v2PauseScan": "Scan pausieren",
-  "v2ContinueFreeCleanup": "Kostenlose Bereinigung fortsetzen ({count} verbleibend)"
+  "v2ContinueFreeCleanup": "Kostenlose Bereinigung fortsetzen ({count} verbleibend)",
+  "v2DailyLimitTitle": "Tageslimit zum Löschen erreicht",
+  "v2DailyLimitBody": "In der Gratisversion kannst du {limit} Objekte pro Tag löschen. Schalte Pro frei, um das Limit aufzuheben.",
+  "v2DailyLimitRemaining": "{count, plural, one{Heute kannst du noch 1 Objekt gratis löschen. Wähle weniger aus oder schalte Pro frei.} other{Heute kannst du noch {count} Objekte gratis löschen. Wähle weniger aus oder schalte Pro frei.}}",
+  "v2SeeProOptions": "Pro-Optionen ansehen"
 }

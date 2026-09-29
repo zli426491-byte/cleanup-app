@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "你已刪除",
   "v2CongratsSaved": "{minutes, plural, other{節省約 {minutes} 分鐘}}",
   "v2CongratsUsing": "使用 {appName}",
-  "v2CongratsRecentlyDeleted": "已刪檔案的原始大小估計為 {size}；實際釋放容量請查看 iPhone 儲存空間，「最近刪除」可能仍佔用空間。",
+  "v2CongratsRecentlyDeleted": "清空 iPhone 上的「最近刪除」相簿即可釋放 {size}。",
   "v2Great": "太好了",
   "v2UnlockTitle": "解鎖無限制使用",
   "v2UnlockFeature1": "立即找出相似照片",
@@ -477,5 +477,9 @@
   "v2ScanPaused": "掃描已暫停",
   "v2ContinueScan": "繼續掃描",
   "v2PauseScan": "暫停掃描",
-  "v2ContinueFreeCleanup": "繼續免費清理（剩餘 {count} 次）"
+  "v2ContinueFreeCleanup": "繼續免費清理（剩餘 {count} 次）",
+  "v2DailyLimitTitle": "已達到今日刪除上限",
+  "v2DailyLimitBody": "免費版每天可刪除 {limit} 項。解鎖 Pro 即可取消限制。",
+  "v2DailyLimitRemaining": "{count, plural, other{今天還能免費刪除 {count} 項。請減少選取，或解鎖 Pro。}}",
+  "v2SeeProOptions": "查看 Pro 方案"
 }

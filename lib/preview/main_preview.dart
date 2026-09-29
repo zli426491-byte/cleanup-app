@@ -24,6 +24,7 @@ import '../views/v2/category_grid_view.dart';
 import '../views/v2/category_intro_view.dart';
 import '../views/v2/cleanup_category.dart';
 import '../views/v2/congratulations_view.dart';
+import '../views/v2/daily_limit_sheet.dart';
 import '../views/v2/extras_view.dart';
 import '../views/v2/group_review_view.dart';
 import '../views/v2/optimize_view.dart';
@@ -281,7 +282,11 @@ Widget _screenFor(String fragment) => switch (fragment) {
   'home' => const MainTabView(),
   'onboarding' => const OnboardingView(),
   'paywall-a' => const PaywallView(variant: PaywallVariant.trial),
-  'paywall-b' => const PaywallView(freeCleanupsLeft: 3),
+  'paywall-b' => const PaywallView(),
+  'limit' => const Scaffold(
+    backgroundColor: Colors.black54,
+    body: Center(child: DailyLimitSheet(source: 'preview', remaining: 0)),
+  ),
   'congrats' => const CongratulationsView(
     deletedCount: 128,
     deletedBytes: 2400 * 1024 * 1024,
@@ -323,7 +328,14 @@ class _PreviewMenu extends StatelessWidget {
           item('App (Home / Optimize / Extras)', (_) => const MainTabView()),
           item('Onboarding', (_) => const OnboardingView()),
           item('Paywall A (trial)', (_) => const PaywallView(variant: PaywallVariant.trial)),
-          item('Paywall B (unlock)', (_) => const PaywallView(freeCleanupsLeft: 3)),
+          item('Paywall B (unlock)', (_) => const PaywallView()),
+          item(
+            'Daily limit',
+            (_) => const Scaffold(
+              backgroundColor: Colors.black54,
+              body: Center(child: DailyLimitSheet(source: 'preview', remaining: 0)),
+            ),
+          ),
           item(
             'Congratulations',
             (_) => const CongratulationsView(

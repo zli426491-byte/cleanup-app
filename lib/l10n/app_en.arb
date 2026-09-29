@@ -1089,7 +1089,7 @@
       }
     }
   },
-  "v2CongratsRecentlyDeleted": "Estimated original file size: {size}. Check iPhone Storage for the space actually freed; Recently Deleted may still use storage.",
+  "v2CongratsRecentlyDeleted": "Empty the “Recently Deleted” album on your iPhone to free up {size}.",
   "@v2CongratsRecentlyDeleted": {
     "placeholders": {
       "size": {
@@ -1227,5 +1227,23 @@
         "type": "int"
       }
     }
-  }
+  },
+  "v2DailyLimitTitle": "You've reached your daily removal limit",
+  "v2DailyLimitBody": "You can delete {limit} items a day with the free version. Unlock Pro to remove the limit.",
+  "@v2DailyLimitBody": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "v2DailyLimitRemaining": "{count, plural, one{You can delete 1 more item today for free. Select fewer items or unlock Pro.} other{You can delete {count} more items today for free. Select fewer items or unlock Pro.}}",
+  "@v2DailyLimitRemaining": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "v2SeeProOptions": "See Pro Options"
 }

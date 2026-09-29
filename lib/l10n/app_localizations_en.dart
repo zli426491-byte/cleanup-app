@@ -1741,7 +1741,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Estimated original file size: $size. Check iPhone Storage for the space actually freed; Recently Deleted may still use storage.';
+    return 'Empty the “Recently Deleted” album on your iPhone to free up $size.';
   }
 
   @override
@@ -1934,4 +1934,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String v2ContinueFreeCleanup(int count) {
     return 'Continue free cleanup ($count remaining)';
   }
+
+  @override
+  String get v2DailyLimitTitle => 'You\'ve reached your daily removal limit';
+
+  @override
+  String v2DailyLimitBody(int limit) {
+    return 'You can delete $limit items a day with the free version. Unlock Pro to remove the limit.';
+  }
+
+  @override
+  String v2DailyLimitRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'You can delete $count more items today for free. Select fewer items or unlock Pro.',
+      one:
+          'You can delete 1 more item today for free. Select fewer items or unlock Pro.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SeeProOptions => 'See Pro Options';
 }

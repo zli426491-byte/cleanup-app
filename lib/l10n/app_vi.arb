@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Bạn đã xóa",
   "v2CongratsSaved": "{minutes, plural, other{Tiết kiệm khoảng {minutes} phút}}",
   "v2CongratsUsing": "nhờ {appName}",
-  "v2CongratsRecentlyDeleted": "Dung lượng tệp gốc ước tính: {size}. Hãy kiểm tra Dung lượng iPhone để biết dung lượng thực tế đã giải phóng; mục Đã xóa gần đây vẫn có thể chiếm chỗ.",
+  "v2CongratsRecentlyDeleted": "Dọn album “Đã xóa gần đây” trên iPhone để giải phóng {size}.",
   "v2Great": "Tuyệt",
   "v2UnlockTitle": "Mở khóa truy cập không giới hạn",
   "v2UnlockFeature1": "Tìm ảnh tương tự ngay lập tức",
@@ -477,5 +477,9 @@
   "v2ScanPaused": "Đã tạm dừng quét",
   "v2ContinueScan": "Tiếp tục",
   "v2PauseScan": "Tạm dừng quét",
-  "v2ContinueFreeCleanup": "Tiếp tục dọn dẹp miễn phí (còn {count} lượt)"
+  "v2ContinueFreeCleanup": "Tiếp tục dọn dẹp miễn phí (còn {count} lượt)",
+  "v2DailyLimitTitle": "Bạn đã đạt giới hạn xóa trong ngày",
+  "v2DailyLimitBody": "Bản miễn phí chỉ xóa được {limit} mục mỗi ngày. Mở khóa Pro để bỏ giới hạn.",
+  "v2DailyLimitRemaining": "{count, plural, other{Hôm nay bạn còn xóa miễn phí được {count} mục. Hãy chọn ít hơn hoặc mở khóa Pro.}}",
+  "v2SeeProOptions": "Xem các gói Pro"
 }

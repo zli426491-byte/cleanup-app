@@ -1659,7 +1659,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Dung lượng tệp gốc ước tính: $size. Hãy kiểm tra Dung lượng iPhone để biết dung lượng thực tế đã giải phóng; mục Đã xóa gần đây vẫn có thể chiếm chỗ.';
+    return 'Dọn album “Đã xóa gần đây” trên iPhone để giải phóng $size.';
   }
 
   @override
@@ -1847,4 +1847,26 @@ class AppLocalizationsVi extends AppLocalizations {
   String v2ContinueFreeCleanup(int count) {
     return 'Tiếp tục dọn dẹp miễn phí (còn $count lượt)';
   }
+
+  @override
+  String get v2DailyLimitTitle => 'Bạn đã đạt giới hạn xóa trong ngày';
+
+  @override
+  String v2DailyLimitBody(int limit) {
+    return 'Bản miễn phí chỉ xóa được $limit mục mỗi ngày. Mở khóa Pro để bỏ giới hạn.';
+  }
+
+  @override
+  String v2DailyLimitRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Hôm nay bạn còn xóa miễn phí được $count mục. Hãy chọn ít hơn hoặc mở khóa Pro.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SeeProOptions => 'Xem các gói Pro';
 }

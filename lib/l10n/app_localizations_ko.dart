@@ -1608,7 +1608,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return '원본 파일 크기 추정치: $size. 실제 확보된 공간은 iPhone 저장 공간에서 확인하세요. \'최근 삭제된 항목\'이 여전히 공간을 차지할 수 있습니다.';
+    return '\"최근 삭제된 항목\" 앨범을 비우면 $size가 확보됩니다.';
   }
 
   @override
@@ -1791,4 +1791,25 @@ class AppLocalizationsKo extends AppLocalizations {
   String v2ContinueFreeCleanup(int count) {
     return '무료 정리 계속하기 (남은 횟수 $count회)';
   }
+
+  @override
+  String get v2DailyLimitTitle => '오늘의 삭제 한도에 도달했습니다';
+
+  @override
+  String v2DailyLimitBody(int limit) {
+    return '무료 버전은 하루에 $limit개까지 삭제할 수 있습니다. Pro로 한도를 해제하세요.';
+  }
+
+  @override
+  String v2DailyLimitRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '오늘은 $count개 더 무료로 삭제할 수 있습니다. 선택을 줄이거나 Pro를 이용하세요.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SeeProOptions => 'Pro 옵션 보기';
 }

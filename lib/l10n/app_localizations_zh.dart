@@ -1554,7 +1554,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return '已删文件的原始大小估计为 $size；实际释放容量请查看 iPhone 储存空间，“最近删除”可能仍占用空间。';
+    return '清空 iPhone 上的“最近删除”相簿即可释放 $size。';
   }
 
   @override
@@ -1737,6 +1737,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String v2ContinueFreeCleanup(int count) {
     return '继续免费清理（剩余 $count 次）';
   }
+
+  @override
+  String get v2DailyLimitTitle => '已达到今日删除上限';
+
+  @override
+  String v2DailyLimitBody(int limit) {
+    return '免费版每天可删除 $limit 项。解锁 Pro 即可取消限制。';
+  }
+
+  @override
+  String v2DailyLimitRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '今天还能免费删除 $count 项。请减少选择，或解锁 Pro。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SeeProOptions => '查看 Pro 方案';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -3289,7 +3310,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return '已删文件的原始大小估计为 $size；实际释放容量请查看 iPhone 储存空间，“最近删除”可能仍占用空间。';
+    return '清空 iPhone 上的“最近删除”相簿即可释放 $size。';
   }
 
   @override
@@ -3472,6 +3493,27 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String v2ContinueFreeCleanup(int count) {
     return '继续免费清理（剩余 $count 次）';
   }
+
+  @override
+  String get v2DailyLimitTitle => '已达到今日删除上限';
+
+  @override
+  String v2DailyLimitBody(int limit) {
+    return '免费版每天可删除 $limit 项。解锁 Pro 即可取消限制。';
+  }
+
+  @override
+  String v2DailyLimitRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '今天还能免费删除 $count 项。请减少选择，或解锁 Pro。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SeeProOptions => '查看 Pro 方案';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -4987,7 +5029,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return '已刪檔案的原始大小估計為 $size；實際釋放容量請查看 iPhone 儲存空間，「最近刪除」可能仍佔用空間。';
+    return '清空 iPhone 上的「最近刪除」相簿即可釋放 $size。';
   }
 
   @override
@@ -5170,4 +5212,25 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String v2ContinueFreeCleanup(int count) {
     return '繼續免費清理（剩餘 $count 次）';
   }
+
+  @override
+  String get v2DailyLimitTitle => '已達到今日刪除上限';
+
+  @override
+  String v2DailyLimitBody(int limit) {
+    return '免費版每天可刪除 $limit 項。解鎖 Pro 即可取消限制。';
+  }
+
+  @override
+  String v2DailyLimitRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '今天還能免費刪除 $count 項。請減少選取，或解鎖 Pro。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SeeProOptions => '查看 Pro 方案';
 }

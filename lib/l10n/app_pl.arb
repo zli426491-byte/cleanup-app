@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Usunięto",
   "v2CongratsSaved": "{minutes, plural, one{Zaoszczędzono ok. {minutes} minutę} few{Zaoszczędzono ok. {minutes} minuty} many{Zaoszczędzono ok. {minutes} minut} other{Zaoszczędzono ok. {minutes} minuty}}",
   "v2CongratsUsing": "dzięki {appName}",
-  "v2CongratsRecentlyDeleted": "Szacowany rozmiar oryginalnych plików: {size}. Rzeczywiście zwolnione miejsce sprawdzisz w Pamięci iPhone’a; Ostatnio usunięte mogą nadal zajmować miejsce.",
+  "v2CongratsRecentlyDeleted": "Opróżnij album „Ostatnio usunięte”, aby zwolnić {size}.",
   "v2Great": "Super",
   "v2UnlockTitle": "Odblokuj nieograniczony dostęp",
   "v2UnlockFeature1": "Natychmiast znajduj podobne zdjęcia",
@@ -477,5 +477,9 @@
   "v2ScanPaused": "Skanowanie wstrzymane",
   "v2ContinueScan": "Wznów",
   "v2PauseScan": "Wstrzymaj skanowanie",
-  "v2ContinueFreeCleanup": "Kontynuuj darmowe czyszczenie (pozostało {count})"
+  "v2ContinueFreeCleanup": "Kontynuuj darmowe czyszczenie (pozostało {count})",
+  "v2DailyLimitTitle": "Osiągnięto dzienny limit usuwania",
+  "v2DailyLimitBody": "W wersji darmowej możesz usunąć {limit} elementów dziennie. Odblokuj Pro, aby znieść limit.",
+  "v2DailyLimitRemaining": "{count, plural, one{Dziś możesz jeszcze usunąć za darmo {count} element. Zaznacz mniej lub odblokuj Pro.} few{Dziś możesz jeszcze usunąć za darmo {count} elementy. Zaznacz mniej lub odblokuj Pro.} many{Dziś możesz jeszcze usunąć za darmo {count} elementów. Zaznacz mniej lub odblokuj Pro.} other{Dziś możesz jeszcze usunąć za darmo {count} elementu. Zaznacz mniej lub odblokuj Pro.}}",
+  "v2SeeProOptions": "Zobacz opcje Pro"
 }

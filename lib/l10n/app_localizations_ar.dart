@@ -1716,7 +1716,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'الحجم الأصلي التقديري للملفات: $size. تحقق من مساحة تخزين iPhone لمعرفة المساحة الفعلية المستعادة؛ قد تستمر العناصر المحذوفة مؤخرًا في شغل مساحة.';
+    return 'أفرغ ألبوم «المحذوفة مؤخرًا» على جهازك لتحرير \u2068$size\u2069.';
   }
 
   @override
@@ -1926,4 +1926,33 @@ class AppLocalizationsAr extends AppLocalizations {
   String v2ContinueFreeCleanup(int count) {
     return 'متابعة التنظيف المجاني ($count متبقية)';
   }
+
+  @override
+  String get v2DailyLimitTitle => 'لقد وصلت إلى حد الحذف اليومي';
+
+  @override
+  String v2DailyLimitBody(int limit) {
+    return 'يمكنك حذف $limit عناصر يوميًا في النسخة المجانية. افتح Pro لإزالة الحد.';
+  }
+
+  @override
+  String v2DailyLimitRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'يمكنك حذف $count عنصر آخر اليوم مجانًا. حدّد عناصر أقل أو افتح Pro.',
+      many:
+          'يمكنك حذف $count عنصرًا آخر اليوم مجانًا. حدّد عناصر أقل أو افتح Pro.',
+      few:
+          'يمكنك حذف $count عناصر أخرى اليوم مجانًا. حدّد عناصر أقل أو افتح Pro.',
+      two: 'يمكنك حذف عنصرين آخرين اليوم مجانًا. حدّد عناصر أقل أو افتح Pro.',
+      one: 'يمكنك حذف عنصر واحد آخر اليوم مجانًا. حدّد عناصر أقل أو افتح Pro.',
+      zero: 'لا يمكنك حذف المزيد اليوم مجانًا. حدّد عناصر أقل أو افتح Pro.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SeeProOptions => 'عرض خيارات Pro';
 }

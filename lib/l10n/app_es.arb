@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Has eliminado",
   "v2CongratsSaved": "{minutes, plural, one{Has ahorrado 1 minuto aprox.} other{Has ahorrado unos {minutes} minutos}}",
   "v2CongratsUsing": "con {appName}",
-  "v2CongratsRecentlyDeleted": "Tamaño original estimado de los archivos: {size}. Consulta Almacenamiento del iPhone para ver el espacio realmente liberado; Eliminado recientemente puede seguir ocupando espacio.",
+  "v2CongratsRecentlyDeleted": "Vacía el álbum “Eliminado” de tu iPhone para liberar {size}.",
   "v2Great": "Genial",
   "v2UnlockTitle": "Desbloquea acceso ilimitado",
   "v2UnlockFeature1": "Encuentra fotos parecidas al instante",
@@ -477,5 +477,9 @@
   "v2ScanPaused": "Análisis en pausa",
   "v2ContinueScan": "Continuar",
   "v2PauseScan": "Pausar análisis",
-  "v2ContinueFreeCleanup": "Continuar limpieza gratuita ({count} restantes)"
+  "v2ContinueFreeCleanup": "Continuar limpieza gratuita ({count} restantes)",
+  "v2DailyLimitTitle": "Has alcanzado el límite diario de eliminación",
+  "v2DailyLimitBody": "Con la versión gratuita puedes eliminar {limit} elementos al día. Desbloquea Pro para quitar el límite.",
+  "v2DailyLimitRemaining": "{count, plural, one{Hoy puedes eliminar 1 elemento más gratis. Selecciona menos o desbloquea Pro.} other{Hoy puedes eliminar {count} elementos más gratis. Selecciona menos o desbloquea Pro.}}",
+  "v2SeeProOptions": "Ver opciones Pro"
 }

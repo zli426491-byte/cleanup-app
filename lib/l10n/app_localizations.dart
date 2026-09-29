@@ -2733,7 +2733,7 @@ abstract class AppLocalizations {
   /// No description provided for @v2CongratsRecentlyDeleted.
   ///
   /// In en, this message translates to:
-  /// **'Estimated original file size: {size}. Check iPhone Storage for the space actually freed; Recently Deleted may still use storage.'**
+  /// **'Empty the “Recently Deleted” album on your iPhone to free up {size}.'**
   String v2CongratsRecentlyDeleted(String size);
 
   /// No description provided for @v2Great.
@@ -2999,6 +2999,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Continue free cleanup ({count} remaining)'**
   String v2ContinueFreeCleanup(int count);
+
+  /// No description provided for @v2DailyLimitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve reached your daily removal limit'**
+  String get v2DailyLimitTitle;
+
+  /// No description provided for @v2DailyLimitBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You can delete {limit} items a day with the free version. Unlock Pro to remove the limit.'**
+  String v2DailyLimitBody(int limit);
+
+  /// No description provided for @v2DailyLimitRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{You can delete 1 more item today for free. Select fewer items or unlock Pro.} other{You can delete {count} more items today for free. Select fewer items or unlock Pro.}}'**
+  String v2DailyLimitRemaining(int count);
+
+  /// No description provided for @v2SeeProOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'See Pro Options'**
+  String get v2SeeProOptions;
 }
 
 class _AppLocalizationsDelegate

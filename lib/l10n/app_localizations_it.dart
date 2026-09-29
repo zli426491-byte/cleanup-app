@@ -1701,7 +1701,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Dimensione originale stimata dei file: $size. Controlla Spazio iPhone per lo spazio effettivamente liberato; Eliminati di recente può ancora occupare spazio.';
+    return 'Svuota l’album “Eliminati di recente” per liberare $size.';
   }
 
   @override
@@ -1895,4 +1895,29 @@ class AppLocalizationsIt extends AppLocalizations {
   String v2ContinueFreeCleanup(int count) {
     return 'Continua la pulizia gratuita ($count rimanenti)';
   }
+
+  @override
+  String get v2DailyLimitTitle =>
+      'Hai raggiunto il limite giornaliero di eliminazione';
+
+  @override
+  String v2DailyLimitBody(int limit) {
+    return 'Con la versione gratuita puoi eliminare $limit elementi al giorno. Sblocca Pro per rimuovere il limite.';
+  }
+
+  @override
+  String v2DailyLimitRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Oggi puoi eliminare ancora $count elementi gratis. Selezionane meno o sblocca Pro.',
+      one:
+          'Oggi puoi eliminare ancora 1 elemento gratis. Selezionane meno o sblocca Pro.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SeeProOptions => 'Vedi le opzioni Pro';
 }

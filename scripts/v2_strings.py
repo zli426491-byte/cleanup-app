@@ -1164,6 +1164,72 @@ s('v2SecretBody', en='Protect your private photos', ar='احمِ صورك الخ
   zh_Hant='保護你的私密照片')
 
 
+# ── Daily free limit (2026-09-29, mirrors Cleanup: 5 items per day) ──
+PLACEHOLDERS.update({
+    'v2DailyLimitBody': {'limit': 'int'},
+    'v2DailyLimitRemaining': {'count': 'int'},
+})
+s('v2DailyLimitTitle', en="You've reached your daily removal limit",
+  ar='لقد وصلت إلى حد الحذف اليومي', de='Tageslimit zum Löschen erreicht',
+  es='Has alcanzado el límite diario de eliminación',
+  fr='Limite quotidienne de suppression atteinte',
+  he='הגעתם למגבלת המחיקה היומית', id='Batas penghapusan harian tercapai',
+  it='Hai raggiunto il limite giornaliero di eliminazione',
+  ja='本日の削除上限に達しました', ko='오늘의 삭제 한도에 도달했습니다',
+  pl='Osiągnięto dzienny limit usuwania', pt='Atingiu o limite diário de eliminação',
+  ro='Ai atins limita zilnică de ștergere', ru='Достигнут дневной лимит удаления',
+  th='ถึงขีดจำกัดการลบรายวันแล้ว', tr='Günlük silme sınırına ulaştınız',
+  vi='Bạn đã đạt giới hạn xóa trong ngày', zh_Hans='已达到今日删除上限',
+  zh_Hant='已達到今日刪除上限')
+s('v2DailyLimitBody',
+  en='You can delete {limit} items a day with the free version. Unlock Pro to remove the limit.',
+  ar='يمكنك حذف {limit} عناصر يوميًا في النسخة المجانية. افتح Pro لإزالة الحد.',
+  de='In der Gratisversion kannst du {limit} Objekte pro Tag löschen. Schalte Pro frei, um das Limit aufzuheben.',
+  es='Con la versión gratuita puedes eliminar {limit} elementos al día. Desbloquea Pro para quitar el límite.',
+  fr='La version gratuite permet de supprimer {limit} éléments par jour. Débloquez Pro pour lever la limite.',
+  he='בגרסה החינמית אפשר למחוק {limit} פריטים ביום. פתחו את Pro כדי להסיר את המגבלה.',
+  id='Versi gratis dapat menghapus {limit} item per hari. Buka Pro untuk menghapus batas.',
+  it='Con la versione gratuita puoi eliminare {limit} elementi al giorno. Sblocca Pro per rimuovere il limite.',
+  ja='無料版では1日に{limit}件まで削除できます。Proで制限を解除できます。',
+  ko='무료 버전은 하루에 {limit}개까지 삭제할 수 있습니다. Pro로 한도를 해제하세요.',
+  pl='W wersji darmowej możesz usunąć {limit} elementów dziennie. Odblokuj Pro, aby znieść limit.',
+  pt='Na versão gratuita pode apagar {limit} itens por dia. Desbloqueie o Pro para remover o limite.',
+  ro='Versiunea gratuită permite ștergerea a {limit} elemente pe zi. Deblochează Pro pentru a elimina limita.',
+  ru='В бесплатной версии можно удалять {limit} объектов в день. Откройте Pro, чтобы снять лимит.',
+  th='เวอร์ชันฟรีลบได้วันละ {limit} รายการ ปลดล็อก Pro เพื่อยกเลิกขีดจำกัด',
+  tr='Ücretsiz sürümde günde {limit} öge silebilirsiniz. Sınırı kaldırmak için Pro’ya geçin.',
+  vi='Bản miễn phí chỉ xóa được {limit} mục mỗi ngày. Mở khóa Pro để bỏ giới hạn.',
+  zh_Hans='免费版每天可删除 {limit} 项。解锁 Pro 即可取消限制。',
+  zh_Hant='免費版每天可刪除 {limit} 項。解鎖 Pro 即可取消限制。')
+s('v2DailyLimitRemaining',
+  en='{count, plural, one{You can delete 1 more item today for free. Select fewer items or unlock Pro.} other{You can delete {count} more items today for free. Select fewer items or unlock Pro.}}',
+  ar='{count, plural, zero{لا يمكنك حذف المزيد اليوم مجانًا. حدّد عناصر أقل أو افتح Pro.} one{يمكنك حذف عنصر واحد آخر اليوم مجانًا. حدّد عناصر أقل أو افتح Pro.} two{يمكنك حذف عنصرين آخرين اليوم مجانًا. حدّد عناصر أقل أو افتح Pro.} few{يمكنك حذف {count} عناصر أخرى اليوم مجانًا. حدّد عناصر أقل أو افتح Pro.} many{يمكنك حذف {count} عنصرًا آخر اليوم مجانًا. حدّد عناصر أقل أو افتح Pro.} other{يمكنك حذف {count} عنصر آخر اليوم مجانًا. حدّد عناصر أقل أو افتح Pro.}}',
+  de='{count, plural, one{Heute kannst du noch 1 Objekt gratis löschen. Wähle weniger aus oder schalte Pro frei.} other{Heute kannst du noch {count} Objekte gratis löschen. Wähle weniger aus oder schalte Pro frei.}}',
+  es='{count, plural, one{Hoy puedes eliminar 1 elemento más gratis. Selecciona menos o desbloquea Pro.} other{Hoy puedes eliminar {count} elementos más gratis. Selecciona menos o desbloquea Pro.}}',
+  fr='{count, plural, one{Vous pouvez encore supprimer {count} élément gratuitement aujourd’hui. Sélectionnez-en moins ou débloquez Pro.} other{Vous pouvez encore supprimer {count} éléments gratuitement aujourd’hui. Sélectionnez-en moins ou débloquez Pro.}}',
+  he='{count, plural, one{היום אפשר למחוק בחינם עוד פריט אחד. בחרו פחות פריטים או פתחו את Pro.} two{היום אפשר למחוק בחינם עוד שני פריטים. בחרו פחות פריטים או פתחו את Pro.} other{היום אפשר למחוק בחינם עוד {count} פריטים. בחרו פחות פריטים או פתחו את Pro.}}',
+  id='{count, plural, other{Hari ini Anda masih bisa menghapus {count} item gratis. Pilih lebih sedikit atau buka Pro.}}',
+  it='{count, plural, one{Oggi puoi eliminare ancora 1 elemento gratis. Selezionane meno o sblocca Pro.} other{Oggi puoi eliminare ancora {count} elementi gratis. Selezionane meno o sblocca Pro.}}',
+  ja='{count, plural, other{本日あと{count}件まで無料で削除できます。選択を減らすか、Proを解除してください。}}',
+  ko='{count, plural, other{오늘은 {count}개 더 무료로 삭제할 수 있습니다. 선택을 줄이거나 Pro를 이용하세요.}}',
+  pl='{count, plural, one{Dziś możesz jeszcze usunąć za darmo {count} element. Zaznacz mniej lub odblokuj Pro.} few{Dziś możesz jeszcze usunąć za darmo {count} elementy. Zaznacz mniej lub odblokuj Pro.} many{Dziś możesz jeszcze usunąć za darmo {count} elementów. Zaznacz mniej lub odblokuj Pro.} other{Dziś możesz jeszcze usunąć za darmo {count} elementu. Zaznacz mniej lub odblokuj Pro.}}',
+  pt='{count, plural, one{Hoje ainda pode apagar 1 item grátis. Selecione menos ou desbloqueie o Pro.} other{Hoje ainda pode apagar {count} itens grátis. Selecione menos ou desbloqueie o Pro.}}',
+  ro='{count, plural, one{Azi mai poți șterge gratuit 1 element. Selectează mai puține sau deblochează Pro.} few{Azi mai poți șterge gratuit {count} elemente. Selectează mai puține sau deblochează Pro.} other{Azi mai poți șterge gratuit {count} de elemente. Selectează mai puține sau deblochează Pro.}}',
+  ru='{count, plural, one{Сегодня можно бесплатно удалить ещё {count} объект. Выберите меньше или откройте Pro.} few{Сегодня можно бесплатно удалить ещё {count} объекта. Выберите меньше или откройте Pro.} many{Сегодня можно бесплатно удалить ещё {count} объектов. Выберите меньше или откройте Pro.} other{Сегодня можно бесплатно удалить ещё {count} объекта. Выберите меньше или откройте Pro.}}',
+  th='{count, plural, other{วันนี้ลบฟรีได้อีก {count} รายการ เลือกให้น้อยลงหรือปลดล็อก Pro}}',
+  tr='{count, plural, other{Bugün {count} öge daha ücretsiz silebilirsiniz. Daha az seçin veya Pro’ya geçin.}}',
+  vi='{count, plural, other{Hôm nay bạn còn xóa miễn phí được {count} mục. Hãy chọn ít hơn hoặc mở khóa Pro.}}',
+  zh_Hans='{count, plural, other{今天还能免费删除 {count} 项。请减少选择，或解锁 Pro。}}',
+  zh_Hant='{count, plural, other{今天還能免費刪除 {count} 項。請減少選取，或解鎖 Pro。}}')
+s('v2SeeProOptions', en='See Pro Options', ar='عرض خيارات Pro',
+  de='Pro-Optionen ansehen', es='Ver opciones Pro', fr='Voir les offres Pro',
+  he='הצגת אפשרויות Pro', id='Lihat opsi Pro', it='Vedi le opzioni Pro',
+  ja='Proプランを見る', ko='Pro 옵션 보기', pl='Zobacz opcje Pro',
+  pt='Ver opções Pro', ro='Vezi opțiunile Pro', ru='Посмотреть Pro',
+  th='ดูตัวเลือก Pro', tr='Pro seçeneklerini gör', vi='Xem các gói Pro',
+  zh_Hans='查看 Pro 方案', zh_Hant='查看 Pro 方案')
+
+
 RTL = {'ar', 'he'}
 FSI, PDI = '⁨', '⁩'
 

@@ -10,58 +10,77 @@ import '../../utils/constants.dart';
 import '../paywall/paywall_view.dart';
 import 'cleanup_category.dart' show sumBytes;
 import 'congratulations_view.dart';
+import 'daily_limit_sheet.dart';
 
-/// Free users can finish a limited number of cleanups after dismissing the
-/// paywall, so the first experience ends with real freed space.
+/// Free users may delete [AppConstants.maxFreeDeletes] items per calendar day
+/// (photos and videos together), like the reference app. The count resets at
+/// local midnight.
 class FreeCleanupQuota {
-  static const _key = 'v2.freeCleanupsUsed';
+  static const _countKey = 'v2.freeDeletes.count';
+  static const _dayKey = 'v2.freeDeletes.day';
 
-  /// Replaces the preference write in tests to simulate a storage failure.
+  /// Replaces the count write in tests to simulate a storage failure.
   @visibleForTesting
   static Future<bool> Function(String key, int value)? debugSetInt;
 
-  static Future<bool> _write(SharedPreferences prefs, int value) =>
-      debugSetInt?.call(_key, value) ?? prefs.setInt(_key, value);
+  /// Clock used for the daily reset; tests move it to another day.
+  @visibleForTesting
+  static DateTime Function() now = DateTime.now;
+
+  static int get dailyLimit => AppConstants.maxFreeDeletes;
+
+  static String _today() {
+    final d = now();
+    return '${d.year}-${d.month.toString().padLeft(2, '0')}-'
+        '${d.day.toString().padLeft(2, '0')}';
+  }
+
+  static int _usedToday(SharedPreferences prefs) =>
+      prefs.getString(_dayKey) == _today()
+      ? (prefs.getInt(_countKey) ?? 0).clamp(0, dailyLimit)
+      : 0;
+
+  static Future<bool> _write(SharedPreferences prefs, int used) async {
+    if (!await prefs.setString(_dayKey, _today())) return false;
+    return debugSetInt?.call(_countKey, used) ??
+        prefs.setInt(_countKey, used);
+  }
 
   static Future<int> remaining() async {
     final prefs = await SharedPreferences.getInstance();
-    final used = prefs.getInt(_key) ?? 0;
-    return (AppConstants.maxFreeDeletes - used).clamp(
-      0,
-      AppConstants.maxFreeDeletes,
-    );
+    return dailyLimit - _usedToday(prefs);
   }
 
-  /// Spends one free cleanup *before* PhotoKit is asked, so a storage failure
-  /// can never grant unlimited free deletions. Returns false when no cleanup
-  /// is left or the reservation could not be saved.
-  static Future<bool> reserve() async {
+  /// Spends [items] of today's allowance *before* PhotoKit is asked, so a
+  /// storage failure can never grant unlimited free deletions. Returns false
+  /// when the allowance is too small or the reservation could not be saved.
+  static Future<bool> reserve(int items) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final used = (prefs.getInt(_key) ?? 0).clamp(
-        0,
-        AppConstants.maxFreeDeletes,
-      );
-      if (used >= AppConstants.maxFreeDeletes) return false;
-      return await _write(prefs, used + 1);
+      final used = _usedToday(prefs);
+      if (items <= 0 || used + items > dailyLimit) return false;
+      return await _write(prefs, used + items);
     } catch (error) {
-      debugPrint('Could not reserve a free cleanup: $error');
+      debugPrint('Could not reserve free deletions: $error');
       return false;
     }
   }
 
-  /// Returns a reservation when nothing was deleted (cancelled or failed).
+  /// Returns [items] that were reserved but not deleted (cancelled or failed).
   /// Retries once; returns false when the refund could not be saved, so the
-  /// caller can tell the user instead of silently losing a free cleanup.
-  static Future<bool> refund() async {
+  /// caller can tell the user instead of silently losing free deletions.
+  static Future<bool> refund(int items) async {
+    if (items <= 0) return true;
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
         final prefs = await SharedPreferences.getInstance();
-        final used = prefs.getInt(_key) ?? 0;
+        final used = _usedToday(prefs);
         if (used <= 0) return true;
-        if (await _write(prefs, used - 1)) return true;
+        if (await _write(prefs, (used - items).clamp(0, dailyLimit))) {
+          return true;
+        }
       } catch (error) {
-        debugPrint('Could not refund a free cleanup: $error');
+        debugPrint('Could not refund free deletions: $error');
       }
     }
     return false;
@@ -103,25 +122,28 @@ class DeleteFlow {
     final scanner = context.read<PhotoScannerService>();
     final sub = context.read<SubscriptionManager>();
 
+    final itemCount = {for (final a in assets) a.id}.length;
     var usesFreeCleanup = false;
     if (!sub.isPro) {
+      // Like the reference app: every free delete shows the unlock offer;
+      // closing it continues within today's free allowance.
       final remaining = await FreeCleanupQuota.remaining();
       if (!context.mounted) return const {};
-      final outcome = await PaywallView.showUnlock(
-        context,
-        source: source,
-        freeCleanupsLeft: remaining,
-      );
-      if (!context.mounted) return const {};
-      if (outcome == PaywallUnlockResult.cancelled) return const {};
-      if (outcome == PaywallUnlockResult.purchased && !sub.isPro) {
-        return const {};
-      }
-      if (!sub.isPro) {
-        if (outcome != PaywallUnlockResult.continueFree ||
-            await FreeCleanupQuota.remaining() <= 0) {
-          return const {};
+      if (remaining <= 0) {
+        await DailyLimitSheet.show(context, source: source, remaining: 0);
+      } else {
+        await PaywallView.showUnlock(context, source: source);
+        if (!context.mounted) return const {};
+        final left = await FreeCleanupQuota.remaining();
+        if (!context.mounted) return const {};
+        if (!sub.isPro && itemCount > left) {
+          await DailyLimitSheet.show(context, source: source, remaining: left);
+          if (!sub.isPro) return const {};
         }
+      }
+      if (!context.mounted) return const {};
+      if (!sub.isPro) {
+        if (await FreeCleanupQuota.remaining() < itemCount) return const {};
         usesFreeCleanup = true;
       }
     }
@@ -157,7 +179,7 @@ class DeleteFlow {
       }
       return const {};
     }
-    if (usesFreeCleanup && !await FreeCleanupQuota.reserve()) {
+    if (usesFreeCleanup && !await FreeCleanupQuota.reserve(selected.length)) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.l10n.serviceOperationFailed)),
@@ -166,16 +188,17 @@ class DeleteFlow {
       return const {};
     }
     final deleted = await scanner.deleteAssetsWithResult(selected);
-    if (deleted.isEmpty) {
-      if (usesFreeCleanup &&
-          !await FreeCleanupQuota.refund() &&
-          context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.serviceOperationFailed)),
-        );
-      }
-      return deleted;
+    // Items the user cancelled in the system dialog go back to the allowance.
+    final unused = selected.length - deleted.length;
+    if (usesFreeCleanup &&
+        unused > 0 &&
+        !await FreeCleanupQuota.refund(unused) &&
+        context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.serviceOperationFailed)),
+      );
     }
+    if (deleted.isEmpty) return deleted;
 
     final removed = selected.where((a) => deleted.contains(a.id)).toList();
     if (!context.mounted) return deleted;

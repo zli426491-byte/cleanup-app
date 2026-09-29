@@ -36,9 +36,8 @@ const _weeklyWithTrial = StoreProduct(
 );
 
 class _Store extends SubscriptionManager {
-  _Store({required this.eligible, this.loading = false});
+  _Store({required this.eligible});
   final bool eligible;
-  final bool loading;
   bool pro = false;
 
   @override
@@ -46,7 +45,7 @@ class _Store extends SubscriptionManager {
   @override
   bool get isPlaceholder => false;
   @override
-  bool get isLoading => loading;
+  bool get isLoading => false;
   @override
   bool get isInitializing => false;
   @override
@@ -212,30 +211,26 @@ void main() {
     store.dispose();
   });
 
-  testWidgets('remaining free cleanups are disclosed on the unlock paywall', (
+  testWidgets('the unlock paywall has no extra free-continue button', (
     tester,
   ) async {
+    // Like the reference app, the X itself continues the free flow.
     final store = _Store(eligible: false);
-    final l10n = await _pump(
-      tester,
-      store,
-      const PaywallView(freeCleanupsLeft: 3),
-    );
-    expect(find.text(l10n.v2ContinueFreeCleanup(3)), findsOneWidget);
-    expect(find.byKey(const ValueKey('paywall-continue-free')), findsOneWidget);
+    await _pump(tester, store, const PaywallView());
+    expect(find.byKey(const ValueKey('paywall-continue-free')), findsNothing);
+    expect(find.byKey(const ValueKey('paywall-close')), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
     store.dispose();
   });
 
   testWidgets(
-    'closing the unlock offer explicitly cancels the pending action',
+    'closing the unlock offer reports cancelled',
     (tester) async {
       final store = _Store(eligible: false);
       final host = await _pumpUnlockHost(tester, store);
       final result = PaywallView.showUnlock(
         host,
         source: 'test',
-        freeCleanupsLeft: 3,
       );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('paywall-close')));
@@ -245,7 +240,7 @@ void main() {
     },
   );
 
-  testWidgets('using a free cleanup requires its own explicit button', (
+  testWidgets('a successful purchase is distinct from closing', (
     tester,
   ) async {
     final store = _Store(eligible: false);
@@ -253,48 +248,6 @@ void main() {
     final result = PaywallView.showUnlock(
       host,
       source: 'test',
-      freeCleanupsLeft: 3,
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('paywall-continue-free')));
-    await tester.pumpAndSettle();
-    expect(await result, PaywallUnlockResult.continueFree);
-    store.dispose();
-  });
-
-  testWidgets('free cleanup remains available while the store is loading', (
-    tester,
-  ) async {
-    final store = _Store(eligible: false, loading: true);
-    final host = await _pumpUnlockHost(tester, store);
-    final result = PaywallView.showUnlock(
-      host,
-      source: 'test',
-      freeCleanupsLeft: 2,
-    );
-    // The purchase button has a perpetual loading spinner, so this route
-    // intentionally cannot settle while the store remains unavailable.
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 350));
-    final button = tester.widget<OutlinedButton>(
-      find.byKey(const ValueKey('paywall-continue-free')),
-    );
-    expect(button.onPressed, isNotNull);
-    await tester.tap(find.byKey(const ValueKey('paywall-continue-free')));
-    await tester.pumpAndSettle();
-    expect(await result, PaywallUnlockResult.continueFree);
-    store.dispose();
-  });
-
-  testWidgets('a successful purchase is distinct from free continuation', (
-    tester,
-  ) async {
-    final store = _Store(eligible: false);
-    final host = await _pumpUnlockHost(tester, store);
-    final result = PaywallView.showUnlock(
-      host,
-      source: 'test',
-      freeCleanupsLeft: 3,
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text(host.l10n.paywallSubscribeYearly('NT\$990')));
@@ -328,7 +281,6 @@ void main() {
     final result = PaywallView.showUnlock(
       host,
       source: 'test',
-      freeCleanupsLeft: 3,
     );
     await tester.pumpAndSettle();
     await tester.binding.handlePopRoute();

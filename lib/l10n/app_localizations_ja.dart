@@ -1590,7 +1590,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return '元のファイルサイズの推定値：$size。実際に空いた容量は「iPhoneストレージ」で確認してください。「最近削除した項目」が容量を使っている場合があります。';
+    return '「最近削除した項目」を空にすると$sizeが解放されます。';
   }
 
   @override
@@ -1773,4 +1773,25 @@ class AppLocalizationsJa extends AppLocalizations {
   String v2ContinueFreeCleanup(int count) {
     return '無料クリーニングを続ける（残り$count回）';
   }
+
+  @override
+  String get v2DailyLimitTitle => '本日の削除上限に達しました';
+
+  @override
+  String v2DailyLimitBody(int limit) {
+    return '無料版では1日に$limit件まで削除できます。Proで制限を解除できます。';
+  }
+
+  @override
+  String v2DailyLimitRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '本日あと$count件まで無料で削除できます。選択を減らすか、Proを解除してください。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SeeProOptions => 'Proプランを見る';
 }

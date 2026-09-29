@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "لقد حذفت",
   "v2CongratsSaved": "{minutes, plural, zero{وفّرت وقتًا} one{وفّرت نحو دقيقة} two{وفّرت نحو دقيقتين} few{وفّرت نحو {minutes} دقائق} many{وفّرت نحو {minutes} دقيقة} other{وفّرت نحو {minutes} دقيقة}}",
   "v2CongratsUsing": "باستخدام ⁨{appName}⁩",
-  "v2CongratsRecentlyDeleted": "الحجم الأصلي التقديري للملفات: {size}. تحقق من مساحة تخزين iPhone لمعرفة المساحة الفعلية المستعادة؛ قد تستمر العناصر المحذوفة مؤخرًا في شغل مساحة.",
+  "v2CongratsRecentlyDeleted": "أفرغ ألبوم «المحذوفة مؤخرًا» على جهازك لتحرير ⁨{size}⁩.",
   "v2Great": "رائع",
   "v2UnlockTitle": "افتح الوصول غير المحدود",
   "v2UnlockFeature1": "اعثر على الصور المتشابهة فورًا",
@@ -477,5 +477,9 @@
   "v2ScanPaused": "الفحص متوقف مؤقتًا",
   "v2ContinueScan": "متابعة",
   "v2PauseScan": "إيقاف الفحص مؤقتًا",
-  "v2ContinueFreeCleanup": "متابعة التنظيف المجاني ({count} متبقية)"
+  "v2ContinueFreeCleanup": "متابعة التنظيف المجاني ({count} متبقية)",
+  "v2DailyLimitTitle": "لقد وصلت إلى حد الحذف اليومي",
+  "v2DailyLimitBody": "يمكنك حذف {limit} عناصر يوميًا في النسخة المجانية. افتح Pro لإزالة الحد.",
+  "v2DailyLimitRemaining": "{count, plural, zero{لا يمكنك حذف المزيد اليوم مجانًا. حدّد عناصر أقل أو افتح Pro.} one{يمكنك حذف عنصر واحد آخر اليوم مجانًا. حدّد عناصر أقل أو افتح Pro.} two{يمكنك حذف عنصرين آخرين اليوم مجانًا. حدّد عناصر أقل أو افتح Pro.} few{يمكنك حذف {count} عناصر أخرى اليوم مجانًا. حدّد عناصر أقل أو افتح Pro.} many{يمكنك حذف {count} عنصرًا آخر اليوم مجانًا. حدّد عناصر أقل أو افتح Pro.} other{يمكنك حذف {count} عنصر آخر اليوم مجانًا. حدّد عناصر أقل أو افتح Pro.}}",
+  "v2SeeProOptions": "عرض خيارات Pro"
 }

@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "삭제한 항목",
   "v2CongratsSaved": "{minutes, plural, other{약 {minutes}분 절약}}",
   "v2CongratsUsing": "{appName} 사용",
-  "v2CongratsRecentlyDeleted": "원본 파일 크기 추정치: {size}. 실제 확보된 공간은 iPhone 저장 공간에서 확인하세요. '최근 삭제된 항목'이 여전히 공간을 차지할 수 있습니다.",
+  "v2CongratsRecentlyDeleted": "\"최근 삭제된 항목\" 앨범을 비우면 {size}가 확보됩니다.",
   "v2Great": "좋아요",
   "v2UnlockTitle": "무제한 이용 잠금 해제",
   "v2UnlockFeature1": "유사한 사진을 바로 찾기",
@@ -477,5 +477,9 @@
   "v2ScanPaused": "스캔 일시 중지됨",
   "v2ContinueScan": "계속하기",
   "v2PauseScan": "스캔 일시 중지",
-  "v2ContinueFreeCleanup": "무료 정리 계속하기 (남은 횟수 {count}회)"
+  "v2ContinueFreeCleanup": "무료 정리 계속하기 (남은 횟수 {count}회)",
+  "v2DailyLimitTitle": "오늘의 삭제 한도에 도달했습니다",
+  "v2DailyLimitBody": "무료 버전은 하루에 {limit}개까지 삭제할 수 있습니다. Pro로 한도를 해제하세요.",
+  "v2DailyLimitRemaining": "{count, plural, other{오늘은 {count}개 더 무료로 삭제할 수 있습니다. 선택을 줄이거나 Pro를 이용하세요.}}",
+  "v2SeeProOptions": "Pro 옵션 보기"
 }

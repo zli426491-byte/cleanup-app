@@ -89,13 +89,17 @@ void main() {
       final watch = Stopwatch()..start();
       final labels = AppLocalizations.of(tester.element(find.byType(HomeView)));
       if (!scanner.isScanning && scanner.scannedAssetCount == 0) {
-        await _tapVisible(tester, find.text(labels.homeScanAll));
+        await _tapVisible(tester, find.byKey(const ValueKey('home-scan-start')));
       }
       await _waitUntil(
         tester,
         () => scanner.isScanning || scanner.scannedAssetCount > 0,
         'home scan start',
       );
+      // The v2 Home checks originals on its own once previews finish. Leave
+      // Home so this test can verify each original round separately in the
+      // review tool, exactly as before.
+      await _showTool(tester, scanner, subscription, null);
       // Continuous previews may legitimately run for minutes on a large
       // library. Opening a resource category pauses them and verifies the
       // requested originals, so only indexing must finish here.
@@ -127,7 +131,7 @@ void main() {
 
       // Ordinary category entry must produce data without a second button tap.
       watch.reset();
-      await _tapVisible(tester, find.text(labels.homeExactDuplicates));
+      await _showTool(tester, scanner, subscription, 'duplicates');
       expect(find.byType(SmartCleanView), findsOneWidget);
       await _waitUntil(
         tester,
@@ -173,11 +177,7 @@ void main() {
       await _capture(binding, 'photos-$workload-exact');
 
       watch.reset();
-      // pageBack() searches the English "Back" tooltip before Cupertino bars.
-      // Our real Material AppBar has a localized zh-TW tooltip on iOS.
-      await _tapVisible(tester, find.byType(BackButton));
-      await tester.pump(const Duration(milliseconds: 400));
-      await _tapVisible(tester, find.text(labels.homeLargeFiles));
+      await _showTool(tester, scanner, subscription, 'largeFiles');
       expect(find.byType(SmartCleanView), findsOneWidget);
       await _waitUntil(
         tester,
@@ -291,8 +291,11 @@ void main() {
         final knownBeforePreview = scanner.knownSizeAssetCount;
         final attemptedBeforePreview = scanner.attemptedAnalysisCount;
         watch.reset();
-        await _tapVisible(tester, find.byType(BackButton));
-        await _tapVisible(tester, find.text(labels.homeContinueAnalysis));
+        await _showHome(tester, scanner, subscription);
+        await _tapVisible(
+          tester,
+          find.byKey(const ValueKey('home-scan-continue')),
+        );
         await _waitUntil(
           tester,
           () => scanner.isScanning,
@@ -322,7 +325,7 @@ void main() {
         stages['previewResumePendingCount'] = scanner.pendingAnalysisCount;
         stages['previewResumeKnownSizeCount'] = scanner.knownSizeAssetCount;
         previewContinuationChecked = true;
-        await _tapVisible(tester, find.text(labels.homeLargeFiles));
+        await _showTool(tester, scanner, subscription, 'largeFiles');
         await tester.pump(const Duration(milliseconds: 600));
         await _revealAsset(tester, movieIds.last);
         _expectActiveCategoryVisible(tester, labels.scanCategoryLarge);
@@ -448,7 +451,10 @@ void main() {
         'actualFixtureCount': actualCount,
         'usesRealPhotosLibrary': true,
         'usesRealFlutterScannerAndNativeBridge': true,
-        'usesHomeScanAndToolNavigation': true,
+        // v2 Home starts and resumes the scan; the review tool is mounted
+        // directly because v2 Home no longer links to it.
+        'usesHomeScanAndToolNavigation': false,
+        'usesV2HomeScanStartAndResume': true,
         'usesMockChannelsOrFakeSizes': false,
         'exactDuplicatePairDetected': true,
         'differentPhotosNotGroupedWithExactPair': true,
@@ -482,6 +488,33 @@ Future<void> _showHome(
   WidgetTester tester,
   PhotoScannerService scanner,
   SubscriptionManager subscription,
+) => _mount(tester, scanner, subscription, const HomeView());
+
+/// Mounts the review tool for [category] (or an empty page when null) in
+/// place of Home, so Home's automatic original check cannot race the rounds
+/// this test starts itself.
+Future<void> _showTool(
+  WidgetTester tester,
+  PhotoScannerService scanner,
+  SubscriptionManager subscription,
+  String? category,
+) async {
+  await _mount(
+    tester,
+    scanner,
+    subscription,
+    category == null
+        ? const Scaffold(body: SizedBox.shrink())
+        : SmartCleanView(key: ValueKey(category), initialCategory: category),
+  );
+  await tester.pump(const Duration(milliseconds: 400));
+}
+
+Future<void> _mount(
+  WidgetTester tester,
+  PhotoScannerService scanner,
+  SubscriptionManager subscription,
+  Widget home,
 ) async {
   await tester.pumpWidget(
     MultiProvider(
@@ -495,7 +528,7 @@ Future<void> _showHome(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: LocaleController.supportedLocales,
         localeListResolutionCallback: LocaleController.resolve,
-        home: const HomeView(),
+        home: home,
       ),
     ),
   );

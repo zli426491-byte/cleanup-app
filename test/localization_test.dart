@@ -15,6 +15,7 @@ import 'package:cleanup_app/views/scanner/smart_clean_view.dart';
 import 'package:cleanup_app/views/scanner/swipe_clean_view.dart';
 import 'package:cleanup_app/views/components/video_compression_view.dart';
 import 'package:cleanup_app/views/settings/settings_view.dart';
+import 'package:cleanup_app/views/v2/daily_limit_sheet.dart';
 import 'package:cleanup_app/views/v2/category_grid_view.dart';
 import 'package:cleanup_app/views/v2/category_intro_view.dart';
 import 'package:cleanup_app/views/v2/cleanup_category.dart';
@@ -169,7 +170,8 @@ void main() {
             const SmartCleanView(),
             const PaywallView(),
             const PaywallView(fromOnboarding: true),
-            const PaywallView(freeCleanupsLeft: 3),
+            const Scaffold(body: DailyLimitSheet(source: 'l10n', remaining: 0)),
+            const Scaffold(body: DailyLimitSheet(source: 'l10n', remaining: 3)),
             const SettingsView(),
             CategoryIntroView(
               title: 'Duplicates',
