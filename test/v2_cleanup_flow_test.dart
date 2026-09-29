@@ -426,6 +426,28 @@ void main() {
       },
     );
 
+    testWidgets('a free cleanup reserved before a cancelled deletion is refunded', (
+      tester,
+    ) async {
+      final scanner = _Scanner(_result())..deleteResult = {};
+      final store = _Store();
+      final context = await _host(tester, scanner, store);
+      final selected = scanner.scanResult.allAssets.firstWhere(
+        (a) => a.id == 'c',
+      );
+      final run = DeleteFlow.run(context, [selected], source: 'test');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('paywall-continue-free')));
+      await tester.pumpAndSettle();
+      expect(scanner.requested, ['c']);
+      expect(await run, isEmpty);
+      expect(find.byType(CongratulationsView), findsNothing);
+      expect(await FreeCleanupQuota.remaining(), AppConstants.maxFreeDeletes);
+      await tester.pumpWidget(const SizedBox());
+      scanner.dispose();
+      store.dispose();
+    });
+
     testWidgets('a cancelled system confirmation shows no celebration', (
       tester,
     ) async {

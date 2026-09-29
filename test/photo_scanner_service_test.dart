@@ -219,6 +219,13 @@ void main() {
           if (pageResponse != null) return pageResponse!.future;
           if (pageHandler != null) return pageHandler!(start, end, ordered);
           return {'data': ordered.sublist(start, end)};
+        case 'fetchEntityProperties':
+          // The live PhotoKit read made right before a deletion request.
+          final id = (call.arguments as Map)['id'];
+          for (final entry in library) {
+            if (entry['id'] == id) return entry;
+          }
+          return null;
         case 'deleteWithIds':
           deletionRequests.add(
             List<String>.from((call.arguments as Map)['ids'] as List),
@@ -712,6 +719,36 @@ void main() {
     expect(scanner.scanResult.allAssets.single.id, 'second');
     expect(scanner.scanResult.similarGroups, isEmpty);
     expect(scanner.availableAssetCount, 1);
+  });
+
+  test(
+    'an edit made in another app since the scan cancels the whole batch',
+    () async {
+      await scanner.startFullScan();
+      final reviewed = scanner.scanResult.allAssets;
+      // Photos changed the second item; the scanner cache was not refreshed.
+      library = [
+        for (final entry in library)
+          entry['id'] == 'second'
+              ? {...entry, 'modifiedDt': (entry['modifiedDt'] as int) + 60}
+              : entry,
+      ];
+      deletedBySystem = ['first', 'second'];
+      expect(await scanner.deleteAssetsWithResult(reviewed), isEmpty);
+      expect(deletionRequests, isEmpty);
+      expect(scanner.scanResult.allAssets, hasLength(2));
+    },
+  );
+
+  test('an item removed from the library cancels the whole batch', () async {
+    await scanner.startFullScan();
+    final reviewed = scanner.scanResult.allAssets;
+    library = [
+      for (final entry in library)
+        if (entry['id'] != 'second') entry,
+    ];
+    expect(await scanner.deleteAssetsWithResult(reviewed), isEmpty);
+    expect(deletionRequests, isEmpty);
   });
 
   test('empty deletion never invokes the device editor', () async {

@@ -314,12 +314,19 @@ class PhotoScannerService extends ChangeNotifier {
   List<DuplicateGroup> _duplicateGroups = [];
   List<SimilarGroup> _similarGroups = [];
 
+  static const _liveCheckTimeout = Duration(seconds: 5);
+
+  /// Reads one asset directly from PhotoKit right before deletion.
+  final Future<AssetEntity?> Function(String id) _liveAssetLoader;
+
   PhotoScannerService({
     bool? supportsNativeResources,
     Duration continuousPreviewRoundBudget =
         _defaultContinuousPreviewRoundBudget,
     Duration continuousScanBudget = _defaultContinuousScanBudget,
-  }) : assert(continuousPreviewRoundBudget > Duration.zero),
+    Future<AssetEntity?> Function(String id)? liveAssetLoader,
+  }) : _liveAssetLoader = liveAssetLoader ?? AssetEntity.fromId,
+       assert(continuousPreviewRoundBudget > Duration.zero),
        assert(continuousScanBudget > Duration.zero),
        _continuousPreviewRoundBudget = continuousPreviewRoundBudget,
        _continuousScanBudget = continuousScanBudget,
@@ -1873,6 +1880,31 @@ class PhotoScannerService extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> _matchesLibrary(Iterable<PhotoAsset> assets) async {
+    final pending = assets.toList();
+    const batch = 16;
+    try {
+      for (var start = 0; start < pending.length; start += batch) {
+        final chunk = pending.skip(start).take(batch).toList();
+        final live = await Future.wait(
+          chunk.map(
+            (asset) => _liveAssetLoader(asset.id).timeout(_liveCheckTimeout),
+          ),
+        );
+        for (var i = 0; i < chunk.length; i++) {
+          final entity = live[i];
+          if (entity == null || !_sameContentVersion(chunk[i], entity)) {
+            return false;
+          }
+        }
+      }
+      return true;
+    } catch (error) {
+      debugPrint('PhotoScannerService live version check failed: $error');
+      return false;
+    }
+  }
+
   Future<bool> deleteAssets(List<PhotoAsset> assets) async =>
       (await deleteAssetsWithResult(assets)).isNotEmpty;
   Future<Set<String>> deleteAssetsWithResult(List<PhotoAsset> assets) async {
@@ -1890,6 +1922,13 @@ class PhotoScannerService extends ChangeNotifier {
     _isDeleting = true;
     notifyListeners();
     try {
+      // The cache can lag behind an edit made in another app. Re-read every
+      // asset from PhotoKit and cancel the whole batch if any one of them is
+      // gone or no longer the version the user reviewed.
+      if (!await _matchesLibrary(assets.where((a) => ids.contains(a.id)))) {
+        return {};
+      }
+      if (_disposed) return {};
       final result = await PhotoManager.editor.deleteWithIds(ids.toList());
       final deleted = result.toSet().intersection(ids);
       if (_disposed) return deleted;

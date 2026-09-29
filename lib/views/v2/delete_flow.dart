@@ -25,15 +25,32 @@ class FreeCleanupQuota {
     );
   }
 
-  static Future<void> consume() async {
-    final prefs = await SharedPreferences.getInstance();
-    final used = (prefs.getInt(_key) ?? 0).clamp(
-      0,
-      AppConstants.maxFreeDeletes,
-    );
-    if (used >= AppConstants.maxFreeDeletes) return;
-    if (!await prefs.setInt(_key, used + 1)) {
-      throw StateError('Could not persist free cleanup usage');
+  /// Spends one free cleanup *before* PhotoKit is asked, so a storage failure
+  /// can never grant unlimited free deletions. Returns false when no cleanup
+  /// is left or the reservation could not be saved.
+  static Future<bool> reserve() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final used = (prefs.getInt(_key) ?? 0).clamp(
+        0,
+        AppConstants.maxFreeDeletes,
+      );
+      if (used >= AppConstants.maxFreeDeletes) return false;
+      return await prefs.setInt(_key, used + 1);
+    } catch (error) {
+      debugPrint('Could not reserve a free cleanup: $error');
+      return false;
+    }
+  }
+
+  /// Returns a reservation when nothing was deleted (cancelled or failed).
+  static Future<void> refund() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final used = prefs.getInt(_key) ?? 0;
+      if (used > 0) await prefs.setInt(_key, used - 1);
+    } catch (error) {
+      debugPrint('Could not refund a free cleanup: $error');
     }
   }
 }
@@ -127,15 +144,18 @@ class DeleteFlow {
       }
       return const {};
     }
-    final deleted = await scanner.deleteAssetsWithResult(selected);
-    if (deleted.isEmpty) return deleted;
-    if (usesFreeCleanup) {
-      try {
-        await FreeCleanupQuota.consume();
-      } catch (error) {
-        // PhotoKit deletion has already finished; still show the true result.
-        debugPrint('Could not save free cleanup usage: $error');
+    if (usesFreeCleanup && !await FreeCleanupQuota.reserve()) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.serviceOperationFailed)),
+        );
       }
+      return const {};
+    }
+    final deleted = await scanner.deleteAssetsWithResult(selected);
+    if (deleted.isEmpty) {
+      if (usesFreeCleanup) await FreeCleanupQuota.refund();
+      return deleted;
     }
 
     final removed = selected.where((a) => deleted.contains(a.id)).toList();
