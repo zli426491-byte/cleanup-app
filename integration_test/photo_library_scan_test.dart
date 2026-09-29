@@ -483,7 +483,7 @@ void main() {
         tester,
         find.byKey(const ValueKey('home-category-duplicates')),
       );
-      await _tapVisible(tester, find.byKey(const ValueKey('intro-lets-go')));
+      await _passIntroIfShown(tester);
       await _waitUntil(
         tester,
         () => find.byType(GroupReviewView).evaluate().isNotEmpty,
@@ -507,7 +507,7 @@ void main() {
         tester,
         find.byKey(const ValueKey('home-category-largeFiles')),
       );
-      await _tapVisible(tester, find.byKey(const ValueKey('intro-lets-go')));
+      await _passIntroIfShown(tester);
       await _waitUntil(
         tester,
         () => find.byType(CategoryGridView).evaluate().isNotEmpty,
@@ -656,6 +656,14 @@ Future<void> _mount(
     ),
   );
   await tester.pump();
+}
+
+/// The first-visit intro shows once per install; the 1,000 and 10,000
+/// photo runs share the simulator app, so the second run may skip it.
+Future<void> _passIntroIfShown(WidgetTester tester) async {
+  await tester.pump(const Duration(milliseconds: 600));
+  final intro = find.byKey(const ValueKey('intro-lets-go'));
+  if (intro.evaluate().isNotEmpty) await _tapVisible(tester, intro);
 }
 
 Future<void> _tapVisible(WidgetTester tester, Finder target) async {
