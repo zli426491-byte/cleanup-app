@@ -1,33 +1,33 @@
 import 'dart:async';
-import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:cleanup_app/l10n/l10n.dart';
+
 import '../../services/photo_scanner_service.dart';
 import '../../services/subscription_manager.dart';
 import '../../models/storage_info.dart';
 import '../../models/photo_asset.dart' show formatBytes;
 import '../../utils/app_theme.dart';
-import '../scanner/smart_clean_view.dart';
-import '../scanner/scan_progress_panel.dart';
-import '../scanner/swipe_clean_view.dart';
+import '../paywall/paywall_view.dart';
 import '../scanner/asset_thumbnail.dart';
+import '../settings/settings_view.dart';
+import '../v2/category_intro_view.dart';
+import '../v2/cleanup_category.dart';
+import '../v2/ui_kit.dart';
 
 class HomeView extends StatefulWidget {
-  final ValueChanged<String>? onOpenReview;
-  const HomeView({super.key, this.onOpenReview});
+  const HomeView({super.key});
   @override
   State<HomeView> createState() => _HomeViewState();
 }
 
 class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
-  StorageInfo? _storage;
-  ScanResult? _photoSource;
-  int _photoCount = 0;
-  List<PhotoAsset> _photoPreviews = const [];
+  StorageInfo _storage = StorageInfo.unknown;
   bool _checkingInitialPreview = false;
   bool _startedInitialPreview = false;
+  bool _startedOriginalCheck = false;
 
   @override
   void initState() {
@@ -58,35 +58,27 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     if (mounted) await _startPreviewWithExistingAccess();
   }
 
-  /// A granted Photos permission can start a preview without another tap.
+  bool _hasScanState(PhotoScannerService scanner) =>
+      scanner.isScanning ||
+      scanner.isDeleting ||
+      scanner.wasCancelled ||
+      scanner.hasCompletedScan ||
+      scanner.scannedAssetCount > 0 ||
+      scanner.scanResult.allAssets.isNotEmpty ||
+      scanner.lastError != null;
+
+  /// A granted Photos permission starts the preview scan without another tap.
   /// Never reopen the permission dialog or restart a cancelled/partial scan.
   Future<void> _startPreviewWithExistingAccess() async {
     if (!mounted || _checkingInitialPreview || _startedInitialPreview) return;
     final scanner = context.read<PhotoScannerService>();
-    if (scanner.isScanning ||
-        scanner.isDeleting ||
-        scanner.wasCancelled ||
-        scanner.hasCompletedScan ||
-        scanner.scannedAssetCount > 0 ||
-        scanner.scanResult.allAssets.isNotEmpty ||
-        scanner.lastError != null) {
-      return;
-    }
+    if (_hasScanState(scanner)) return;
     _checkingInitialPreview = true;
     try {
       final permission = await PhotoManager.getPermissionState(
         requestOption: const PermissionRequestOption(),
       );
-      if (!mounted || !permission.hasAccess) return;
-      if (scanner.isScanning ||
-          scanner.isDeleting ||
-          scanner.wasCancelled ||
-          scanner.hasCompletedScan ||
-          scanner.scannedAssetCount > 0 ||
-          scanner.scanResult.allAssets.isNotEmpty ||
-          scanner.lastError != null) {
-        return;
-      }
+      if (!mounted || !permission.hasAccess || _hasScanState(scanner)) return;
       _startedInitialPreview = true;
       unawaited(scanner.startContinuousScan());
     } catch (_) {
@@ -94,6 +86,34 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     } finally {
       _checkingInitialPreview = false;
     }
+  }
+
+  /// Once every item is indexed, confirm exact duplicates and file sizes from
+  /// the originals in the background, so Duplicates and "Space to Clean"
+  /// fill in without the user asking. Runs at most once per launch.
+  void _maybeCheckOriginals(PhotoScannerService scanner) {
+    if (_startedOriginalCheck ||
+        scanner.isScanning ||
+        scanner.isDeleting ||
+        scanner.wasCancelled ||
+        !scanner.nativeOriginalAnalysisAvailable) {
+      return;
+    }
+    final total = scanner.availableAssetCount;
+    if (total == null || total == 0 || scanner.scannedAssetCount < total) {
+      return;
+    }
+    // A paused or deadline-limited preview keeps its checkpoint; the user
+    // continues it explicitly before originals are checked.
+    if (scanner.pendingAnalysisCount > 0) return;
+    if (scanner.pendingHashAssetCount <= 0 &&
+        scanner.pendingSizeAssetCount <= 0) {
+      return;
+    }
+    _startedOriginalCheck = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(scanner.verifyOriginals());
+    });
   }
 
   Future<void> _loadStorage() async {
@@ -110,599 +130,652 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         scanner.isDeleting,
         scanner.hasCompletedScan,
         scanner.permissionDenied,
-        scanner.hasLimitedAccess,
-        scanner.photoScopeChanged,
+        scanner.scannedAssetCount,
+        scanner.wasCancelled,
+        scanner.pendingAnalysisCount,
+        scanner.availableAssetCount,
       ),
     );
     final scanner = context.read<PhotoScannerService>();
-    if (!identical(_photoSource, scanner.scanResult)) {
-      _photoSource = scanner.scanResult;
-      _photoCount = 0;
-      final previews = <PhotoAsset>[];
-      for (final asset in scanner.scanResult.allAssets) {
-        if (asset.type != AssetType.image) continue;
-        _photoCount++;
-        if (previews.length < 2) previews.add(asset);
-      }
-      _photoPreviews = previews;
-    }
+    _maybeCheckOriginals(scanner);
     final isPro = context.select<SubscriptionManager, bool>((sub) => sub.isPro);
+    final index = CategoryIndex.of(scanner.scanResult);
+    final notStarted =
+        !_hasScanState(scanner) && !scanner.permissionDenied;
 
     return Scaffold(
       body: SafeArea(
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(isPro),
-                  if (scanner.photoScopeChanged &&
-                      !scanner.permissionDenied) ...[
-                    const SizedBox(height: AppTheme.s12),
-                    Text(
-                      context.l10n.homePhotoScopeChanged,
-                      style: AppTheme.body,
+        bottom: false,
+        child: Column(
+          children: [
+            _Header(isPro: isPro),
+            _SpaceToClean(
+              bytes: sumBytes(index.suggested),
+              storage: _storage,
+            ),
+            Expanded(
+              child: CustomScrollView(
+                key: const PageStorageKey('home-scroll'),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: _OptimizeBanner(
+                      onTap: () => openOptimizeStorage(context),
                     ),
-                  ],
-                  if (scanner.permissionDenied && !scanner.isScanning) ...[
-                    const SizedBox(height: AppTheme.s16),
-                    _buildPermissionCard(scanner),
-                    if (_storage != null && !_storage!.isEstimate) ...[
-                      const SizedBox(height: AppTheme.s20),
-                      _buildStorageCard(_storage!, scanner),
-                    ],
-                  ] else ...[
-                    if (scanner.isScanning ||
-                        scanner.scannedAssetCount > 0) ...[
-                      const SizedBox(height: AppTheme.s16),
-                      _buildScanStrip(scanner),
-                    ],
-                    if (!scanner.isScanning &&
-                        scanner.scanResult.allAssets.isEmpty) ...[
-                      const SizedBox(height: AppTheme.s16),
-                      _buildScanButton(scanner),
-                    ],
-                    if (_photoCount > 0) ...[
-                      const SizedBox(height: AppTheme.s16),
-                      _buildPhotoHero(scanner),
-                    ] else if (!scanner.isScanning &&
-                        scanner.scanResult.allAssets.isNotEmpty) ...[
-                      const SizedBox(height: AppTheme.s16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed: scanner.isDeleting ? null : _openReview,
-                          icon: const Icon(Icons.photo_library_outlined),
-                          label: Text(context.l10n.homeReviewReady),
-                        ),
-                      ),
-                    ],
-                    if (scanner.hasLimitedAccess)
-                      TextButton.icon(
-                        onPressed: scanner.isScanning || scanner.isDeleting
-                            ? null
-                            : () => _manageAccess(scanner),
-                        icon: const Icon(Icons.photo_library_outlined),
-                        label: Text(context.l10n.homeManagePhotoAccess),
-                      ),
-                    if (!scanner.isScanning ||
-                        scanner.scanResult.allAssets.isNotEmpty) ...[
-                      const SizedBox(height: AppTheme.s12),
-                      _buildSwipeEntry(scanner),
-                    ],
-                    if (_storage != null && !_storage!.isEstimate) ...[
-                      const SizedBox(height: AppTheme.s20),
-                      _buildStorageCard(_storage!, scanner),
-                    ] else if (scanner.knownSizeAssetCount > 0) ...[
-                      const SizedBox(height: AppTheme.s16),
-                      Text(
-                        context.l10n.homeKnownLibrarySize(
-                          scanner.knownSizeAssetCount,
-                          formatBytes(scanner.knownLibraryBytes),
-                        ),
-                        style: AppTheme.caption,
-                      ),
-                    ],
-                    const SizedBox(height: AppTheme.s20),
-                    _buildSectionHeader(context.l10n.homeCleanupTools),
-                    const SizedBox(height: AppTheme.s10),
-                    _buildToolList(scanner),
-                    if (scanner.isScanning) ...[
-                      const SizedBox(height: AppTheme.s16),
-                      ExpansionTile(
-                        tilePadding: EdgeInsets.zero,
-                        title: Text(context.l10n.homeScanDetails),
-                        children: [_buildProgress(scanner)],
-                      ),
-                    ],
-                    if (!scanner.isScanning &&
-                        (scanner.hasCompletedScan ||
-                            scanner.scannedAssetCount > 0 ||
-                            scanner.wasCancelled ||
-                            scanner.lastError != null) &&
-                        (scanner.scannedAssetCount == 0 ||
-                            scanner.pendingSizeAssetCount > 0 ||
-                            scanner.scanNotice != null)) ...[
-                      const SizedBox(height: AppTheme.s16),
-                      _buildResults(scanner),
-                    ],
-                  ],
+                  ),
+                  if (scanner.permissionDenied && !scanner.isScanning)
+                    SliverToBoxAdapter(child: _PermissionCard(scanner))
+                  else if (notStarted)
+                    SliverToBoxAdapter(child: _StartScanCard(scanner))
+                  else if (scanner.isScanning)
+                    SliverToBoxAdapter(child: _ScanStatus(scanner))
+                  else if (_isPaused(scanner))
+                    SliverToBoxAdapter(child: _ScanPaused(scanner)),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                    sliver: SliverToBoxAdapter(
+                      child: _CategoryWall(index: index),
+                    ),
+                  ),
                 ],
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
+}
 
-  Future<void> _manageAccess(PhotoScannerService scanner) async {
-    try {
-      await scanner.managePhotoAccess();
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.homePermissionDescription)),
-      );
-    }
-  }
+/// A cancelled scan, one stopped by its time budget, or a partial index can
+/// be continued from its checkpoint.
+bool _isPaused(PhotoScannerService scanner) {
+  if (scanner.isScanning || scanner.isDeleting) return false;
+  if (scanner.wasCancelled) return true;
+  if (scanner.scannedAssetCount == 0) return false;
+  final total = scanner.availableAssetCount;
+  return scanner.pendingAnalysisCount > 0 ||
+      (total != null && scanner.scannedAssetCount < total);
+}
 
-  Widget _buildPermissionCard(PhotoScannerService scanner) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(
-      color: AppTheme.primaryLight,
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(context.l10n.homePermissionTitle, style: AppTheme.heading3),
-        const SizedBox(height: 8),
-        Text(context.l10n.homePermissionDescription),
-        const SizedBox(height: 12),
-        FilledButton.icon(
-          key: const ValueKey('open-photo-settings'),
-          onPressed: () async {
-            final opened = await scanner.openPhotoSettings();
-            if (!mounted || opened) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(context.l10n.homePermissionDescription)),
-            );
-          },
-          icon: const Icon(Icons.settings_outlined),
-          label: Text(context.l10n.homeOpenSettings),
-        ),
-        TextButton(
-          onPressed: () => scanner.startContinuousScan(),
-          child: Text(context.l10n.scanStart),
-        ),
-      ],
-    ),
-  );
+// ── Header: "✦ App name"  [★ PRO] [⚙] ──
+class _Header extends StatelessWidget {
+  const _Header({required this.isPro});
+  final bool isPro;
 
-  // ── Header ──
-  Widget _buildHeader(bool isPro) => Row(
-    children: [
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(context.l10n.homeAppName, style: AppTheme.heading1),
-            const SizedBox(height: 2),
-            Text(
-              context.l10n.homeSubtitle,
-              style: AppTheme.caption.copyWith(color: AppTheme.textMuted),
-            ),
-          ],
-        ),
-      ),
-      if (isPro)
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: AppTheme.primary.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(AppTheme.r50),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.workspace_premium_rounded,
-                color: AppTheme.primary,
-                size: 13,
-              ),
-              const SizedBox(width: 3),
-              Text(
-                context.l10n.homeProBadge,
-                style: AppTheme.label.copyWith(
-                  color: AppTheme.primary,
-                  fontSize: 10,
-                  letterSpacing: 0.8,
-                ),
-              ),
-            ],
-          ),
-        ),
-    ],
-  );
-
-  // ── Storage Card ──
-  Widget _buildStorageCard(StorageInfo info, PhotoScannerService scanner) {
-    final pct = info.usedPercentage.clamp(0.0, 1.0);
-    final ringColor = pct > 0.85
-        ? AppTheme.danger
-        : pct > 0.6
-        ? AppTheme.warning
-        : AppTheme.primary;
-
-    return Container(
-      padding: const EdgeInsets.all(AppTheme.s20),
-      decoration: BoxDecoration(
-        color: AppTheme.cardBg,
-        borderRadius: BorderRadius.circular(AppTheme.r20),
-        border: Border.all(color: AppTheme.border, width: 0.5),
-        boxShadow: AppTheme.cardShadow,
-      ),
-      child: Column(
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 8, 6),
+      child: Row(
         children: [
-          Row(
-            children: [
-              // Donut chart
-              SizedBox(
-                width: 90,
-                height: 90,
-                child: CustomPaint(
-                  painter: _DonutPainter(pct, ringColor),
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          context.l10n.homeUsedPercent((pct * 100).toInt()),
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: ringColor,
-                          ),
-                        ),
-                        Text(
-                          context.l10n.homeStorageUsed,
-                          style: AppTheme.small.copyWith(fontSize: 10),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppTheme.s20),
-              // Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      info.usedSpaceFormatted,
-                      style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.textTitle,
-                      ),
-                    ),
-                    Text(
-                      context.l10n.homeStorageTotal(info.totalSpaceFormatted),
-                      style: AppTheme.caption,
-                    ),
-                    const SizedBox(height: AppTheme.s12),
-                    Wrap(
-                      spacing: AppTheme.s12,
-                      runSpacing: 4,
-                      children: [
-                        _legend(ringColor, context.l10n.homeUsedLegend),
-                        _legend(
-                          AppTheme.success,
-                          context.l10n.homeAvailableLegend,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          const Icon(
+            Icons.auto_awesome_rounded,
+            color: AppTheme.textTitle,
+            size: 26,
           ),
-          if (!scanner.isScanning &&
-              !scanner.permissionDenied &&
-              !scanner.hasCompletedScan &&
-              !scanner.wasCancelled &&
-              scanner.scannedAssetCount == 0) ...[
-            const SizedBox(height: AppTheme.s16),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppTheme.s12,
-                vertical: AppTheme.s8,
-              ),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryLight,
-                borderRadius: BorderRadius.circular(AppTheme.r8),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: AppTheme.accent,
-                      shape: BoxShape.circle,
-                    ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              l10n.appName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTheme.heading1,
+            ),
+          ),
+          if (!isPro)
+            Material(
+              color: AppTheme.primary,
+              borderRadius: BorderRadius.circular(AppTheme.r50),
+              // An upgrade action, not a claim that this account is Pro.
+              child: Semantics(
+                button: true,
+                label: l10n.settingsUpgrade,
+                excludeSemantics: true,
+                child: InkWell(
+                key: const ValueKey('home-pro'),
+                borderRadius: BorderRadius.circular(AppTheme.r50),
+                onTap: () => PaywallView.showUnlock(context, source: 'home_pro'),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
                   ),
-                  const SizedBox(width: AppTheme.s8),
-                  Expanded(
-                    child: Text(
-                      context.l10n.homeStartScanHint,
-                      style: AppTheme.small.copyWith(color: AppTheme.primary),
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.star_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        l10n.homeProBadge,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
+              ),
               ),
             ),
-          ],
+          IconButton(
+            key: const ValueKey('home-settings'),
+            tooltip: l10n.settingsTitle,
+            icon: const Icon(
+              Icons.settings_outlined,
+              color: AppTheme.textTitle,
+              size: 28,
+            ),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsView()),
+            ),
+          ),
         ],
       ),
     );
   }
+}
 
-  Widget _legend(Color c, String t) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(
-          color: c,
-          borderRadius: BorderRadius.circular(2),
+// ── "23.7 MB Space to Clean" + usage bar ──
+class _SpaceToClean extends StatelessWidget {
+  const _SpaceToClean({required this.bytes, required this.storage});
+  final int bytes;
+  final StorageInfo storage;
+
+  @override
+  Widget build(BuildContext context) {
+    final known = !storage.isEstimate && storage.totalSpace > 0;
+    final usedFraction = known ? storage.usedPercentage : 0.0;
+    final cleanFraction = known
+        ? (bytes / storage.totalSpace).clamp(0.0, usedFraction)
+        : 0.0;
+    return Padding(
+      key: const ValueKey('home-space-to-clean'),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: formatBytes(bytes),
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textTitle,
+                  ),
+                ),
+                const TextSpan(text: '  '),
+                TextSpan(
+                  text: context.l10n.v2SpaceToClean,
+                  style: AppTheme.caption,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Semantics(
+                  label: known
+                      ? context.l10n.v2StorageUsedOf(
+                          storage.usedSpaceFormatted,
+                          storage.totalSpaceFormatted,
+                        )
+                      : null,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: SizedBox(
+                      height: 8,
+                      child: LayoutBuilder(
+                        builder: (context, c) => Stack(
+                          children: [
+                            Container(color: AppTheme.divider),
+                            Container(
+                              width: c.maxWidth * (known ? usedFraction : 1),
+                              color: known
+                                  ? AppTheme.danger
+                                  : AppTheme.danger.withValues(alpha: 0.25),
+                            ),
+                            if (cleanFraction > 0)
+                              PositionedDirectional(
+                                start: c.maxWidth * (usedFraction - cleanFraction),
+                                child: Container(
+                                  width: c.maxWidth * cleanFraction,
+                                  height: 8,
+                                  color: const Color(0xFFFFB020),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              for (final color in const [
+                Color(0xFFFF9F0A),
+                Color(0xFFFFCC00),
+                Color(0xFF8E8E93),
+              ]) ...[
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 3),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Full-width blue "Optimize Storage" banner ──
+class _OptimizeBanner extends StatelessWidget {
+  const _OptimizeBanner({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    child: Material(
+      child: Ink(
+        decoration: const BoxDecoration(gradient: AppTheme.bannerGradient),
+        child: InkWell(
+          key: const ValueKey('home-optimize-storage'),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 18, 12, 18),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        context.l10n.v2OptimizeTitle,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        context.l10n.v2OptimizeSubtitle,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.white,
+                  size: 32,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
-      const SizedBox(width: 4),
-      Text(t, style: AppTheme.small),
-    ],
+    ),
   );
+}
 
-  Widget _buildScanStrip(PhotoScannerService scanner) => AnimatedBuilder(
+// ── Scan states ──
+class _ScanStatus extends StatelessWidget {
+  const _ScanStatus(this.scanner);
+  final PhotoScannerService scanner;
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
     animation: scanner,
     builder: (context, _) {
       final total = scanner.availableAssetCount;
-      final indexed = scanner.scannedAssetCount;
-      final indexing = scanner.currentPhase == ScanPhase.fetchingAssets;
-      final verifying = !indexing && scanner.isVerifyingOriginals;
-      final stageTotal = indexing
-          ? total
-          : verifying
-          ? scanner.originalRoundTotal
-          : scanner.totalPhotoCount;
-      final stageDone = indexing
-          ? indexed
-          : verifying
+      final verifying = scanner.isVerifyingOriginals;
+      final indexing = total == null || scanner.scannedAssetCount < total;
+      // Show the stage that is actually moving: originals, index, analysis.
+      final done = verifying
           ? scanner.originalRoundProcessed
+          : indexing
+          ? scanner.scannedAssetCount
           : scanner.attemptedAnalysisCount;
-      final stageProgress = stageTotal == null || stageTotal == 0
+      final stageTotal = verifying
+          ? scanner.originalRoundTotal
+          : indexing
+          ? total
+          : scanner.totalPhotoCount;
+      final progress = stageTotal == null || stageTotal == 0
           ? null
-          : (stageDone / stageTotal).clamp(0.0, 1.0);
-      final stageTitle = indexing
-          ? context.l10n.scanIndexingTitle
-          : verifying
-          ? switch (scanner.originalVerificationTarget) {
-              OriginalVerificationTarget.exactPhotos =>
-                context.l10n.scanCheckingExactTitle,
-              OriginalVerificationTarget.fileSizes =>
-                context.l10n.scanCheckingSizesTitle,
-              _ => context.l10n.scanVerifyingTitle,
-            }
-          : context.l10n.scanAnalyzingTitle;
-      final stageCount = indexing
-          ? total == null
-                ? context.l10n.homeIndexedCount(indexed)
-                : context.l10n.scanIndexedCount(indexed, total.toString())
-          : verifying
-          ? stageTotal == null
-                ? context.l10n.scanCountConfirming
-                : context.l10n.scanRoundProgress(stageTotal, stageDone)
-          : context.l10n.scanPreviewAttemptCount(
-              stageDone,
-              scanner.totalPhotoCount,
-            );
-      return Container(
+          : (done / stageTotal).clamp(0.0, 1.0);
+      return Padding(
         key: const ValueKey('home-scan-progress'),
-        width: double.infinity,
-        padding: const EdgeInsets.all(AppTheme.s14),
-        decoration: BoxDecoration(
-          color: AppTheme.primaryLight,
-          borderRadius: BorderRadius.circular(AppTheme.r16),
-          border: Border.all(color: AppTheme.primary.withValues(alpha: 0.12)),
-        ),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (scanner.isScanning) ...[
-              Text(
-                stageTitle,
-                style: AppTheme.heading3.copyWith(color: AppTheme.primary),
-              ),
-              const SizedBox(height: AppTheme.s4),
-              Text(stageCount, style: AppTheme.caption),
-              const SizedBox(height: AppTheme.s10),
-              LinearProgressIndicator(
-                value: stageProgress,
-                minHeight: 5,
-                backgroundColor: AppTheme.cardBg,
-                color: AppTheme.primary,
-                borderRadius: BorderRadius.circular(AppTheme.r8),
-              ),
-              const SizedBox(height: AppTheme.s10),
-              Text(
-                total == null
-                    ? context.l10n.homeIndexedCount(indexed)
-                    : context.l10n.homeIndexedCountWithTotal(indexed, total),
-                style: AppTheme.small,
-              ),
-              if (scanner.currentOperation != null)
-                Text(
-                  context.l10n.scanOperationWait(
-                    context.localizeServiceMessage(scanner.currentOperation!),
-                    scanner.currentWaitSeconds,
-                  ),
-                  style: AppTheme.caption,
+            Row(
+              children: [
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-              Wrap(
-                spacing: AppTheme.s8,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  TextButton(
-                    onPressed: scanner.cancelScan,
-                    child: Text(context.l10n.scanCancelKeepProgress),
-                  ),
-                ],
-              ),
-            ] else ...[
-              Text(
-                total == null
-                    ? context.l10n.homeIndexedCount(indexed)
-                    : context.l10n.homeIndexedCountWithTotal(indexed, total),
-                style: AppTheme.heading3,
-              ),
-              const SizedBox(height: AppTheme.s6),
-              Wrap(
-                spacing: AppTheme.s12,
-                runSpacing: AppTheme.s4,
-                children: [
-                  Text(
-                    context.l10n.scanVisualSuccessCount(
-                      scanner.analyzedAssetCount,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    verifying
+                        ? context.l10n.v2CheckingDuplicates
+                        : context.l10n.v2Scanning,
+                    style: AppTheme.caption.copyWith(
+                      color: AppTheme.textTitle,
+                      fontWeight: FontWeight.w500,
                     ),
-                    style: AppTheme.caption,
                   ),
-                  Text(
-                    context.l10n.scanOriginalVerifiedCount(
-                      scanner.verifiedOriginalCount,
-                    ),
-                    style: AppTheme.caption,
-                  ),
-                ],
-              ),
-              TextButton.icon(
-                onPressed: scanner.isDeleting
-                    ? null
-                    : _shouldResume(scanner)
-                    ? () => scanner.startContinuousScan(resume: true)
-                    : () => scanner.startContinuousScan(),
-                icon: const Icon(Icons.refresh_rounded),
-                label: Text(
-                  _shouldResume(scanner)
-                      ? context.l10n.homeContinueAnalysis
-                      : context.l10n.homeScanAll,
                 ),
+                if (stageTotal != null && stageTotal > 0)
+                  Text(
+                    context.l10n.v2ScanningCount(done, stageTotal),
+                    style: AppTheme.small,
+                  ),
+                IconButton(
+                  key: const ValueKey('home-scan-pause'),
+                  tooltip: context.l10n.v2PauseScan,
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(
+                    Icons.pause_circle_outline_rounded,
+                    color: AppTheme.textSecondary,
+                  ),
+                  onPressed: scanner.cancelScan,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 4,
+                backgroundColor: AppTheme.primaryLight,
               ),
-            ],
+            ),
           ],
         ),
       );
     },
   );
+}
 
-  Widget _buildPhotoHero(PhotoScannerService scanner) {
-    var preview = _photoPreviews;
-    var category = 'photos';
-    var title = context.l10n.scanCategoryPhotos;
-    var count = _photoCount;
-    if (scanner.scanResult.duplicateGroups.isNotEmpty) {
-      final group = scanner.scanResult.duplicateGroups.first;
-      preview = group.assets.take(2).toList();
-      category = 'duplicates';
-      title = context.l10n.homeExactDuplicates;
-      count = scanner.scanResult.duplicateGroups.fold<int>(
-        0,
-        (total, candidate) => total + candidate.assets.length,
-      );
-    } else if (scanner.scanResult.similarGroups.isNotEmpty) {
-      final group = scanner.scanResult.similarGroups.first;
-      preview = group.assets.take(2).toList();
-      category = 'similar';
-      title = context.l10n.homeSimilarPhotos;
-      count = scanner.scanResult.similarGroups.fold<int>(
-        0,
-        (total, candidate) => total + candidate.assets.length,
-      );
-    }
-    return Container(
-      key: ValueKey('home-photo-hero-$category'),
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppTheme.s14),
-      decoration: BoxDecoration(
-        color: AppTheme.cardBg,
-        borderRadius: BorderRadius.circular(AppTheme.r20),
-        border: Border.all(color: AppTheme.border),
-        boxShadow: AppTheme.cardShadow,
+class _ScanPaused extends StatelessWidget {
+  const _ScanPaused(this.scanner);
+  final PhotoScannerService scanner;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = scanner.availableAssetCount;
+    final indexed = total != null && scanner.scannedAssetCount >= total;
+    final done = indexed
+        ? scanner.attemptedAnalysisCount
+        : scanner.scannedAssetCount;
+    final of = indexed ? scanner.totalPhotoCount : total;
+    return Padding(
+      key: const ValueKey('home-scan-paused'),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: TintCard(
+        padding: const EdgeInsetsDirectional.fromSTEB(14, 6, 6, 6),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.pause_circle_filled_rounded,
+              color: AppTheme.textMuted,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.v2ScanPaused,
+                    style: AppTheme.caption.copyWith(
+                      color: AppTheme.textTitle,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  if (of != null && of > 0)
+                    Text(
+                      context.l10n.v2ScanningCount(done, of),
+                      style: AppTheme.small,
+                    ),
+                ],
+              ),
+            ),
+            Flexible(
+              child: TextButton(
+                key: const ValueKey('home-scan-continue'),
+                onPressed: () => scanner.startContinuousScan(resume: true),
+                child: Text(
+                  context.l10n.v2ContinueScan,
+                  textAlign: TextAlign.end,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _StartScanCard extends StatelessWidget {
+  const _StartScanCard(this.scanner);
+  final PhotoScannerService scanner;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+    child: TintCard(
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Text(context.l10n.v2PermissionTitle, style: AppTheme.heading2),
+          const SizedBox(height: 6),
+          Text(
+            context.l10n.v2PermissionBody(context.l10n.appName),
+            style: AppTheme.caption,
+          ),
+          const SizedBox(height: 16),
+          BigButton(
+            key: const ValueKey('home-scan-start'),
+            label: context.l10n.v2ScanStart,
+            onPressed: scanner.isDeleting
+                ? null
+                : () => scanner.startContinuousScan(),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _PermissionCard extends StatelessWidget {
+  const _PermissionCard(this.scanner);
+  final PhotoScannerService scanner;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+    child: TintCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(context.l10n.v2PermissionTitle, style: AppTheme.heading2),
+          const SizedBox(height: 6),
+          Text(
+            context.l10n.v2PermissionBody(context.l10n.appName),
+            style: AppTheme.caption,
+          ),
+          const SizedBox(height: 16),
+          BigButton(
+            key: const ValueKey('open-photo-settings'),
+            label: context.l10n.v2OpenSettings,
+            onPressed: () async {
+              final opened = await scanner.openPhotoSettings();
+              if (!context.mounted || opened) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(context.l10n.homePermissionDescription)),
+              );
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+// ── Category wall ──
+class _CategoryWall extends StatelessWidget {
+  const _CategoryWall({required this.index});
+  final CategoryIndex index;
+
+  @override
+  Widget build(BuildContext context) {
+    final wide = <Widget>[];
+    final tiles = <CategoryContent>[];
+    for (final category in CleanupCategory.values) {
+      final content = index[category];
+      if (category.isGrouped) {
+        wide.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _WideCategoryCard(content: content),
+          ),
+        );
+      } else {
+        tiles.add(content);
+      }
+    }
+    return Column(
+      children: [
+        ...wide,
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // Two columns on iPhone; iPad adds columns instead of huge tiles.
+            final columns = (constraints.maxWidth / 210).floor().clamp(2, 5);
+            final width = (constraints.maxWidth - 12 * (columns - 1)) / columns;
+            return Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                for (final content in tiles)
+                  SizedBox(
+                    width: width,
+                    height: width * 1.2,
+                    child: _CategoryTile(content: content),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+String _pillDetail(CategoryContent content) =>
+    content.bytes > 0 ? formatBytes(content.bytes) : '';
+
+/// Similars / Duplicates: a slim row when empty, a two-photo card when not.
+class _WideCategoryCard extends StatelessWidget {
+  const _WideCategoryCard({required this.content});
+  final CategoryContent content;
+
+  @override
+  Widget build(BuildContext context) {
+    final category = content.category;
+    final title = category.title(context);
+    final countLabel = category.countLabel(context, content.count);
+    if (content.isEmpty) {
+      return Semantics(
+        button: true,
+        label: '$title, $countLabel',
+        excludeSemantics: true,
+        child: TintCard(
+          key: ValueKey('home-category-${category.id}'),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+          onTap: () => openCategory(context, category),
+          child: Row(
             children: [
-              Expanded(child: Text(title, style: AppTheme.heading2)),
-              const SizedBox(width: AppTheme.s8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppTheme.s10,
-                  vertical: AppTheme.s6,
-                ),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryLight,
-                  borderRadius: BorderRadius.circular(AppTheme.r50),
-                ),
+              Expanded(
                 child: Text(
-                  context.l10n.homePhotoCount(count),
-                  style: AppTheme.caption.copyWith(
-                    color: AppTheme.primary,
-                    fontWeight: FontWeight.w700,
+                  title,
+                  style: AppTheme.heading2.copyWith(
+                    color: AppTheme.textMuted.withValues(alpha: 0.7),
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
+              Text(countLabel, style: AppTheme.small),
             ],
           ),
-          const SizedBox(height: AppTheme.s12),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final previewHeight = (constraints.maxWidth * 0.41).clamp(
-                146.0,
-                276.0,
-              );
-              return Semantics(
-                button: true,
-                enabled: !scanner.isDeleting,
-                label: '$title, ${context.l10n.homePhotoCount(count)}',
-                onTap: scanner.isDeleting ? null : () => _openReview(category),
-                child: ExcludeSemantics(
-                  child: InkWell(
-                    onTap: scanner.isDeleting
-                        ? null
-                        : () => _openReview(category),
-                    borderRadius: BorderRadius.circular(AppTheme.r12),
-                    child: Row(
-                      children: [
-                        for (var i = 0; i < preview.length; i++) ...[
-                          if (i > 0) const SizedBox(width: AppTheme.s8),
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(AppTheme.r12),
-                              child: SizedBox(
-                                height: previewHeight,
+        ),
+      );
+    }
+    final preview = content.groups.first.assets.take(2).toList();
+    return Semantics(
+      button: true,
+      label: '$title, $countLabel',
+      excludeSemantics: true,
+      child: TintCard(
+        key: ValueKey('home-category-${category.id}'),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+        onTap: () => openCategory(context, category),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsetsDirectional.only(start: 2, bottom: 10),
+              child: Text(title, style: AppTheme.heading2),
+            ),
+            SizedBox(
+              height: 170,
+              child: Stack(
+                children: [
+                  Row(
+                    children: [
+                      for (var i = 0; i < preview.length; i++) ...[
+                        if (i > 0) const SizedBox(width: 8),
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            // The whole card opens the category, even when a
+                            // thumbnail shows its reload control.
+                            child: IgnorePointer(
+                              child: SizedBox.expand(
                                 child: AssetThumbnail(
                                   key: ValueKey(
-                                    'home-photo-preview-${preview[i].id}',
+                                    'home-preview-${preview[i].id}',
                                   ),
                                   asset: preview[i],
                                   previewSize: 300,
@@ -710,608 +783,127 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                               ),
                             ),
                           ),
-                        ],
+                        ),
+                      ],
+                    ],
+                  ),
+                  PositionedDirectional(
+                    end: 8,
+                    bottom: 8,
+                    child: InfoPill(
+                      text: countLabel,
+                      detail: _pillDetail(content).isEmpty
+                          ? null
+                          : _pillDetail(content),
+                      chevron: true,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Two-column category tile: title, cover photo and a count pill.
+class _CategoryTile extends StatelessWidget {
+  const _CategoryTile({required this.content});
+  final CategoryContent content;
+
+  @override
+  Widget build(BuildContext context) {
+    final category = content.category;
+    final title = category.title(context);
+    final countLabel = category.countLabel(context, content.count);
+    final cover = content.cover;
+    return Semantics(
+      button: true,
+      label: '$title, $countLabel',
+      excludeSemantics: true,
+      child: TintCard(
+        key: ValueKey('home-category-${category.id}'),
+        padding: EdgeInsets.zero,
+        onTap: () => openCategory(context, category),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+              child: Text(
+                title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTheme.heading2.copyWith(
+                  fontSize: 18,
+                  color: cover == null
+                      ? AppTheme.textMuted.withValues(alpha: 0.7)
+                      : AppTheme.textTitle,
+                  fontWeight: cover == null ? FontWeight.w500 : FontWeight.w600,
+                ),
+              ),
+            ),
+            Expanded(
+              child: cover == null
+                  ? Stack(
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryMuted.withValues(
+                                alpha: 0.5,
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Icon(
+                              category.icon,
+                              color: Colors.white,
+                              size: 34,
+                            ),
+                          ),
+                        ),
+                        PositionedDirectional(
+                          end: 12,
+                          bottom: 10,
+                          child: Text(countLabel, style: AppTheme.small),
+                        ),
+                      ],
+                    )
+                  : Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        IgnorePointer(
+                          child: AssetThumbnail(
+                            key: ValueKey('home-cover-${category.id}'),
+                            asset: cover,
+                            previewSize: 300,
+                          ),
+                        ),
+                        PositionedDirectional(
+                          start: 8,
+                          end: 8,
+                          bottom: 8,
+                          child: Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: InfoPill(
+                              text: countLabel,
+                              detail: _pillDetail(content).isEmpty
+                                  ? null
+                                  : _pillDetail(content),
+                              chevron: true,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: AppTheme.s12),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: scanner.isDeleting
-                  ? null
-                  : () => _openReview(category),
-              icon: const Icon(Icons.arrow_forward_rounded),
-              label: Text(context.l10n.homeReviewReady),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  bool _shouldResume(PhotoScannerService scanner) =>
-      scanner.wasCancelled ||
-      scanner.pendingAnalysisCount > 0 ||
-      (scanner.scannedAssetCount > 0 && !scanner.hasCompletedScan);
-
-  // ── Scan Button ──
-  Widget _buildScanButton(PhotoScannerService s) => Container(
-    constraints: const BoxConstraints(minHeight: 52),
-    decoration: BoxDecoration(
-      color: AppTheme.primary,
-      borderRadius: BorderRadius.circular(AppTheme.r16),
-      boxShadow: [
-        BoxShadow(
-          color: AppTheme.primary.withValues(alpha: 0.2),
-          blurRadius: 16,
-          offset: const Offset(0, 6),
-        ),
-      ],
-    ),
-    child: Material(
-      color: Colors.transparent,
-      child: InkWell(
-        key: const ValueKey('home-scan-start'),
-        borderRadius: BorderRadius.circular(AppTheme.r16),
-        onTap: s.isScanning || s.isDeleting
-            ? null
-            : _shouldResume(s)
-            ? () => s.startContinuousScan(resume: true)
-            : () => s.startContinuousScan(),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (s.isScanning)
-                const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              else
-                const Icon(
-                  Icons.play_arrow_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  s.isScanning
-                      ? context.l10n.homeScanning
-                      : s.isDeleting
-                      ? context.l10n.homeDeleting
-                      : _shouldResume(s)
-                      ? context.l10n.homeResumeScan
-                      : context.l10n.homeScanAll,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
-
-  // ── Progress ──
-  Widget _buildProgress(PhotoScannerService s) => ScanProgressPanel(scanner: s);
-
-  // ── Results ──
-  Widget _buildResults(PhotoScannerService s) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(AppTheme.s16),
-    decoration: BoxDecoration(
-      color: AppTheme.cardBg,
-      borderRadius: BorderRadius.circular(AppTheme.r16),
-      border: Border.all(color: AppTheme.accent.withValues(alpha: 0.15)),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (s.scannedAssetCount == 0) ...[
-          Text(
-            s.availableAssetCount == null
-                ? context.l10n.homeIndexedCount(0)
-                : context.l10n.homeIndexedCountWithTotal(
-                    0,
-                    s.availableAssetCount!,
-                  ),
-            style: AppTheme.body.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: AppTheme.s6),
-        ],
-        if (s.pendingSizeAssetCount > 0)
-          Text(
-            context.l10n.homePendingSizes(s.pendingSizeAssetCount),
-            style: AppTheme.caption,
-          ),
-        if (s.scanNotice != null)
-          ExpansionTile(
-            tilePadding: EdgeInsets.zero,
-            title: Text(context.l10n.homeScanDetails),
-            children: [
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: Text(
-                  context.localizeServiceMessage(s.scanNotice!),
-                  style: AppTheme.caption,
-                ),
-              ),
-            ],
-          ),
-      ],
-    ),
-  );
-
-  // ── Section Header ──
-  Widget _buildSectionHeader(String t) =>
-      Text(t, style: AppTheme.heading3.copyWith(fontSize: 16));
-
-  // ── Tool List ──
-  Widget _buildToolList(PhotoScannerService s) {
-    final hasScanned = s.hasCompletedScan || s.scannedAssetCount > 0;
-    final indexComplete =
-        s.availableAssetCount != null &&
-        s.scannedAssetCount >= s.availableAssetCount!;
-    final ts = s.scanResult.similarGroups.fold<int>(
-      0,
-      (a, g) => a + g.assets.length,
-    );
-    final duplicateCount = s.scanResult.duplicateGroups.fold<int>(
-      0,
-      (sum, group) => sum + group.assets.length,
-    );
-    final items = [
-      _Tool(
-        'duplicates',
-        Icons.copy_all_rounded,
-        context.l10n.homeExactDuplicates,
-        _resourceCountLabel(
-          duplicateCount,
-          s.pendingHashAssetCount,
-          hasScanned,
-          indexComplete: indexComplete,
-          photos: true,
-        ),
-        duplicateCount > 0
-            ? _Status.warn
-            : indexComplete && s.pendingHashAssetCount == 0
-            ? _Status.done
-            : s.pendingHashAssetCount > 0
-            ? _Status.pending
-            : _Status.scan,
-        AppTheme.primary,
-        preview: s.scanResult.duplicateGroups.isEmpty
-            ? null
-            : s.scanResult.duplicateGroups.first.assets.first,
-      ),
-      _Tool(
-        'similar',
-        Icons.photo_library_rounded,
-        context.l10n.homeSimilarPhotos,
-        !hasScanned
-            ? context.l10n.homeNotScanned
-            : s.pendingAnalysisCount > 0
-            ? ts > 0
-                  ? context.l10n.homePhotoCountPartial(ts)
-                  : context.l10n.homePendingAnalysis
-            : ts > 0
-            ? context.l10n.homePhotoCount(ts)
-            : !indexComplete
-            ? context.l10n.scanEmptyIndexing
-            : context.l10n.homeNoneAnalyzed,
-        ts > 0
-            ? _Status.warn
-            : indexComplete && s.pendingAnalysisCount == 0
-            ? _Status.done
-            : _Status.scan,
-        const Color(0xFFF0997B),
-        preview: s.scanResult.similarGroups.isEmpty
-            ? null
-            : s.scanResult.similarGroups.first.assets.first,
-      ),
-      _Tool(
-        'screenshots',
-        Icons.screenshot_rounded,
-        context.l10n.homeScreenshots,
-        !indexComplete && s.scanResult.screenshots.isEmpty
-            ? (hasScanned
-                  ? context.l10n.scanEmptyIndexing
-                  : context.l10n.homeNotScanned)
-            : _photoCountLabel(s.scanResult.screenshots.length, hasScanned),
-        s.scanResult.screenshots.isNotEmpty
-            ? _Status.minor
-            : indexComplete
-            ? _Status.done
-            : _Status.scan,
-        const Color(0xFF1D9E75),
-        preview: s.scanResult.screenshots.isEmpty
-            ? null
-            : s.scanResult.screenshots.first,
-      ),
-      _Tool(
-        'videos',
-        Icons.play_circle_outline_rounded,
-        context.l10n.scanCategoryVideos,
-        !indexComplete && s.scanResult.videos.isEmpty
-            ? (hasScanned
-                  ? context.l10n.scanEmptyIndexing
-                  : context.l10n.homeNotScanned)
-            : _photoCountLabel(s.scanResult.videos.length, hasScanned),
-        s.scanResult.videos.isNotEmpty
-            ? _Status.minor
-            : indexComplete
-            ? _Status.done
-            : _Status.scan,
-        AppTheme.primary,
-        preview: s.scanResult.videos.isEmpty ? null : s.scanResult.videos.first,
-      ),
-      _Tool(
-        'largeFiles',
-        Icons.photo_size_select_large_rounded,
-        context.l10n.homeLargeFiles,
-        _resourceCountLabel(
-          s.scanResult.largeFiles.length,
-          s.pendingSizeAssetCount,
-          hasScanned,
-          indexComplete: indexComplete,
-          photos: false,
-        ),
-        s.scanResult.largeFiles.isNotEmpty
-            ? _Status.minor
-            : indexComplete && s.pendingSizeAssetCount == 0
-            ? _Status.done
-            : s.pendingSizeAssetCount > 0
-            ? _Status.pending
-            : _Status.scan,
-        const Color(0xFFE5A31A),
-        preview: s.scanResult.largeFiles.isEmpty
-            ? null
-            : s.scanResult.largeFiles.first,
-      ),
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final textScale = MediaQuery.textScalerOf(context).scale(1);
-        final columns = textScale > 1.3 || constraints.maxWidth < 540 ? 1 : 2;
-        final width =
-            (constraints.maxWidth - AppTheme.s10 * (columns - 1)) / columns;
-        return Wrap(
-          spacing: AppTheme.s10,
-          runSpacing: AppTheme.s10,
-          children: [
-            for (final tool in items)
-              SizedBox(
-                width: width,
-                child: _buildToolCard(tool, horizontal: columns == 1),
-              ),
-          ],
-        );
-      },
-    );
-  }
-
-  String _photoCountLabel(int count, bool hasScanned) {
-    if (!hasScanned) return context.l10n.homeNotScanned;
-    return count > 0
-        ? context.l10n.homePhotoCount(count)
-        : context.l10n.homeNoneFound;
-  }
-
-  String _resourceCountLabel(
-    int count,
-    int pending,
-    bool hasScanned, {
-    required bool indexComplete,
-    required bool photos,
-  }) {
-    if (!hasScanned) return context.l10n.homeNotScanned;
-    if (!indexComplete && count == 0 && pending == 0) {
-      return context.l10n.scanEmptyIndexing;
-    }
-    if (pending > 0) {
-      if (count == 0) return context.l10n.homePendingVerification;
-      return photos
-          ? context.l10n.homeVerifiedPhotosPending(count)
-          : context.l10n.homeVerifiedItemsPending(count);
-    }
-    if (count == 0) return context.l10n.homeNoneVerified;
-    return photos
-        ? context.l10n.homePhotoCount(count)
-        : context.l10n.homeItemCount(count);
-  }
-
-  Widget _buildToolCard(_Tool t, {required bool horizontal}) => Material(
-    key: ValueKey('home-category-${t.category}'),
-    color: AppTheme.cardBg,
-    borderRadius: BorderRadius.circular(AppTheme.r16),
-    clipBehavior: Clip.antiAlias,
-    child: InkWell(
-      onTap: () => _openReview(t.category),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border.all(color: AppTheme.border),
-          borderRadius: BorderRadius.circular(AppTheme.r16),
-        ),
-        child: horizontal
-            ? Row(
-                children: [
-                  _buildToolPreview(t, horizontal: true),
-                  Expanded(child: _buildToolDetails(t)),
-                ],
-              )
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildToolPreview(t, horizontal: false),
-                  _buildToolDetails(t),
-                ],
-              ),
-      ),
-    ),
-  );
-
-  Widget _buildToolPreview(_Tool tool, {required bool horizontal}) => SizedBox(
-    key: ValueKey('home-tool-preview-${tool.category}'),
-    width: horizontal ? 112 : double.infinity,
-    height: horizontal ? 148 : 168,
-    child: tool.preview == null
-        ? ColoredBox(
-            color: tool.color.withValues(alpha: 0.1),
-            child: Center(child: Icon(tool.icon, color: tool.color, size: 38)),
-          )
-        : AssetThumbnail(
-            key: ValueKey('home-preview-${tool.category}'),
-            asset: tool.preview!,
-            previewSize: 240,
-          ),
-  );
-
-  Widget _buildToolDetails(_Tool tool) => Padding(
-    padding: const EdgeInsets.all(AppTheme.s12),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(tool.title, style: AppTheme.heading3),
-        const SizedBox(height: AppTheme.s4),
-        Text(tool.subtitle, style: AppTheme.caption),
-        const SizedBox(height: AppTheme.s8),
-        _buildStatusTag(tool.status),
-        const SizedBox(height: AppTheme.s8),
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                context.l10n.homePreviewOrganize,
-                style: AppTheme.label.copyWith(color: AppTheme.primary),
-              ),
-            ),
-            const Icon(
-              Icons.arrow_forward_rounded,
-              color: AppTheme.primary,
-              size: 18,
             ),
           ],
         ),
-      ],
-    ),
-  );
-
-  Widget _buildStatusTag(_Status status) {
-    switch (status) {
-      case _Status.critical:
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: AppTheme.dangerLight,
-            borderRadius: BorderRadius.circular(AppTheme.r50),
-          ),
-          child: Text(
-            context.l10n.homeNeedsReview,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.danger,
-            ),
-          ),
-        );
-      case _Status.warn:
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: AppTheme.warningLight,
-            borderRadius: BorderRadius.circular(AppTheme.r50),
-          ),
-          child: Text(
-            context.l10n.homeCanReview,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.warning,
-            ),
-          ),
-        );
-      case _Status.minor:
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: AppTheme.primaryLight,
-            borderRadius: BorderRadius.circular(AppTheme.r50),
-          ),
-          child: Text(
-            context.l10n.homeCanReview,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.primary,
-            ),
-          ),
-        );
-      case _Status.scan:
-        return Text(
-          context.l10n.homeScanStatus,
-          style: AppTheme.small.copyWith(color: AppTheme.textMuted),
-        );
-      case _Status.pending:
-        return Text(
-          context.l10n.scanNotChecked,
-          style: AppTheme.small.copyWith(color: AppTheme.warning),
-        );
-      case _Status.done:
-        return Text(
-          context.l10n.homeDoneStatus,
-          style: AppTheme.small.copyWith(color: AppTheme.textMuted),
-        );
-    }
-  }
-
-  // ── Quick Actions ──
-  Widget _buildSwipeEntry(PhotoScannerService scanner) {
-    return Container(
-      key: const ValueKey('home-swipe-entry'),
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppTheme.s14),
-      decoration: BoxDecoration(
-        color: AppTheme.primaryLight,
-        borderRadius: BorderRadius.circular(AppTheme.r16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.swipe_rounded,
-                color: AppTheme.primary,
-                size: 24,
-              ),
-              const SizedBox(width: AppTheme.s8),
-              Expanded(
-                child: Text(
-                  context.l10n.scanSwipeCleanup,
-                  style: AppTheme.heading3,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppTheme.s4),
-          Text(context.l10n.homeSwipeDescription, style: AppTheme.caption),
-          if (_photoCount > 0) ...[
-            const SizedBox(height: AppTheme.s8),
-            FilledButton.icon(
-              onPressed: scanner.isScanning || scanner.isDeleting
-                  ? null
-                  : () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => SwipeCleanView(
-                          assets: scanner.scanResult.allAssets
-                              .where((asset) => asset.type == AssetType.image)
-                              .toList(),
-                          title: context.l10n.scanCategoryPhotos,
-                          categoryId: 'photos',
-                        ),
-                      ),
-                    ),
-              icon: const Icon(Icons.arrow_forward_rounded),
-              label: Text(context.l10n.scanSwipeStart),
-            ),
-          ],
-        ],
       ),
     );
   }
-
-  void _openReview([String category = 'photos']) {
-    if (widget.onOpenReview != null) {
-      widget.onOpenReview!(category);
-      return;
-    }
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => SmartCleanView(initialCategory: category),
-      ),
-    );
-  }
-}
-
-// ── Status Enum ──
-enum _Status { critical, warn, minor, scan, pending, done }
-
-// ── Tool Data ──
-class _Tool {
-  final String category;
-  final IconData icon;
-  final String title, subtitle;
-  final _Status status;
-  final Color color;
-  final PhotoAsset? preview;
-  _Tool(
-    this.category,
-    this.icon,
-    this.title,
-    this.subtitle,
-    this.status,
-    this.color, {
-    this.preview,
-  });
-}
-
-// ── Donut Chart Painter ──
-class _DonutPainter extends CustomPainter {
-  final double pct;
-  final Color color;
-  _DonutPainter(this.pct, this.color);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 6;
-    const strokeWidth = 8.0;
-
-    // Background track
-    canvas.drawCircle(
-      center,
-      radius,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth
-        ..color = const Color(0xFFF0F0EC),
-    );
-
-    // Progress arc
-    final sweepAngle = 2 * pi * pct;
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -pi / 2,
-      sweepAngle,
-      false,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth
-        ..strokeCap = StrokeCap.round
-        ..color = color,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _DonutPainter old) =>
-      old.pct != pct || old.color != color;
 }

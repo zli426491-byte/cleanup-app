@@ -1,3 +1,6 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+
 import 'photo_asset.dart' show formatBytes;
 
 class StorageInfo {
@@ -28,15 +31,36 @@ class StorageInfo {
   /// Label suffix shown in UI when data is estimated (not real disk info).
   String get estimateLabel => isEstimate ? ' (估計值)' : '';
 
-  /// Device capacity has not been supplied by a platform implementation.
-  /// Zero values mean unknown and must never be displayed as measured storage.
-  /// The UI uses the scanner's verified media byte count instead.
-  static Future<StorageInfo> current() async => const StorageInfo(
+  static const unknown = StorageInfo(
     totalSpace: 0,
     usedSpace: 0,
     freeSpace: 0,
     isEstimate: true,
   );
+
+  static const _channel = MethodChannel('cleanup/photo_resources');
+
+  /// Device capacity from iOS volume resource values. Any other platform, or a
+  /// failed lookup, returns [unknown]: zero values must never be displayed as
+  /// measured storage.
+  static Future<StorageInfo> current() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return unknown;
+    try {
+      final values = await _channel
+          .invokeMapMethod<String, Object?>('deviceStorage', const {})
+          .timeout(const Duration(seconds: 3));
+      final total = (values?['total'] as num?)?.toInt() ?? 0;
+      final free = (values?['free'] as num?)?.toInt() ?? -1;
+      if (total <= 0 || free < 0 || free > total) return unknown;
+      return StorageInfo(
+        totalSpace: total,
+        usedSpace: total - free,
+        freeSpace: free,
+      );
+    } catch (_) {
+      return unknown;
+    }
+  }
 
   StorageInfo copyWith({
     int? totalSpace,

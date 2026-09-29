@@ -1490,4 +1490,450 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get homePhotoScopeChanged =>
       'Der Fotozugriff hat sich möglicherweise geändert. Scanne erneut, um verfügbare Fotos zu aktualisieren.';
+
+  @override
+  String get navOptimize => 'Optimieren';
+
+  @override
+  String get navExtras => 'Mehr';
+
+  @override
+  String get v2Before => 'Vorher';
+
+  @override
+  String get v2After => 'Nachher';
+
+  @override
+  String get v2Best => 'Beste';
+
+  @override
+  String get v2Cancel => 'Abbrechen';
+
+  @override
+  String get v2Select => 'Auswählen';
+
+  @override
+  String get v2SelectAll => 'Alle auswählen';
+
+  @override
+  String get v2DeselectAll => 'Auswahl aufheben';
+
+  @override
+  String v2SelectedCount(int count) {
+    return '$count ausgewählt';
+  }
+
+  @override
+  String get v2CatSimilars => 'Ähnliche';
+
+  @override
+  String get v2CatDuplicates => 'Duplikate';
+
+  @override
+  String get v2CatVideos => 'Filme';
+
+  @override
+  String get v2CatScreenshots => 'Bildschirmfotos';
+
+  @override
+  String get v2CatBlurred => 'Unscharf';
+
+  @override
+  String get v2CatLarge => 'Große Dateien';
+
+  @override
+  String get v2CatOther => 'Sonstige';
+
+  @override
+  String v2PhotoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Fotos',
+      one: '1 Foto',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2VideoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Videos',
+      one: '1 Video',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2ItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Objekte',
+      one: '1 Objekt',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Objekte löschen',
+      one: '1 Objekt löschen',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteVideos(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Videos löschen',
+      one: '1 Video löschen',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteSize(String size) {
+    return '$size löschen';
+  }
+
+  @override
+  String v2FreeCleanupsLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Noch $count kostenlose Bereinigungen',
+      one: 'Noch 1 kostenlose Bereinigung',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SpaceToClean => 'Freizugebender Speicher';
+
+  @override
+  String v2StorageUsedOf(String used, String total) {
+    return '$used von $total belegt';
+  }
+
+  @override
+  String get v2OptimizeTitle => 'Speicher optimieren';
+
+  @override
+  String get v2OptimizeSubtitle => 'Schnell Speicherplatz freigeben';
+
+  @override
+  String get v2Scanning => 'Mediathek wird durchsucht…';
+
+  @override
+  String v2ScanningCount(int done, int total) {
+    return '$done / $total';
+  }
+
+  @override
+  String get v2CheckingDuplicates => 'Duplikate werden geprüft…';
+
+  @override
+  String get v2ScanStart => 'Fotos scannen';
+
+  @override
+  String get v2PermissionTitle => 'Zugriff auf Fotos erlauben';
+
+  @override
+  String v2PermissionBody(String appName) {
+    return '$appName braucht Zugriff auf deine Fotos, um Duplikate zu finden und Speicher freizugeben. Deine Fotos bleiben auf deinem Gerät.';
+  }
+
+  @override
+  String get v2OpenSettings => 'Einstellungen öffnen';
+
+  @override
+  String get v2IntroLeft => 'Links';
+
+  @override
+  String get v2IntroToDelete => 'zum Löschen';
+
+  @override
+  String get v2IntroRight => 'Rechts';
+
+  @override
+  String get v2IntroToKeep => 'zum Behalten';
+
+  @override
+  String get v2LetsGo => 'Los geht’s';
+
+  @override
+  String get v2IntroSimilars =>
+      'Ähnliche Aufnahmen werden gruppiert. Wir behalten die beste und wählen den Rest für dich aus.';
+
+  @override
+  String get v2IntroDuplicates =>
+      'Exakte Kopien desselben Fotos. Behalte eins und lösche den Rest mit einem Tipp.';
+
+  @override
+  String get v2IntroVideos =>
+      'Sieh dir alle Videos an. Sortiere nach Größe oder Datum, um die größten Speicherfresser zu finden.';
+
+  @override
+  String get v2IntroScreenshots =>
+      'Alte Bildschirmfotos sammeln sich schnell. Wische durch und entferne, was du nicht mehr brauchst.';
+
+  @override
+  String get v2IntroBlurred =>
+      'Verwackelte und unscharfe Aufnahmen, die du wahrscheinlich nicht behalten willst.';
+
+  @override
+  String get v2IntroLarge =>
+      'Deine größten Fotos und Videos. Schon wenige davon zu löschen, bringt am meisten Platz.';
+
+  @override
+  String get v2IntroOther =>
+      'Fotos, die in keine Kategorie passen. Sortiere nach Größe oder Datum und trenne dich von Unnötigem.';
+
+  @override
+  String get v2IntroOptimize =>
+      'Findet doppelte und ähnliche Fotos, behält die besten und wählt den Rest aus. Platz in Sekunden.';
+
+  @override
+  String get v2SortLargest => 'Größte';
+
+  @override
+  String get v2SortNewest => 'Neueste';
+
+  @override
+  String get v2EmptyCategory => 'Hier gibt es nichts zu bereinigen';
+
+  @override
+  String get v2EmptyCategoryBody => 'Diese Kategorie ist schon aufgeräumt.';
+
+  @override
+  String get v2VideoCompress => 'Videos komprimieren';
+
+  @override
+  String get v2VideoCompressSubtitle => 'Tippe, um zu starten';
+
+  @override
+  String get v2VideoCompressBody =>
+      'Komprimiere Videos zu kleineren Kopien und spare Speicher.';
+
+  @override
+  String get v2CongratsTitle => 'Glückwunsch!';
+
+  @override
+  String get v2CongratsDeleted => 'Du hast gelöscht:';
+
+  @override
+  String v2CongratsSaved(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Etwa $minutes Minuten gespart',
+      one: 'Etwa 1 Minute gespart',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2CongratsUsing(String appName) {
+    return 'mit $appName';
+  }
+
+  @override
+  String v2CongratsRecentlyDeleted(String size) {
+    return 'Leere das Album „Zuletzt gelöscht“, um $size freizugeben.';
+  }
+
+  @override
+  String get v2Great => 'Super';
+
+  @override
+  String get v2UnlockTitle => 'Unbegrenzten Zugang freischalten';
+
+  @override
+  String get v2UnlockFeature1 => 'Ähnliche Fotos sofort finden';
+
+  @override
+  String get v2UnlockFeature2 => 'Aufräumen ohne Limits';
+
+  @override
+  String get v2UnlockFeature3 => 'Spare Speicher und Zeit';
+
+  @override
+  String get v2PrivacyLine =>
+      'Fotos werden auf dem Gerät analysiert und nie hochgeladen.';
+
+  @override
+  String v2PerWeek(String price) {
+    return '$price/Woche, jederzeit kündbar';
+  }
+
+  @override
+  String v2PerYear(String price) {
+    return '$price/Jahr';
+  }
+
+  @override
+  String v2SavePercent(int percent) {
+    return '$percent % sparen';
+  }
+
+  @override
+  String v2FreeTrialDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days Tage gratis testen',
+      one: '1 Tag gratis testen',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2StartFreeTrial(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days Tage gratis testen',
+      one: '1 Tag gratis testen',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2FreeThen(int days, String price) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days Tage gratis, danach $price',
+      one: '1 Tag gratis, danach $price',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2TrialEnabled => 'Gratis-Testphase aktiv';
+
+  @override
+  String get v2DueToday => 'Heute fällig';
+
+  @override
+  String v2DueOn(String date) {
+    return 'Fällig am $date';
+  }
+
+  @override
+  String v2DaysFree(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days Tage gratis',
+      one: '1 Tag gratis',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2TryFree => 'Gratis testen';
+
+  @override
+  String get v2CleanYourStorage => 'Speicher aufräumen';
+
+  @override
+  String get v2GetRidOf => 'Weg mit allem, was du nicht brauchst';
+
+  @override
+  String get v2ProFeatures =>
+      'Smarte Bereinigung, Videokomprimierung, geheimer Bereich und keine Limits.';
+
+  @override
+  String v2WelcomeTitle(String appName) {
+    return 'Willkommen bei $appName';
+  }
+
+  @override
+  String v2WelcomeAccess(String appName) {
+    return '$appName braucht Zugriff auf deine Fotos, um Speicher freizugeben.';
+  }
+
+  @override
+  String get v2WelcomePrivacy =>
+      'Deine Fotos werden auf dem Gerät analysiert und nie auf unsere Server geladen.';
+
+  @override
+  String get v2GetStarted => 'Los geht’s';
+
+  @override
+  String get v2Next => 'Weiter';
+
+  @override
+  String get v2OnbDupTitle => 'Doppelte Fotos löschen';
+
+  @override
+  String get v2OnbDupBody =>
+      'Finde Duplikate in Sekunden und hol dir Speicher zurück.';
+
+  @override
+  String get v2OnbSwipeTitle => 'Wischen zum Aufräumen';
+
+  @override
+  String get v2OnbSwipeBody =>
+      'Nach links zum Löschen, nach rechts zum Behalten. So schnell war Aufräumen noch nie.';
+
+  @override
+  String get v2OnbVideoTitle => 'Videos komprimieren';
+
+  @override
+  String get v2OnbVideoBody =>
+      'Verkleinere große Videos und behalte deine Erinnerungen.';
+
+  @override
+  String v2TryDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days Tage testen',
+      one: '1 Tag testen',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2ForFree => 'Kostenlos!';
+
+  @override
+  String get v2ExtrasTitle => 'Weitere Tools';
+
+  @override
+  String get v2ExtrasUtilities => 'Werkzeuge';
+
+  @override
+  String get v2ExtrasPrivate => 'Privat';
+
+  @override
+  String get v2ChargingTitle => 'Lade-Animation';
+
+  @override
+  String get v2ChargingBody => 'Gestalte deinen Ladebildschirm';
+
+  @override
+  String get v2SecretTitle => 'Geheime Mediathek';
+
+  @override
+  String get v2SecretBody => 'Schütze deine privaten Fotos';
+
+  @override
+  String get v2ScanPaused => 'Scan pausiert';
+
+  @override
+  String get v2ContinueScan => 'Fortsetzen';
+
+  @override
+  String get v2PauseScan => 'Scan pausieren';
 }

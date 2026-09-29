@@ -1,16 +1,22 @@
 import 'dart:async';
 import 'package:cleanup_app/l10n/l10n.dart';
 
+import 'package:cleanup_app/l10n/app_localizations.dart';
 import 'package:cleanup_app/services/photo_scanner_service.dart';
 import 'package:cleanup_app/services/subscription_manager.dart';
 import 'package:cleanup_app/views/home/home_view.dart';
-import 'package:cleanup_app/views/scanner/smart_clean_view.dart';
+import 'package:cleanup_app/views/paywall/paywall_view.dart';
+import 'package:cleanup_app/views/v2/category_grid_view.dart';
+import 'package:cleanup_app/views/v2/category_intro_view.dart';
+import 'package:cleanup_app/views/v2/group_review_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:image/image.dart' as img;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _PartialScanner extends PhotoScannerService {
   final result = ScanResult(
@@ -35,21 +41,61 @@ class _PartialScanner extends PhotoScannerService {
     overexposedPhotos: [],
     totalSavingsEstimate: 0,
   );
+  int resumes = 0;
   @override
   ScanResult get scanResult => result;
   @override
   int get scannedAssetCount => result.allAssets.length;
   @override
   bool get hasCompletedScan => true;
-
   @override
   int? get availableAssetCount => 5000;
-
   @override
-  String? get scanNotice => '本次僅讀取部分項目，請預覽後再決定。';
+  Future<void> startContinuousScan({bool resume = false}) async {
+    if (resume) resumes++;
+  }
 }
 
+class _ProSubscription extends SubscriptionManager {
+  @override
+  bool get isPro => true;
+}
+
+Widget _home(
+  PhotoScannerService scanner,
+  SubscriptionManager subscription, {
+  double textScale = 1,
+}) => MultiProvider(
+  providers: [
+    ChangeNotifierProvider<PhotoScannerService>.value(value: scanner),
+    ChangeNotifierProvider<SubscriptionManager>.value(value: subscription),
+  ],
+  child: MaterialApp(
+    locale: const Locale('en'),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    builder: (context, child) => MediaQuery(
+      data: MediaQuery.of(
+        context,
+      ).copyWith(textScaler: TextScaler.linear(textScale)),
+      child: child!,
+    ),
+    home: const HomeView(),
+  ),
+);
+
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    PackageInfo.setMockInitialValues(
+      appName: 'Cleanup',
+      packageName: 'com.cleanupapp.cleaner',
+      version: '1.1.3',
+      buildNumber: '46',
+      buildSignature: '',
+    );
+  });
+
   testWidgets('small iPhone home supports enlarged text without overflow', (
     tester,
   ) async {
@@ -59,25 +105,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     final scanner = _PartialScanner();
     final subscription = SubscriptionManager();
-    await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<PhotoScannerService>.value(value: scanner),
-          ChangeNotifierProvider<SubscriptionManager>.value(
-            value: subscription,
-          ),
-        ],
-        child: MaterialApp(
-          builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: const TextScaler.linear(2)),
-            child: child!,
-          ),
-          home: const HomeView(),
-        ),
-      ),
-    );
+    await tester.pumpWidget(_home(scanner, subscription, textScale: 2));
     await tester.pump();
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
@@ -86,63 +114,72 @@ void main() {
   });
 
   for (final category in {
-    '真重複照片': 'duplicates',
-    '視覺相似照片': 'similar',
-    '螢幕截圖': 'screenshots',
-    '大型檔案': 'largeFiles',
+    'duplicates': GroupReviewView,
+    'similar': GroupReviewView,
+    'videos': CategoryGridView,
+    'screenshots': CategoryGridView,
+    'blurred': CategoryGridView,
+    'largeFiles': CategoryGridView,
+    'other': CategoryGridView,
   }.entries) {
-    testWidgets('home ${category.key} opens its matching category', (
-      tester,
-    ) async {
-      final scanner = _PartialScanner();
-      final subscription = SubscriptionManager();
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider<PhotoScannerService>.value(value: scanner),
-            ChangeNotifierProvider<SubscriptionManager>.value(
-              value: subscription,
-            ),
-          ],
-          child: const MaterialApp(home: HomeView()),
-        ),
-      );
-      await tester.pump();
-      await tester.ensureVisible(find.text(category.key));
-      await tester.tap(find.text(category.key));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-      expect(
-        tester
-            .widget<SmartCleanView>(find.byType(SmartCleanView))
-            .initialCategory,
-        category.value,
-      );
-      await tester.pumpWidget(const SizedBox.shrink());
-      scanner.dispose();
-      subscription.dispose();
-    });
+    testWidgets(
+      'home ${category.key} shows its intro once, then opens the category',
+      (tester) async {
+        final scanner = _PartialScanner();
+        final subscription = SubscriptionManager();
+        await tester.pumpWidget(_home(scanner, subscription));
+        await tester.pump();
+        final card = find.byKey(ValueKey('home-category-${category.key}'));
+        await tester.ensureVisible(card);
+        await tester.pumpAndSettle();
+        await tester.tap(card);
+        await tester.pumpAndSettle();
+        expect(find.byType(CategoryIntroView), findsOneWidget);
+        await tester.tap(find.byKey(const ValueKey('intro-lets-go')));
+        await tester.pumpAndSettle();
+        expect(find.byType(category.value), findsOneWidget);
+        expect(find.byType(CategoryIntroView), findsNothing);
+
+        // The explainer is shown only on the first visit.
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+        await tester.tap(card);
+        await tester.pumpAndSettle();
+        expect(find.byType(CategoryIntroView), findsNothing);
+        expect(find.byType(category.value), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+        scanner.dispose();
+        subscription.dispose();
+      },
+    );
   }
 
-  testWidgets('home does not label a free account PRO', (tester) async {
+  testWidgets('free home offers PRO as an upgrade action, Pro hides it', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
     final scanner = _PartialScanner();
-    final subscription = SubscriptionManager();
-    await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<PhotoScannerService>.value(value: scanner),
-          ChangeNotifierProvider<SubscriptionManager>.value(
-            value: subscription,
-          ),
-        ],
-        child: const MaterialApp(home: HomeView()),
-      ),
-    );
+    final free = SubscriptionManager();
+    await tester.pumpWidget(_home(scanner, free));
     await tester.pump();
-    expect(find.text('PRO'), findsNothing);
+    final pro = find.byKey(const ValueKey('home-pro'));
+    expect(pro, findsOneWidget);
+    expect(find.bySemanticsLabel('Upgrade'), findsOneWidget);
+    await tester.tap(pro);
+    await tester.pumpAndSettle();
+    expect(find.byType(PaywallView), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+
+    final paid = _ProSubscription();
+    await tester.pumpWidget(_home(scanner, paid));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('home-pro')), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
     scanner.dispose();
-    subscription.dispose();
+    free.dispose();
+    paid.dispose();
+    semantics.dispose();
   });
 
   for (final device in {
@@ -150,7 +187,7 @@ void main() {
     'iPad': const Size(1024, 1366),
   }.entries) {
     testWidgets(
-      '${device.key}: partial scan is disclosed and preview opens a real review page',
+      '${device.key}: a partial index is disclosed and can be continued',
       (tester) async {
         tester.view.physicalSize = device.value;
         tester.view.devicePixelRatio = 1;
@@ -158,40 +195,15 @@ void main() {
         addTearDown(tester.view.resetDevicePixelRatio);
         final scanner = _PartialScanner();
         final subscription = SubscriptionManager();
-        await tester.pumpWidget(
-          MultiProvider(
-            providers: [
-              ChangeNotifierProvider<PhotoScannerService>.value(value: scanner),
-              ChangeNotifierProvider<SubscriptionManager>.value(
-                value: subscription,
-              ),
-            ],
-            child: const MaterialApp(home: HomeView()),
-          ),
-        );
+        await tester.pumpWidget(_home(scanner, subscription));
         await tester.pump();
-
-        expect(
-          find.text(appStringsOf().homeIndexedCountWithTotal(1, 5000)),
-          findsOneWidget,
-        );
-        expect(find.textContaining('僅讀取部分項目'), findsNothing);
-        await tester.ensureVisible(find.text(appStringsOf().homeScanDetails));
-        await tester.tap(find.text(appStringsOf().homeScanDetails));
-        await tester.pumpAndSettle();
-        expect(find.textContaining('僅讀取部分項目'), findsOneWidget);
-        expect(find.text('預估可釋放'), findsNothing);
-        expect(find.text('模糊照片'), findsNothing);
-        expect(find.text('清理信箱'), findsNothing);
-        expect(find.text('清理行事曆'), findsNothing);
-
-        await tester.ensureVisible(find.text(appStringsOf().homeReviewReady));
-        await tester.tap(find.text(appStringsOf().homeReviewReady));
+        final strings = tester.element(find.byType(HomeView)).l10n;
+        expect(find.text(strings.v2ScanPaused), findsOneWidget);
+        expect(find.text(strings.v2ScanningCount(1, 5000)), findsOneWidget);
+        await tester.tap(find.byKey(const ValueKey('home-scan-continue')));
         await tester.pump();
-        await tester.pump(const Duration(milliseconds: 400));
-        expect(find.byType(SmartCleanView), findsOneWidget);
+        expect(scanner.resumes, 1);
         expect(tester.takeException(), isNull);
-
         await tester.pumpWidget(const SizedBox.shrink());
         scanner.dispose();
         subscription.dispose();
@@ -200,7 +212,7 @@ void main() {
   }
 
   testWidgets(
-    'deadline partial results expose one continuation action preserving checkpoints',
+    'deadline partial results continue from the checkpoint without re-measuring',
     (tester) async {
       const photos = MethodChannel('com.fluttercandies/photo_manager');
       const resources = MethodChannel('cleanup/photo_resources');
@@ -224,6 +236,7 @@ void main() {
       messenger.setMockMethodCallHandler(photos, (call) async {
         switch (call.method) {
           case 'requestPermissionExtend':
+          case 'getPermissionState':
             return PermissionState.authorized.index;
           case 'getAssetPathList':
             return {
@@ -249,6 +262,7 @@ void main() {
       });
       messenger.setMockMethodCallHandler(resources, (call) async {
         if (call.method == 'cancelInspections') return null;
+        if (call.method == 'deviceStorage') return null;
         if (call.method == 'inspectAsset') {
           return {'complete': true, 'sizeKnown': true, 'size': 9000000};
         }
@@ -296,17 +310,7 @@ void main() {
             'modifiedDt': 1700000000,
           },
       ];
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider<PhotoScannerService>.value(value: scanner),
-            ChangeNotifierProvider<SubscriptionManager>.value(
-              value: subscription,
-            ),
-          ],
-          child: const MaterialApp(home: HomeView()),
-        ),
-      );
+      await tester.pumpWidget(_home(scanner, subscription));
       final scan = scanner.resumeScan();
       await pumpUntil(() => batches.isNotEmpty);
       for (var i = 0; i < 17 && scanner.isScanning; i++) {
@@ -318,35 +322,15 @@ void main() {
       expect(scanner.scannedAssetCount, 801);
       expect(scanner.pendingAnalysisCount, 800);
       expect(scanner.verifiedOriginalCount, 1);
-      expect(
-        find.text(appStringsOf().homeIndexedCountWithTotal(801, 801)),
-        findsOneWidget,
-      );
-      await tester.ensureVisible(find.text(appStringsOf().homeScanDetails));
-      await tester.tap(find.text(appStringsOf().homeScanDetails));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('已達 30 秒'), findsOneWidget);
-      expect(find.text(appStringsOf().homeReviewReady), findsOneWidget);
-      expect(find.text(appStringsOf().homeContinueAnalysis), findsOneWidget);
+      final continueScan = find.byKey(const ValueKey('home-scan-continue'));
+      expect(continueScan, findsOneWidget);
+
       final processed = scanner.attemptedAnalysisCount;
       blockPreview = true;
-      final beforeSecondary = batches.length;
-      await tester.ensureVisible(
-        find.text(appStringsOf().homeContinueAnalysis),
-      );
-      await tester.tap(find.text(appStringsOf().homeContinueAnalysis));
-      await pumpUntil(() => batches.length > beforeSecondary);
-      expect(batches.last.first, 'photo-$processed');
-      expect(scanner.verifiedOriginalCount, 1);
-      expect(scanner.attemptedAnalysisCount, processed);
-      scanner.cancelScan();
-      await tester.pump();
-      final beforePrimary = batches.length;
-      await tester.ensureVisible(
-        find.text(appStringsOf().homeContinueAnalysis),
-      );
-      await tester.tap(find.text(appStringsOf().homeContinueAnalysis));
-      await pumpUntil(() => batches.length > beforePrimary);
+      final before = batches.length;
+      await tester.ensureVisible(continueScan);
+      await tester.tap(continueScan);
+      await pumpUntil(() => batches.length > before);
       expect(batches.last.first, 'photo-$processed');
       expect(
         scanner.verifiedOriginalCount,
@@ -355,9 +339,15 @@ void main() {
             'A full restart would erase the previously measured video checkpoint.',
       );
       expect(scanner.attemptedAnalysisCount, processed);
-      scanner.cancelScan();
-      blockedPreview.complete({'assets': []});
+
+      // Pausing from the home status keeps the snapshot and offers Continue.
+      await tester.tap(find.byKey(const ValueKey('home-scan-pause')));
       await tester.pump();
+      blockedPreview.complete({'assets': []});
+      await pumpUntil(() => !scanner.isScanning);
+      await tester.pump();
+      expect(find.byKey(const ValueKey('home-scan-continue')), findsOneWidget);
+      expect(scanner.verifiedOriginalCount, 1);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
     },
@@ -378,6 +368,9 @@ void main() {
           permissionCalls++;
           return permission.future;
         }
+        if (call.method == 'getPermissionState') {
+          return PermissionState.notDetermined.index;
+        }
         if (call.method == 'getAssetPathList') return {'data': []};
         throw StateError('Unexpected Photos method ${call.method}');
       });
@@ -386,34 +379,20 @@ void main() {
         subscription.dispose();
         messenger.setMockMethodCallHandler(photos, null);
       });
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider<PhotoScannerService>.value(value: scanner),
-            ChangeNotifierProvider<SubscriptionManager>.value(
-              value: subscription,
-            ),
-          ],
-          child: const MaterialApp(home: HomeView()),
-        ),
-      );
-      expect(find.text('掃描全部可存取照片與影片'), findsOneWidget);
-      expect(find.text('繼續掃描並保留進度'), findsNothing);
-      await tester.tap(find.text('掃描全部可存取照片與影片'));
+      await tester.pumpWidget(_home(scanner, subscription));
+      await tester.pump();
+      final start = find.byKey(const ValueKey('home-scan-start'));
+      expect(start, findsOneWidget);
+      await tester.tap(start);
       await tester.pump();
       expect(scanner.isScanning, isTrue);
-      await tester.ensureVisible(find.text('取消掃描並保留進度'));
-      await tester.tap(find.text('取消掃描並保留進度'));
+      await tester.tap(find.byKey(const ValueKey('home-scan-pause')));
       await tester.pump();
       expect(scanner.isScanning, isFalse);
       expect(scanner.scannedAssetCount, 0);
-      await tester.ensureVisible(find.text(appStringsOf().homeScanDetails));
-      await tester.tap(find.text(appStringsOf().homeScanDetails));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('已暫停'), findsOneWidget);
-      expect(find.text('繼續掃描並保留進度'), findsOneWidget);
-      await tester.ensureVisible(find.text('繼續掃描並保留進度'));
-      await tester.tap(find.text('繼續掃描並保留進度'));
+      final continueScan = find.byKey(const ValueKey('home-scan-continue'));
+      expect(continueScan, findsOneWidget);
+      await tester.tap(continueScan);
       await tester.pump();
       expect(scanner.isScanning, isTrue);
       expect(permissionCalls, 2);
@@ -423,7 +402,6 @@ void main() {
       }
       expect(scanner.isScanning, isFalse);
       expect(scanner.scannedAssetCount, 0);
-      expect(find.text('掃描全部可存取照片與影片'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
     },

@@ -62,7 +62,7 @@ void main() {
       expect(subscriptions.initializationStarted, isTrue);
       expect(subscriptions.initialization.isCompleted, isFalse);
       expect(find.byType(OnboardingView), findsOneWidget);
-      expect(find.text('繼續'), findsOneWidget);
+      expect(find.text('開始使用'), findsOneWidget);
 
       subscriptions.initialization.complete();
       await tester.pumpWidget(const SizedBox());
@@ -85,11 +85,13 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.byType(OnboardingView), findsOneWidget);
-      await tester.tap(find.text('繼續'));
+      await tester.runAsync(() async {
+        await tester.tap(find.text('開始使用'));
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      });
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
-      await tester.pump();
-      expect(find.text('2/4'), findsOneWidget);
+      expect(find.byKey(const ValueKey('onboarding-next')), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox());
       subscriptions.dispose();

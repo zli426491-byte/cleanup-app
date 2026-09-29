@@ -130,6 +130,15 @@ final class PhotoResourceInspector: NSObject, FlutterPlugin {
       result(URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
         .appendingPathComponent("video_compress", isDirectory: true).path)
     case "saveCompressedVideo": saveCompressedVideo(args, result: result)
+    case "deviceStorage":
+      // Capacity the user can actually reclaim for photos (Settings › iPhone Storage).
+      let home = URL(fileURLWithPath: NSHomeDirectory())
+      guard let values = try? home.resourceValues(forKeys: [
+        .volumeTotalCapacityKey, .volumeAvailableCapacityForImportantUsageKey,
+      ]), let total = values.volumeTotalCapacity,
+        let free = values.volumeAvailableCapacityForImportantUsage,
+        total > 0 else { result(nil); return }
+      result(["total": NSNumber(value: Int64(total)), "free": NSNumber(value: free)])
     case "inspectPreviews", "inspectAsset":
       guard let token = args["token"] as? String, !token.isEmpty else {
         result(FlutterError(code: "arguments", message: "Missing request token", details: nil)); return

@@ -42,10 +42,12 @@ class TestScanner extends PhotoScannerService {
   @override
   ScanResult get scanResult => result;
   int deletionRequests = 0;
+  List<String> lastRequested = const [];
   Completer<Set<String>>? pendingDeletion;
   @override
   Future<Set<String>> deleteAssetsWithResult(List<PhotoAsset> assets) async {
     deletionRequests++;
+    lastRequested = [for (final asset in assets) asset.id];
     return pendingDeletion?.future ?? {};
   }
 }
@@ -203,10 +205,8 @@ void main() {
       await reviewForDeletion(tester, pro: true);
       await tester.tap(find.text('刪除 1 張照片'));
       await tester.pumpAndSettle();
-      await waitForDecodedPreview(tester);
-      await tester.tap(find.text('確認刪除 · 1 個'));
-      await tester.pumpAndSettle();
       expect(scanner.deletionRequests, 1);
+      expect(scanner.lastRequested, ['swipe-gate-test']);
       expect(find.byType(SwipeCleanView), findsOneWidget);
       expect(find.text('刪除 1 張照片'), findsOneWidget);
       expect(find.text('未刪除任何照片，可能已取消或刪除未成功。'), findsOneWidget);
@@ -281,15 +281,12 @@ void main() {
     expect(find.text(appStringsOf().scanReviewChanged), findsOneWidget);
   });
 
-  testWidgets('library change while reviewing rejects confirmation', (
+  testWidgets('an edit to a reviewed photo rejects its deletion', (
     tester,
   ) async {
     await reviewForDeletion(tester, pro: true);
+    scanner.setAssets([asset.copyWith(modifiedDate: DateTime(2027))]);
     await tester.tap(find.text('刪除 1 張照片'));
-    await tester.pumpAndSettle();
-    await waitForDecodedPreview(tester);
-    scanner.setAssets([]);
-    await tester.tap(find.text('確認刪除 · 1 個'));
     await tester.pumpAndSettle();
     expect(scanner.deletionRequests, 0);
     expect(find.text(appStringsOf().scanReviewChanged), findsOneWidget);
@@ -519,9 +516,6 @@ void main() {
     await tester.pumpAndSettle();
     scanner.pendingDeletion = Completer<Set<String>>();
     await tester.tap(find.text('刪除 1 張照片'));
-    await tester.pumpAndSettle();
-    await waitForDecodedPreview(tester);
-    await tester.tap(find.text('確認刪除 · 1 個'));
     await tester.pump(const Duration(milliseconds: 100));
     await navigator.maybePop();
     await tester.pump(const Duration(milliseconds: 100));
@@ -532,6 +526,9 @@ void main() {
     );
     expect(close.onPressed, isNull);
     scanner.pendingDeletion!.complete({'swipe-gate-test'});
+    await tester.pumpAndSettle();
+    // A completed deletion celebrates first, then leaves the review.
+    await tester.tap(find.byKey(const ValueKey('congrats-great')));
     await tester.pumpAndSettle();
     expect(find.byType(SwipeCleanView), findsNothing);
     expect(find.text('open review'), findsOneWidget);
@@ -776,8 +773,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text(appStringsOf().swipeDeletePhotos(3)));
       await tester.pumpAndSettle();
-      expect(find.text(appStringsOf().reviewConfirmCount(3)), findsOneWidget);
-      expect(scanner.deletionRequests, 0);
+      // Only the three decoded photos reach the system deletion request.
+      expect(scanner.deletionRequests, 1);
+      expect(scanner.lastRequested, ['paint-0', 'paint-1', 'paint-3']);
     },
   );
 
@@ -856,9 +854,9 @@ void main() {
 
       await tester.tap(find.text(appStringsOf().swipeDeletePhotos(30)));
       await tester.pumpAndSettle();
-      expect(find.text(appStringsOf().reviewConfirmCount(30)), findsOneWidget);
-      expect(find.text(appStringsOf().reviewUnseenCount(29)), findsNothing);
-      expect(scanner.deletionRequests, 0);
+      // Offscreen selections stay decoded, so all 30 are requested together.
+      expect(scanner.deletionRequests, 1);
+      expect(scanner.lastRequested, hasLength(30));
     },
   );
 

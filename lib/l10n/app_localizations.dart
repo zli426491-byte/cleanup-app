@@ -2375,6 +2375,624 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Photo access may have changed. Scan again to refresh available photos.'**
   String get homePhotoScopeChanged;
+
+  /// No description provided for @navOptimize.
+  ///
+  /// In en, this message translates to:
+  /// **'Optimize'**
+  String get navOptimize;
+
+  /// No description provided for @navExtras.
+  ///
+  /// In en, this message translates to:
+  /// **'Extras'**
+  String get navExtras;
+
+  /// No description provided for @v2Before.
+  ///
+  /// In en, this message translates to:
+  /// **'Before'**
+  String get v2Before;
+
+  /// No description provided for @v2After.
+  ///
+  /// In en, this message translates to:
+  /// **'After'**
+  String get v2After;
+
+  /// No description provided for @v2Best.
+  ///
+  /// In en, this message translates to:
+  /// **'Best'**
+  String get v2Best;
+
+  /// No description provided for @v2Cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get v2Cancel;
+
+  /// No description provided for @v2Select.
+  ///
+  /// In en, this message translates to:
+  /// **'Select'**
+  String get v2Select;
+
+  /// No description provided for @v2SelectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select All'**
+  String get v2SelectAll;
+
+  /// No description provided for @v2DeselectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Deselect All'**
+  String get v2DeselectAll;
+
+  /// No description provided for @v2SelectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected'**
+  String v2SelectedCount(int count);
+
+  /// No description provided for @v2CatSimilars.
+  ///
+  /// In en, this message translates to:
+  /// **'Similar'**
+  String get v2CatSimilars;
+
+  /// No description provided for @v2CatDuplicates.
+  ///
+  /// In en, this message translates to:
+  /// **'Duplicates'**
+  String get v2CatDuplicates;
+
+  /// No description provided for @v2CatVideos.
+  ///
+  /// In en, this message translates to:
+  /// **'Videos'**
+  String get v2CatVideos;
+
+  /// No description provided for @v2CatScreenshots.
+  ///
+  /// In en, this message translates to:
+  /// **'Screenshots'**
+  String get v2CatScreenshots;
+
+  /// No description provided for @v2CatBlurred.
+  ///
+  /// In en, this message translates to:
+  /// **'Blurred'**
+  String get v2CatBlurred;
+
+  /// No description provided for @v2CatLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'Large Files'**
+  String get v2CatLarge;
+
+  /// No description provided for @v2CatOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get v2CatOther;
+
+  /// No description provided for @v2PhotoCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 Photo} other{{count} Photos}}'**
+  String v2PhotoCount(int count);
+
+  /// No description provided for @v2VideoCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 Video} other{{count} Videos}}'**
+  String v2VideoCount(int count);
+
+  /// No description provided for @v2ItemCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 item} other{{count} items}}'**
+  String v2ItemCount(int count);
+
+  /// No description provided for @v2DeleteCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Delete 1 Item} other{Delete {count} Items}}'**
+  String v2DeleteCount(int count);
+
+  /// No description provided for @v2DeleteVideos.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Delete 1 Video} other{Delete {count} Videos}}'**
+  String v2DeleteVideos(int count);
+
+  /// No description provided for @v2DeleteSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {size}'**
+  String v2DeleteSize(String size);
+
+  /// No description provided for @v2FreeCleanupsLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 free cleanup left} other{{count} free cleanups left}}'**
+  String v2FreeCleanupsLeft(int count);
+
+  /// No description provided for @v2SpaceToClean.
+  ///
+  /// In en, this message translates to:
+  /// **'Space to Clean'**
+  String get v2SpaceToClean;
+
+  /// No description provided for @v2StorageUsedOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{used} of {total} used'**
+  String v2StorageUsedOf(String used, String total);
+
+  /// No description provided for @v2OptimizeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Optimize Storage'**
+  String get v2OptimizeTitle;
+
+  /// No description provided for @v2OptimizeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Free up space from your files quickly'**
+  String get v2OptimizeSubtitle;
+
+  /// No description provided for @v2Scanning.
+  ///
+  /// In en, this message translates to:
+  /// **'Scanning your library…'**
+  String get v2Scanning;
+
+  /// No description provided for @v2ScanningCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} / {total}'**
+  String v2ScanningCount(int done, int total);
+
+  /// No description provided for @v2CheckingDuplicates.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking duplicates…'**
+  String get v2CheckingDuplicates;
+
+  /// No description provided for @v2ScanStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan my photos'**
+  String get v2ScanStart;
+
+  /// No description provided for @v2PermissionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow access to Photos'**
+  String get v2PermissionTitle;
+
+  /// No description provided for @v2PermissionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{appName} needs access to your photos to find duplicates and free up storage. Your photos stay on your device.'**
+  String v2PermissionBody(String appName);
+
+  /// No description provided for @v2OpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get v2OpenSettings;
+
+  /// No description provided for @v2IntroLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Left'**
+  String get v2IntroLeft;
+
+  /// No description provided for @v2IntroToDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'to Delete'**
+  String get v2IntroToDelete;
+
+  /// No description provided for @v2IntroRight.
+  ///
+  /// In en, this message translates to:
+  /// **'Right'**
+  String get v2IntroRight;
+
+  /// No description provided for @v2IntroToKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'to Keep'**
+  String get v2IntroToKeep;
+
+  /// No description provided for @v2LetsGo.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s go'**
+  String get v2LetsGo;
+
+  /// No description provided for @v2IntroSimilars.
+  ///
+  /// In en, this message translates to:
+  /// **'Similar shots are grouped together. We keep the best one and select the rest for you.'**
+  String get v2IntroSimilars;
+
+  /// No description provided for @v2IntroDuplicates.
+  ///
+  /// In en, this message translates to:
+  /// **'Exact copies of the same photo. Keep one and delete the rest in one tap.'**
+  String get v2IntroDuplicates;
+
+  /// No description provided for @v2IntroVideos.
+  ///
+  /// In en, this message translates to:
+  /// **'Review all your videos. Sort them by size or date to see the ones that take the most space.'**
+  String get v2IntroVideos;
+
+  /// No description provided for @v2IntroScreenshots.
+  ///
+  /// In en, this message translates to:
+  /// **'Old screenshots pile up fast. Swipe through them and clear the ones you no longer need.'**
+  String get v2IntroScreenshots;
+
+  /// No description provided for @v2IntroBlurred.
+  ///
+  /// In en, this message translates to:
+  /// **'Blurry and out-of-focus shots you probably don\'t want to keep.'**
+  String get v2IntroBlurred;
+
+  /// No description provided for @v2IntroLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'Your biggest photos and videos. Deleting a few of them frees the most space.'**
+  String get v2IntroLarge;
+
+  /// No description provided for @v2IntroOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos that don\'t belong to any category. Sort them by size or date and say goodbye to the ones you don\'t need.'**
+  String get v2IntroOther;
+
+  /// No description provided for @v2IntroOptimize.
+  ///
+  /// In en, this message translates to:
+  /// **'Finds duplicate and similar photos, keeps the best ones and selects the rest. Free up space in seconds.'**
+  String get v2IntroOptimize;
+
+  /// No description provided for @v2SortLargest.
+  ///
+  /// In en, this message translates to:
+  /// **'Largest'**
+  String get v2SortLargest;
+
+  /// No description provided for @v2SortNewest.
+  ///
+  /// In en, this message translates to:
+  /// **'Newest'**
+  String get v2SortNewest;
+
+  /// No description provided for @v2EmptyCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to clean here'**
+  String get v2EmptyCategory;
+
+  /// No description provided for @v2EmptyCategoryBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This category is already clean.'**
+  String get v2EmptyCategoryBody;
+
+  /// No description provided for @v2VideoCompress.
+  ///
+  /// In en, this message translates to:
+  /// **'Video Compress'**
+  String get v2VideoCompress;
+
+  /// No description provided for @v2VideoCompressSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to start the process'**
+  String get v2VideoCompressSubtitle;
+
+  /// No description provided for @v2VideoCompressBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Compress videos into smaller copies to save storage.'**
+  String get v2VideoCompressBody;
+
+  /// No description provided for @v2CongratsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Congratulations!'**
+  String get v2CongratsTitle;
+
+  /// No description provided for @v2CongratsDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'You have deleted'**
+  String get v2CongratsDeleted;
+
+  /// No description provided for @v2CongratsSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes, plural, one{Saved about 1 minute} other{Saved about {minutes} minutes}}'**
+  String v2CongratsSaved(int minutes);
+
+  /// No description provided for @v2CongratsUsing.
+  ///
+  /// In en, this message translates to:
+  /// **'using {appName}'**
+  String v2CongratsUsing(String appName);
+
+  /// No description provided for @v2CongratsRecentlyDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty the “Recently Deleted” album on your iPhone to free up {size}.'**
+  String v2CongratsRecentlyDeleted(String size);
+
+  /// No description provided for @v2Great.
+  ///
+  /// In en, this message translates to:
+  /// **'Great'**
+  String get v2Great;
+
+  /// No description provided for @v2UnlockTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock Unlimited Access'**
+  String get v2UnlockTitle;
+
+  /// No description provided for @v2UnlockFeature1.
+  ///
+  /// In en, this message translates to:
+  /// **'Instantly find similar photos'**
+  String get v2UnlockFeature1;
+
+  /// No description provided for @v2UnlockFeature2.
+  ///
+  /// In en, this message translates to:
+  /// **'No limits on cleanup'**
+  String get v2UnlockFeature2;
+
+  /// No description provided for @v2UnlockFeature3.
+  ///
+  /// In en, this message translates to:
+  /// **'Save both storage and time'**
+  String get v2UnlockFeature3;
+
+  /// No description provided for @v2PrivacyLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Your photos are analyzed on your device and never uploaded.'**
+  String get v2PrivacyLine;
+
+  /// No description provided for @v2PerWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'{price}/week, cancel anytime'**
+  String v2PerWeek(String price);
+
+  /// No description provided for @v2PerYear.
+  ///
+  /// In en, this message translates to:
+  /// **'{price}/year'**
+  String v2PerYear(String price);
+
+  /// No description provided for @v2SavePercent.
+  ///
+  /// In en, this message translates to:
+  /// **'Save {percent}%'**
+  String v2SavePercent(int percent);
+
+  /// No description provided for @v2FreeTrialDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, one{1-day free trial} other{{days}-day free trial}}'**
+  String v2FreeTrialDays(int days);
+
+  /// No description provided for @v2StartFreeTrial.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, one{Start my 1-day free trial} other{Start my {days}-day free trial}}'**
+  String v2StartFreeTrial(int days);
+
+  /// No description provided for @v2FreeThen.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, one{Free for 1 day, then {price}} other{Free for {days} days, then {price}}}'**
+  String v2FreeThen(int days, String price);
+
+  /// No description provided for @v2TrialEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Free trial enabled'**
+  String get v2TrialEnabled;
+
+  /// No description provided for @v2DueToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Due today'**
+  String get v2DueToday;
+
+  /// No description provided for @v2DueOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Due {date}'**
+  String v2DueOn(String date);
+
+  /// No description provided for @v2DaysFree.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, one{1 day free} other{{days} days free}}'**
+  String v2DaysFree(int days);
+
+  /// No description provided for @v2TryFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Try Free'**
+  String get v2TryFree;
+
+  /// No description provided for @v2CleanYourStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'Clean your Storage'**
+  String get v2CleanYourStorage;
+
+  /// No description provided for @v2GetRidOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Get rid of what you don\'t need'**
+  String get v2GetRidOf;
+
+  /// No description provided for @v2ProFeatures.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart cleanup, video compression, secret space and no limits.'**
+  String get v2ProFeatures;
+
+  /// No description provided for @v2WelcomeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to {appName}'**
+  String v2WelcomeTitle(String appName);
+
+  /// No description provided for @v2WelcomeAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'{appName} needs access to your Photos to free up storage.'**
+  String v2WelcomeAccess(String appName);
+
+  /// No description provided for @v2WelcomePrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Your photos are analyzed on your device and never uploaded to our servers.'**
+  String get v2WelcomePrivacy;
+
+  /// No description provided for @v2GetStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Get started'**
+  String get v2GetStarted;
+
+  /// No description provided for @v2Next.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get v2Next;
+
+  /// No description provided for @v2OnbDupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Duplicate Photos'**
+  String get v2OnbDupTitle;
+
+  /// No description provided for @v2OnbDupBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Find duplicate photos in seconds and reclaim your storage.'**
+  String get v2OnbDupBody;
+
+  /// No description provided for @v2OnbSwipeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe to Clean'**
+  String get v2OnbSwipeTitle;
+
+  /// No description provided for @v2OnbSwipeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe left to delete, right to keep. Cleaning up has never been this quick.'**
+  String get v2OnbSwipeBody;
+
+  /// No description provided for @v2OnbVideoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Compress Videos'**
+  String get v2OnbVideoTitle;
+
+  /// No description provided for @v2OnbVideoBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Shrink large videos and keep your memories.'**
+  String get v2OnbVideoBody;
+
+  /// No description provided for @v2TryDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, one{Try 1 day} other{Try {days} days}}'**
+  String v2TryDays(int days);
+
+  /// No description provided for @v2ForFree.
+  ///
+  /// In en, this message translates to:
+  /// **'For free!'**
+  String get v2ForFree;
+
+  /// No description provided for @v2ExtrasTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Extra Tools'**
+  String get v2ExtrasTitle;
+
+  /// No description provided for @v2ExtrasUtilities.
+  ///
+  /// In en, this message translates to:
+  /// **'Utilities'**
+  String get v2ExtrasUtilities;
+
+  /// No description provided for @v2ExtrasPrivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Private'**
+  String get v2ExtrasPrivate;
+
+  /// No description provided for @v2ChargingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Charging Animation'**
+  String get v2ChargingTitle;
+
+  /// No description provided for @v2ChargingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Personalize your charging screen'**
+  String get v2ChargingBody;
+
+  /// No description provided for @v2SecretTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Secret Library'**
+  String get v2SecretTitle;
+
+  /// No description provided for @v2SecretBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Protect your private photos'**
+  String get v2SecretBody;
+
+  /// No description provided for @v2ScanPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan paused'**
+  String get v2ScanPaused;
+
+  /// No description provided for @v2ContinueScan.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get v2ContinueScan;
+
+  /// No description provided for @v2PauseScan.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause scan'**
+  String get v2PauseScan;
 }
 
 class _AppLocalizationsDelegate

@@ -15,6 +15,13 @@ import 'package:cleanup_app/views/scanner/smart_clean_view.dart';
 import 'package:cleanup_app/views/scanner/swipe_clean_view.dart';
 import 'package:cleanup_app/views/components/video_compression_view.dart';
 import 'package:cleanup_app/views/settings/settings_view.dart';
+import 'package:cleanup_app/views/v2/category_grid_view.dart';
+import 'package:cleanup_app/views/v2/category_intro_view.dart';
+import 'package:cleanup_app/views/v2/cleanup_category.dart';
+import 'package:cleanup_app/views/v2/congratulations_view.dart';
+import 'package:cleanup_app/views/v2/extras_view.dart';
+import 'package:cleanup_app/views/v2/group_review_view.dart';
+import 'package:cleanup_app/views/v2/optimize_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -155,10 +162,41 @@ void main() {
           tester.view.physicalSize = viewport;
           for (final screen in <Widget>[
             const OnboardingView(),
+            const MainTabView(),
             const HomeView(),
+            const OptimizeTabView(),
+            const ExtrasView(),
             const SmartCleanView(),
             const PaywallView(),
+            const PaywallView(fromOnboarding: true),
+            const PaywallView(freeCleanupsLeft: 3),
             const SettingsView(),
+            CategoryIntroView(
+              title: 'Duplicates',
+              body: 'Intro',
+              grouped: true,
+              onContinue: (_) async {},
+            ),
+            CategoryIntroView(
+              title: 'Videos',
+              body: 'Intro',
+              onContinue: (_) async {},
+            ),
+            const CategoryGridView(category: CleanupCategory.videos),
+            const CategoryGridView(category: CleanupCategory.screenshots),
+            const GroupReviewView(
+              title: 'Duplicates',
+              sections: [CleanupCategory.duplicates],
+            ),
+            const GroupReviewView(
+              title: 'Optimize',
+              sections: [CleanupCategory.duplicates, CleanupCategory.similars],
+            ),
+            const VideoCompressListView(),
+            const CongratulationsView(
+              deletedCount: 128,
+              deletedBytes: 3 * 1024 * 1024 * 1024,
+            ),
             SwipeCleanView(
               assets: [
                 PhotoAsset(
@@ -266,16 +304,16 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(find.text('繼續'), findsOneWidget);
+      expect(find.text('開始使用'), findsOneWidget);
       final state = tester.state(find.byType(OnboardingView));
       dispatcher.localesTestValue = const [Locale('zh', 'CN')];
       await tester.pump();
-      expect(find.text('继续'), findsOneWidget);
+      expect(find.text('开始使用'), findsOneWidget);
       expect(tester.state(find.byType(OnboardingView)), same(state));
       await controller.setLocale(const Locale('en'));
       dispatcher.localesTestValue = const [Locale('ar')];
       await tester.pump();
-      expect(find.text('Continue'), findsOneWidget);
+      expect(find.text('Get started'), findsOneWidget);
       expect(
         Directionality.of(tester.element(find.byType(OnboardingView))),
         TextDirection.ltr,
@@ -298,7 +336,8 @@ void main() {
       ),
     );
     await tester.pump();
-    await tester.tap(find.text('Settings').last);
+    await tester.tap(find.byKey(const ValueKey('home-settings')));
+    await tester.pumpAndSettle();
     await tester.pump();
     await tester.tap(find.text('Language'));
     await tester.pump();
@@ -319,12 +358,13 @@ void main() {
       tester
           .widget<IndexedStack>(
             find.descendant(
-              of: find.byType(MainTabView),
-              matching: find.byType(IndexedStack),
+              of: find.byType(MainTabView, skipOffstage: false),
+              matching: find.byType(IndexedStack, skipOffstage: false),
+              skipOffstage: false,
             ),
           )
           .index,
-      2,
+      0,
     );
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
@@ -394,11 +434,56 @@ class _LocalizedProducts extends SubscriptionManager {
       90,
       'NT\$90',
       'TWD',
+      introductoryPrice: IntroductoryPrice(0, 'NT\$0', 'P1W', 1, PeriodUnit.week, 1),
     ),
   ];
+  @override
+  int? freeTrialDays(StoreProduct product) =>
+      product.introductoryPrice == null ? null : 7;
 }
 
+PhotoAsset _fixtureAsset(String id, AssetType type, {bool screenshot = false}) =>
+    PhotoAsset(
+      id: id,
+      width: 3024,
+      height: 4032,
+      size: 48 * 1024 * 1024,
+      sizeKnown: true,
+      createDate: DateTime(2026, 9, 27),
+      type: type,
+      isScreenshot: screenshot,
+      thumbnail: img.encodePng(img.Image(width: 8, height: 12)),
+    );
+
+final _fixtureResult = () {
+  final a = _fixtureAsset('dup-a', AssetType.image);
+  final b = _fixtureAsset('dup-b', AssetType.image);
+  final c = _fixtureAsset('sim-a', AssetType.image);
+  final d = _fixtureAsset('sim-b', AssetType.image);
+  final e = _fixtureAsset('sim-c', AssetType.image);
+  final video = _fixtureAsset('video-a', AssetType.video);
+  final shot = _fixtureAsset('shot-a', AssetType.image, screenshot: true);
+  return ScanResult(
+    allAssets: [a, b, c, d, e, video, shot],
+    duplicateGroups: [
+      DuplicateGroup(hash: 'h', assets: [a, b], bestAssetId: 'dup-a'),
+    ],
+    similarGroups: [
+      SimilarGroup(assets: [c, d, e], hammingDistance: 4, bestAssetId: 'sim-b'),
+    ],
+    screenshots: [shot],
+    largeFiles: [a, video],
+    videos: [video],
+    blurryPhotos: const [],
+    darkPhotos: const [],
+    overexposedPhotos: const [],
+    totalSavingsEstimate: 0,
+  );
+}();
+
 class _ScanningFixture extends PhotoScannerService {
+  @override
+  ScanResult get scanResult => _fixtureResult;
   @override
   bool get isScanning => true;
   @override

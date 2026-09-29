@@ -1409,4 +1409,437 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get homePhotoScopeChanged =>
       'Quyền truy cập ảnh có thể đã thay đổi. Quét lại để cập nhật ảnh hiện có.';
+
+  @override
+  String get navOptimize => 'Tối ưu';
+
+  @override
+  String get navExtras => 'Thêm';
+
+  @override
+  String get v2Before => 'Trước';
+
+  @override
+  String get v2After => 'Sau';
+
+  @override
+  String get v2Best => 'Đẹp nhất';
+
+  @override
+  String get v2Cancel => 'Hủy';
+
+  @override
+  String get v2Select => 'Chọn';
+
+  @override
+  String get v2SelectAll => 'Chọn tất cả';
+
+  @override
+  String get v2DeselectAll => 'Bỏ chọn tất cả';
+
+  @override
+  String v2SelectedCount(int count) {
+    return 'Đã chọn $count';
+  }
+
+  @override
+  String get v2CatSimilars => 'Tương tự';
+
+  @override
+  String get v2CatDuplicates => 'Trùng lặp';
+
+  @override
+  String get v2CatVideos => 'Video';
+
+  @override
+  String get v2CatScreenshots => 'Ảnh chụp màn hình';
+
+  @override
+  String get v2CatBlurred => 'Bị mờ';
+
+  @override
+  String get v2CatLarge => 'Tệp lớn';
+
+  @override
+  String get v2CatOther => 'Khác';
+
+  @override
+  String v2PhotoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ảnh',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2VideoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count video',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2ItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count mục',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Xóa $count mục',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteVideos(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Xóa $count video',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteSize(String size) {
+    return 'Xóa $size';
+  }
+
+  @override
+  String v2FreeCleanupsLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Còn $count lượt dọn miễn phí',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SpaceToClean => 'Dung lượng có thể dọn';
+
+  @override
+  String v2StorageUsedOf(String used, String total) {
+    return 'Đã dùng $used / $total';
+  }
+
+  @override
+  String get v2OptimizeTitle => 'Tối ưu dung lượng';
+
+  @override
+  String get v2OptimizeSubtitle => 'Giải phóng dung lượng nhanh chóng';
+
+  @override
+  String get v2Scanning => 'Đang quét thư viện…';
+
+  @override
+  String v2ScanningCount(int done, int total) {
+    return '$done / $total';
+  }
+
+  @override
+  String get v2CheckingDuplicates => 'Đang kiểm tra ảnh trùng…';
+
+  @override
+  String get v2ScanStart => 'Quét ảnh của tôi';
+
+  @override
+  String get v2PermissionTitle => 'Cho phép truy cập Ảnh';
+
+  @override
+  String v2PermissionBody(String appName) {
+    return '$appName cần quyền truy cập ảnh để tìm ảnh trùng và giải phóng dung lượng. Ảnh của bạn luôn nằm trên thiết bị.';
+  }
+
+  @override
+  String get v2OpenSettings => 'Mở Cài đặt';
+
+  @override
+  String get v2IntroLeft => 'Trái';
+
+  @override
+  String get v2IntroToDelete => 'để xóa';
+
+  @override
+  String get v2IntroRight => 'Phải';
+
+  @override
+  String get v2IntroToKeep => 'để giữ';
+
+  @override
+  String get v2LetsGo => 'Bắt đầu';
+
+  @override
+  String get v2IntroSimilars =>
+      'Ảnh tương tự được gom nhóm. Chúng tôi giữ ảnh đẹp nhất và chọn sẵn những ảnh còn lại.';
+
+  @override
+  String get v2IntroDuplicates =>
+      'Các bản sao giống hệt của cùng một ảnh. Giữ một ảnh và xóa phần còn lại chỉ với một chạm.';
+
+  @override
+  String get v2IntroVideos =>
+      'Xem lại tất cả video. Sắp xếp theo dung lượng hoặc ngày để thấy video chiếm nhiều chỗ nhất.';
+
+  @override
+  String get v2IntroScreenshots =>
+      'Ảnh chụp màn hình cũ tích tụ rất nhanh. Vuốt qua và xóa những ảnh không còn cần.';
+
+  @override
+  String get v2IntroBlurred =>
+      'Những ảnh mờ, lệch nét mà bạn có lẽ không muốn giữ.';
+
+  @override
+  String get v2IntroLarge =>
+      'Những ảnh và video lớn nhất. Chỉ cần xóa vài tệp là giải phóng nhiều dung lượng nhất.';
+
+  @override
+  String get v2IntroOther =>
+      'Những ảnh không thuộc danh mục nào. Sắp xếp theo dung lượng hoặc ngày và tạm biệt ảnh không cần.';
+
+  @override
+  String get v2IntroOptimize =>
+      'Tìm ảnh trùng và ảnh tương tự, giữ ảnh đẹp nhất và chọn sẵn phần còn lại. Giải phóng dung lượng trong vài giây.';
+
+  @override
+  String get v2SortLargest => 'Lớn nhất';
+
+  @override
+  String get v2SortNewest => 'Mới nhất';
+
+  @override
+  String get v2EmptyCategory => 'Không có gì để dọn';
+
+  @override
+  String get v2EmptyCategoryBody => 'Danh mục này đã gọn gàng.';
+
+  @override
+  String get v2VideoCompress => 'Nén video';
+
+  @override
+  String get v2VideoCompressSubtitle => 'Chạm để bắt đầu';
+
+  @override
+  String get v2VideoCompressBody =>
+      'Nén video thành bản sao nhỏ hơn để tiết kiệm dung lượng.';
+
+  @override
+  String get v2CongratsTitle => 'Chúc mừng!';
+
+  @override
+  String get v2CongratsDeleted => 'Bạn đã xóa';
+
+  @override
+  String v2CongratsSaved(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Tiết kiệm khoảng $minutes phút',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2CongratsUsing(String appName) {
+    return 'nhờ $appName';
+  }
+
+  @override
+  String v2CongratsRecentlyDeleted(String size) {
+    return 'Dọn album “Đã xóa gần đây” trên iPhone để giải phóng $size.';
+  }
+
+  @override
+  String get v2Great => 'Tuyệt';
+
+  @override
+  String get v2UnlockTitle => 'Mở khóa truy cập không giới hạn';
+
+  @override
+  String get v2UnlockFeature1 => 'Tìm ảnh tương tự ngay lập tức';
+
+  @override
+  String get v2UnlockFeature2 => 'Dọn dẹp không giới hạn';
+
+  @override
+  String get v2UnlockFeature3 => 'Tiết kiệm cả dung lượng lẫn thời gian';
+
+  @override
+  String get v2PrivacyLine =>
+      'Ảnh được phân tích ngay trên thiết bị và không bao giờ được tải lên.';
+
+  @override
+  String v2PerWeek(String price) {
+    return '$price/tuần, hủy bất cứ lúc nào';
+  }
+
+  @override
+  String v2PerYear(String price) {
+    return '$price/năm';
+  }
+
+  @override
+  String v2SavePercent(int percent) {
+    return 'Tiết kiệm $percent%';
+  }
+
+  @override
+  String v2FreeTrialDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Dùng thử miễn phí $days ngày',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2StartFreeTrial(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Bắt đầu dùng thử $days ngày miễn phí',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2FreeThen(int days, String price) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Miễn phí $days ngày, sau đó $price',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2TrialEnabled => 'Đã bật dùng thử miễn phí';
+
+  @override
+  String get v2DueToday => 'Thanh toán hôm nay';
+
+  @override
+  String v2DueOn(String date) {
+    return 'Thanh toán ngày $date';
+  }
+
+  @override
+  String v2DaysFree(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Miễn phí $days ngày',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2TryFree => 'Dùng thử miễn phí';
+
+  @override
+  String get v2CleanYourStorage => 'Dọn dẹp dung lượng';
+
+  @override
+  String get v2GetRidOf => 'Loại bỏ những gì bạn không cần';
+
+  @override
+  String get v2ProFeatures =>
+      'Dọn dẹp thông minh, nén video, không gian bí mật và không giới hạn.';
+
+  @override
+  String v2WelcomeTitle(String appName) {
+    return 'Chào mừng đến với $appName';
+  }
+
+  @override
+  String v2WelcomeAccess(String appName) {
+    return '$appName cần quyền truy cập Ảnh để giải phóng dung lượng.';
+  }
+
+  @override
+  String get v2WelcomePrivacy =>
+      'Ảnh được phân tích ngay trên thiết bị và không bao giờ được tải lên máy chủ của chúng tôi.';
+
+  @override
+  String get v2GetStarted => 'Bắt đầu';
+
+  @override
+  String get v2Next => 'Tiếp';
+
+  @override
+  String get v2OnbDupTitle => 'Xóa ảnh trùng lặp';
+
+  @override
+  String get v2OnbDupBody =>
+      'Tìm ảnh trùng trong vài giây và lấy lại dung lượng.';
+
+  @override
+  String get v2OnbSwipeTitle => 'Vuốt để dọn';
+
+  @override
+  String get v2OnbSwipeBody =>
+      'Vuốt trái để xóa, vuốt phải để giữ. Dọn dẹp chưa bao giờ nhanh đến thế.';
+
+  @override
+  String get v2OnbVideoTitle => 'Nén video';
+
+  @override
+  String get v2OnbVideoBody => 'Thu nhỏ video lớn mà vẫn giữ lại kỷ niệm.';
+
+  @override
+  String v2TryDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Dùng thử $days ngày',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2ForFree => 'Miễn phí!';
+
+  @override
+  String get v2ExtrasTitle => 'Công cụ bổ sung';
+
+  @override
+  String get v2ExtrasUtilities => 'Tiện ích';
+
+  @override
+  String get v2ExtrasPrivate => 'Riêng tư';
+
+  @override
+  String get v2ChargingTitle => 'Hiệu ứng sạc pin';
+
+  @override
+  String get v2ChargingBody => 'Tùy chỉnh màn hình sạc';
+
+  @override
+  String get v2SecretTitle => 'Thư viện bí mật';
+
+  @override
+  String get v2SecretBody => 'Bảo vệ ảnh riêng tư';
+
+  @override
+  String get v2ScanPaused => 'Đã tạm dừng quét';
+
+  @override
+  String get v2ContinueScan => 'Tiếp tục';
+
+  @override
+  String get v2PauseScan => 'Tạm dừng quét';
 }

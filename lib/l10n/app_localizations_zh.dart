@@ -1313,6 +1313,425 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homePhotoScopeChanged => '可访问的照片范围可能已变更，请重新扫描。';
+
+  @override
+  String get navOptimize => '优化';
+
+  @override
+  String get navExtras => '更多';
+
+  @override
+  String get v2Before => '清理前';
+
+  @override
+  String get v2After => '清理后';
+
+  @override
+  String get v2Best => '最佳';
+
+  @override
+  String get v2Cancel => '取消';
+
+  @override
+  String get v2Select => '选择';
+
+  @override
+  String get v2SelectAll => '全选';
+
+  @override
+  String get v2DeselectAll => '取消全选';
+
+  @override
+  String v2SelectedCount(int count) {
+    return '已选 $count 项';
+  }
+
+  @override
+  String get v2CatSimilars => '相似照片';
+
+  @override
+  String get v2CatDuplicates => '重复照片';
+
+  @override
+  String get v2CatVideos => '视频';
+
+  @override
+  String get v2CatScreenshots => '截图';
+
+  @override
+  String get v2CatBlurred => '模糊照片';
+
+  @override
+  String get v2CatLarge => '大文件';
+
+  @override
+  String get v2CatOther => '其他照片';
+
+  @override
+  String v2PhotoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 张照片',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2VideoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个视频',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2ItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 项',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '删除 $count 项',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteVideos(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '删除 $count 个视频',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteSize(String size) {
+    return '删除 $size';
+  }
+
+  @override
+  String v2FreeCleanupsLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '还剩 $count 次免费清理',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SpaceToClean => '可清理空间';
+
+  @override
+  String v2StorageUsedOf(String used, String total) {
+    return '已使用 $used / $total';
+  }
+
+  @override
+  String get v2OptimizeTitle => '优化存储空间';
+
+  @override
+  String get v2OptimizeSubtitle => '快速释放文件占用的空间';
+
+  @override
+  String get v2Scanning => '正在扫描图库…';
+
+  @override
+  String v2ScanningCount(int done, int total) {
+    return '$done / $total';
+  }
+
+  @override
+  String get v2CheckingDuplicates => '正在检查重复照片…';
+
+  @override
+  String get v2ScanStart => '扫描我的照片';
+
+  @override
+  String get v2PermissionTitle => '允许访问照片';
+
+  @override
+  String v2PermissionBody(String appName) {
+    return '$appName 需要访问你的照片来查找重复项并释放空间。照片始终保留在你的设备上。';
+  }
+
+  @override
+  String get v2OpenSettings => '打开设置';
+
+  @override
+  String get v2IntroLeft => '向左';
+
+  @override
+  String get v2IntroToDelete => '删除';
+
+  @override
+  String get v2IntroRight => '向右';
+
+  @override
+  String get v2IntroToKeep => '保留';
+
+  @override
+  String get v2LetsGo => '开始吧';
+
+  @override
+  String get v2IntroSimilars => '相似照片会分组显示。我们保留最佳的一张，其余的已帮你选好。';
+
+  @override
+  String get v2IntroDuplicates => '完全相同的照片副本。保留一张，其余一键删除。';
+
+  @override
+  String get v2IntroVideos => '查看所有视频。按大小或日期排序，找出最占空间的视频。';
+
+  @override
+  String get v2IntroScreenshots => '旧截图很快就会堆积。滑动浏览，清掉不再需要的截图。';
+
+  @override
+  String get v2IntroBlurred => '模糊、失焦、你大概不想留下的照片。';
+
+  @override
+  String get v2IntroLarge => '最大的照片和视频。删掉几个就能释放最多空间。';
+
+  @override
+  String get v2IntroOther => '不属于任何分类的照片。按大小或日期排序，和不需要的照片说再见。';
+
+  @override
+  String get v2IntroOptimize => '找出重复和相似照片，保留最佳的，其余自动选好。几秒钟释放空间。';
+
+  @override
+  String get v2SortLargest => '最大';
+
+  @override
+  String get v2SortNewest => '最新';
+
+  @override
+  String get v2EmptyCategory => '这里没有需要清理的内容';
+
+  @override
+  String get v2EmptyCategoryBody => '这个分类已经很干净了。';
+
+  @override
+  String get v2VideoCompress => '视频压缩';
+
+  @override
+  String get v2VideoCompressSubtitle => '点按开始';
+
+  @override
+  String get v2VideoCompressBody => '把视频压缩成更小的副本，节省空间。';
+
+  @override
+  String get v2CongratsTitle => '恭喜！';
+
+  @override
+  String get v2CongratsDeleted => '你已删除';
+
+  @override
+  String v2CongratsSaved(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '节省约 $minutes 分钟',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2CongratsUsing(String appName) {
+    return '使用 $appName';
+  }
+
+  @override
+  String v2CongratsRecentlyDeleted(String size) {
+    return '清空 iPhone 上的“最近删除”相簿即可释放 $size。';
+  }
+
+  @override
+  String get v2Great => '太好了';
+
+  @override
+  String get v2UnlockTitle => '解锁无限制使用';
+
+  @override
+  String get v2UnlockFeature1 => '立即找出相似照片';
+
+  @override
+  String get v2UnlockFeature2 => '清理不设上限';
+
+  @override
+  String get v2UnlockFeature3 => '省空间也省时间';
+
+  @override
+  String get v2PrivacyLine => '照片只在你的设备上分析，从不上传。';
+
+  @override
+  String v2PerWeek(String price) {
+    return '每周 $price，可随时取消';
+  }
+
+  @override
+  String v2PerYear(String price) {
+    return '每年 $price';
+  }
+
+  @override
+  String v2SavePercent(int percent) {
+    return '省 $percent%';
+  }
+
+  @override
+  String v2FreeTrialDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days 天免费试用',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2StartFreeTrial(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '开始 $days 天免费试用',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2FreeThen(int days, String price) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '免费 $days 天，之后 $price',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2TrialEnabled => '已启用免费试用';
+
+  @override
+  String get v2DueToday => '今日应付';
+
+  @override
+  String v2DueOn(String date) {
+    return '$date 应付';
+  }
+
+  @override
+  String v2DaysFree(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '免费 $days 天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2TryFree => '免费试用';
+
+  @override
+  String get v2CleanYourStorage => '清理存储空间';
+
+  @override
+  String get v2GetRidOf => '清掉不需要的东西';
+
+  @override
+  String get v2ProFeatures => '智能清理、视频压缩、私密空间，全部无限制。';
+
+  @override
+  String v2WelcomeTitle(String appName) {
+    return '欢迎使用 $appName';
+  }
+
+  @override
+  String v2WelcomeAccess(String appName) {
+    return '$appName 需要访问照片来释放空间。';
+  }
+
+  @override
+  String get v2WelcomePrivacy => '照片只在你的设备上分析，绝不会上传到我们的服务器。';
+
+  @override
+  String get v2GetStarted => '开始使用';
+
+  @override
+  String get v2Next => '下一步';
+
+  @override
+  String get v2OnbDupTitle => '删除重复照片';
+
+  @override
+  String get v2OnbDupBody => '几秒钟找出重复照片，收回存储空间。';
+
+  @override
+  String get v2OnbSwipeTitle => '滑动清理';
+
+  @override
+  String get v2OnbSwipeBody => '向左滑删除，向右滑保留。整理从未如此快速。';
+
+  @override
+  String get v2OnbVideoTitle => '压缩视频';
+
+  @override
+  String get v2OnbVideoBody => '缩小大视频，留住回忆。';
+
+  @override
+  String v2TryDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '试用 $days 天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2ForFree => '免费！';
+
+  @override
+  String get v2ExtrasTitle => '更多工具';
+
+  @override
+  String get v2ExtrasUtilities => '实用工具';
+
+  @override
+  String get v2ExtrasPrivate => '隐私';
+
+  @override
+  String get v2ChargingTitle => '充电动画';
+
+  @override
+  String get v2ChargingBody => '个性化你的充电画面';
+
+  @override
+  String get v2SecretTitle => '私密相册';
+
+  @override
+  String get v2SecretBody => '保护你的私密照片';
+
+  @override
+  String get v2ScanPaused => '扫描已暂停';
+
+  @override
+  String get v2ContinueScan => '继续扫描';
+
+  @override
+  String get v2PauseScan => '暂停扫描';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -2624,6 +3043,425 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get homePhotoScopeChanged => '可访问的照片范围可能已变更，请重新扫描。';
+
+  @override
+  String get navOptimize => '优化';
+
+  @override
+  String get navExtras => '更多';
+
+  @override
+  String get v2Before => '清理前';
+
+  @override
+  String get v2After => '清理后';
+
+  @override
+  String get v2Best => '最佳';
+
+  @override
+  String get v2Cancel => '取消';
+
+  @override
+  String get v2Select => '选择';
+
+  @override
+  String get v2SelectAll => '全选';
+
+  @override
+  String get v2DeselectAll => '取消全选';
+
+  @override
+  String v2SelectedCount(int count) {
+    return '已选 $count 项';
+  }
+
+  @override
+  String get v2CatSimilars => '相似照片';
+
+  @override
+  String get v2CatDuplicates => '重复照片';
+
+  @override
+  String get v2CatVideos => '视频';
+
+  @override
+  String get v2CatScreenshots => '截图';
+
+  @override
+  String get v2CatBlurred => '模糊照片';
+
+  @override
+  String get v2CatLarge => '大文件';
+
+  @override
+  String get v2CatOther => '其他照片';
+
+  @override
+  String v2PhotoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 张照片',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2VideoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个视频',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2ItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 项',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '删除 $count 项',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteVideos(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '删除 $count 个视频',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteSize(String size) {
+    return '删除 $size';
+  }
+
+  @override
+  String v2FreeCleanupsLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '还剩 $count 次免费清理',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SpaceToClean => '可清理空间';
+
+  @override
+  String v2StorageUsedOf(String used, String total) {
+    return '已使用 $used / $total';
+  }
+
+  @override
+  String get v2OptimizeTitle => '优化存储空间';
+
+  @override
+  String get v2OptimizeSubtitle => '快速释放文件占用的空间';
+
+  @override
+  String get v2Scanning => '正在扫描图库…';
+
+  @override
+  String v2ScanningCount(int done, int total) {
+    return '$done / $total';
+  }
+
+  @override
+  String get v2CheckingDuplicates => '正在检查重复照片…';
+
+  @override
+  String get v2ScanStart => '扫描我的照片';
+
+  @override
+  String get v2PermissionTitle => '允许访问照片';
+
+  @override
+  String v2PermissionBody(String appName) {
+    return '$appName 需要访问你的照片来查找重复项并释放空间。照片始终保留在你的设备上。';
+  }
+
+  @override
+  String get v2OpenSettings => '打开设置';
+
+  @override
+  String get v2IntroLeft => '向左';
+
+  @override
+  String get v2IntroToDelete => '删除';
+
+  @override
+  String get v2IntroRight => '向右';
+
+  @override
+  String get v2IntroToKeep => '保留';
+
+  @override
+  String get v2LetsGo => '开始吧';
+
+  @override
+  String get v2IntroSimilars => '相似照片会分组显示。我们保留最佳的一张，其余的已帮你选好。';
+
+  @override
+  String get v2IntroDuplicates => '完全相同的照片副本。保留一张，其余一键删除。';
+
+  @override
+  String get v2IntroVideos => '查看所有视频。按大小或日期排序，找出最占空间的视频。';
+
+  @override
+  String get v2IntroScreenshots => '旧截图很快就会堆积。滑动浏览，清掉不再需要的截图。';
+
+  @override
+  String get v2IntroBlurred => '模糊、失焦、你大概不想留下的照片。';
+
+  @override
+  String get v2IntroLarge => '最大的照片和视频。删掉几个就能释放最多空间。';
+
+  @override
+  String get v2IntroOther => '不属于任何分类的照片。按大小或日期排序，和不需要的照片说再见。';
+
+  @override
+  String get v2IntroOptimize => '找出重复和相似照片，保留最佳的，其余自动选好。几秒钟释放空间。';
+
+  @override
+  String get v2SortLargest => '最大';
+
+  @override
+  String get v2SortNewest => '最新';
+
+  @override
+  String get v2EmptyCategory => '这里没有需要清理的内容';
+
+  @override
+  String get v2EmptyCategoryBody => '这个分类已经很干净了。';
+
+  @override
+  String get v2VideoCompress => '视频压缩';
+
+  @override
+  String get v2VideoCompressSubtitle => '点按开始';
+
+  @override
+  String get v2VideoCompressBody => '把视频压缩成更小的副本，节省空间。';
+
+  @override
+  String get v2CongratsTitle => '恭喜！';
+
+  @override
+  String get v2CongratsDeleted => '你已删除';
+
+  @override
+  String v2CongratsSaved(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '节省约 $minutes 分钟',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2CongratsUsing(String appName) {
+    return '使用 $appName';
+  }
+
+  @override
+  String v2CongratsRecentlyDeleted(String size) {
+    return '清空 iPhone 上的“最近删除”相簿即可释放 $size。';
+  }
+
+  @override
+  String get v2Great => '太好了';
+
+  @override
+  String get v2UnlockTitle => '解锁无限制使用';
+
+  @override
+  String get v2UnlockFeature1 => '立即找出相似照片';
+
+  @override
+  String get v2UnlockFeature2 => '清理不设上限';
+
+  @override
+  String get v2UnlockFeature3 => '省空间也省时间';
+
+  @override
+  String get v2PrivacyLine => '照片只在你的设备上分析，从不上传。';
+
+  @override
+  String v2PerWeek(String price) {
+    return '每周 $price，可随时取消';
+  }
+
+  @override
+  String v2PerYear(String price) {
+    return '每年 $price';
+  }
+
+  @override
+  String v2SavePercent(int percent) {
+    return '省 $percent%';
+  }
+
+  @override
+  String v2FreeTrialDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days 天免费试用',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2StartFreeTrial(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '开始 $days 天免费试用',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2FreeThen(int days, String price) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '免费 $days 天，之后 $price',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2TrialEnabled => '已启用免费试用';
+
+  @override
+  String get v2DueToday => '今日应付';
+
+  @override
+  String v2DueOn(String date) {
+    return '$date 应付';
+  }
+
+  @override
+  String v2DaysFree(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '免费 $days 天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2TryFree => '免费试用';
+
+  @override
+  String get v2CleanYourStorage => '清理存储空间';
+
+  @override
+  String get v2GetRidOf => '清掉不需要的东西';
+
+  @override
+  String get v2ProFeatures => '智能清理、视频压缩、私密空间，全部无限制。';
+
+  @override
+  String v2WelcomeTitle(String appName) {
+    return '欢迎使用 $appName';
+  }
+
+  @override
+  String v2WelcomeAccess(String appName) {
+    return '$appName 需要访问照片来释放空间。';
+  }
+
+  @override
+  String get v2WelcomePrivacy => '照片只在你的设备上分析，绝不会上传到我们的服务器。';
+
+  @override
+  String get v2GetStarted => '开始使用';
+
+  @override
+  String get v2Next => '下一步';
+
+  @override
+  String get v2OnbDupTitle => '删除重复照片';
+
+  @override
+  String get v2OnbDupBody => '几秒钟找出重复照片，收回存储空间。';
+
+  @override
+  String get v2OnbSwipeTitle => '滑动清理';
+
+  @override
+  String get v2OnbSwipeBody => '向左滑删除，向右滑保留。整理从未如此快速。';
+
+  @override
+  String get v2OnbVideoTitle => '压缩视频';
+
+  @override
+  String get v2OnbVideoBody => '缩小大视频，留住回忆。';
+
+  @override
+  String v2TryDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '试用 $days 天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2ForFree => '免费！';
+
+  @override
+  String get v2ExtrasTitle => '更多工具';
+
+  @override
+  String get v2ExtrasUtilities => '实用工具';
+
+  @override
+  String get v2ExtrasPrivate => '隐私';
+
+  @override
+  String get v2ChargingTitle => '充电动画';
+
+  @override
+  String get v2ChargingBody => '个性化你的充电画面';
+
+  @override
+  String get v2SecretTitle => '私密相册';
+
+  @override
+  String get v2SecretBody => '保护你的私密照片';
+
+  @override
+  String get v2ScanPaused => '扫描已暂停';
+
+  @override
+  String get v2ContinueScan => '继续扫描';
+
+  @override
+  String get v2PauseScan => '暂停扫描';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -3898,4 +4736,423 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get homePhotoScopeChanged => '可存取的照片範圍可能已變更，請重新掃描。';
+
+  @override
+  String get navOptimize => '最佳化';
+
+  @override
+  String get navExtras => '更多';
+
+  @override
+  String get v2Before => '清理前';
+
+  @override
+  String get v2After => '清理後';
+
+  @override
+  String get v2Best => '最佳';
+
+  @override
+  String get v2Cancel => '取消';
+
+  @override
+  String get v2Select => '選擇';
+
+  @override
+  String get v2SelectAll => '全選';
+
+  @override
+  String get v2DeselectAll => '取消全選';
+
+  @override
+  String v2SelectedCount(int count) {
+    return '已選 $count 項';
+  }
+
+  @override
+  String get v2CatSimilars => '相似照片';
+
+  @override
+  String get v2CatDuplicates => '重複照片';
+
+  @override
+  String get v2CatVideos => '影片';
+
+  @override
+  String get v2CatScreenshots => '螢幕截圖';
+
+  @override
+  String get v2CatBlurred => '模糊照片';
+
+  @override
+  String get v2CatLarge => '大型檔案';
+
+  @override
+  String get v2CatOther => '其他照片';
+
+  @override
+  String v2PhotoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 張照片',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2VideoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 部影片',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2ItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 項',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '刪除 $count 項',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteVideos(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '刪除 $count 部影片',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteSize(String size) {
+    return '刪除 $size';
+  }
+
+  @override
+  String v2FreeCleanupsLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '還剩 $count 次免費清理',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SpaceToClean => '可清理空間';
+
+  @override
+  String v2StorageUsedOf(String used, String total) {
+    return '已使用 $used / $total';
+  }
+
+  @override
+  String get v2OptimizeTitle => '最佳化儲存空間';
+
+  @override
+  String get v2OptimizeSubtitle => '快速釋放檔案佔用的空間';
+
+  @override
+  String get v2Scanning => '正在掃描圖庫…';
+
+  @override
+  String v2ScanningCount(int done, int total) {
+    return '$done / $total';
+  }
+
+  @override
+  String get v2CheckingDuplicates => '正在檢查重複照片…';
+
+  @override
+  String get v2ScanStart => '掃描我的照片';
+
+  @override
+  String get v2PermissionTitle => '允許存取照片';
+
+  @override
+  String v2PermissionBody(String appName) {
+    return '$appName 需要存取你的照片來找出重複項並釋放空間。照片始終保留在你的裝置上。';
+  }
+
+  @override
+  String get v2OpenSettings => '打開設定';
+
+  @override
+  String get v2IntroLeft => '向左';
+
+  @override
+  String get v2IntroToDelete => '刪除';
+
+  @override
+  String get v2IntroRight => '向右';
+
+  @override
+  String get v2IntroToKeep => '保留';
+
+  @override
+  String get v2LetsGo => '開始吧';
+
+  @override
+  String get v2IntroSimilars => '相似照片會分組顯示。我們保留最佳的一張，其餘的已幫你選好。';
+
+  @override
+  String get v2IntroDuplicates => '完全相同的照片副本。保留一張，其餘一鍵刪除。';
+
+  @override
+  String get v2IntroVideos => '查看所有影片。依大小或日期排序，找出最佔空間的影片。';
+
+  @override
+  String get v2IntroScreenshots => '舊截圖很快就會堆積。滑動瀏覽，清掉不再需要的截圖。';
+
+  @override
+  String get v2IntroBlurred => '模糊、失焦、你大概不想留下的照片。';
+
+  @override
+  String get v2IntroLarge => '最大的照片和影片。刪掉幾個就能釋放最多空間。';
+
+  @override
+  String get v2IntroOther => '不屬於任何分類的照片。依大小或日期排序，和不需要的照片說再見。';
+
+  @override
+  String get v2IntroOptimize => '找出重複和相似照片，保留最佳的，其餘自動選好。幾秒鐘釋放空間。';
+
+  @override
+  String get v2SortLargest => '最大';
+
+  @override
+  String get v2SortNewest => '最新';
+
+  @override
+  String get v2EmptyCategory => '這裡沒有需要清理的內容';
+
+  @override
+  String get v2EmptyCategoryBody => '這個分類已經很乾淨了。';
+
+  @override
+  String get v2VideoCompress => '影片壓縮';
+
+  @override
+  String get v2VideoCompressSubtitle => '點一下開始';
+
+  @override
+  String get v2VideoCompressBody => '把影片壓縮成更小的副本，節省空間。';
+
+  @override
+  String get v2CongratsTitle => '恭喜！';
+
+  @override
+  String get v2CongratsDeleted => '你已刪除';
+
+  @override
+  String v2CongratsSaved(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '節省約 $minutes 分鐘',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2CongratsUsing(String appName) {
+    return '使用 $appName';
+  }
+
+  @override
+  String v2CongratsRecentlyDeleted(String size) {
+    return '清空 iPhone 上的「最近刪除」相簿即可釋放 $size。';
+  }
+
+  @override
+  String get v2Great => '太好了';
+
+  @override
+  String get v2UnlockTitle => '解鎖無限制使用';
+
+  @override
+  String get v2UnlockFeature1 => '立即找出相似照片';
+
+  @override
+  String get v2UnlockFeature2 => '清理不設上限';
+
+  @override
+  String get v2UnlockFeature3 => '省空間也省時間';
+
+  @override
+  String get v2PrivacyLine => '照片只在你的裝置上分析，從不上傳。';
+
+  @override
+  String v2PerWeek(String price) {
+    return '每週 $price，可隨時取消';
+  }
+
+  @override
+  String v2PerYear(String price) {
+    return '每年 $price';
+  }
+
+  @override
+  String v2SavePercent(int percent) {
+    return '省 $percent%';
+  }
+
+  @override
+  String v2FreeTrialDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days 天免費試用',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2StartFreeTrial(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '開始 $days 天免費試用',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2FreeThen(int days, String price) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '免費 $days 天，之後 $price',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2TrialEnabled => '已啟用免費試用';
+
+  @override
+  String get v2DueToday => '今日應付';
+
+  @override
+  String v2DueOn(String date) {
+    return '$date 應付';
+  }
+
+  @override
+  String v2DaysFree(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '免費 $days 天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2TryFree => '免費試用';
+
+  @override
+  String get v2CleanYourStorage => '清理儲存空間';
+
+  @override
+  String get v2GetRidOf => '清掉不需要的東西';
+
+  @override
+  String get v2ProFeatures => '智慧清理、影片壓縮、私密空間，全部無限制。';
+
+  @override
+  String v2WelcomeTitle(String appName) {
+    return '歡迎使用 $appName';
+  }
+
+  @override
+  String v2WelcomeAccess(String appName) {
+    return '$appName 需要存取照片來釋放空間。';
+  }
+
+  @override
+  String get v2WelcomePrivacy => '照片只在你的裝置上分析，絕不會上傳到我們的伺服器。';
+
+  @override
+  String get v2GetStarted => '開始使用';
+
+  @override
+  String get v2Next => '下一步';
+
+  @override
+  String get v2OnbDupTitle => '刪除重複照片';
+
+  @override
+  String get v2OnbDupBody => '幾秒鐘找出重複照片，收回儲存空間。';
+
+  @override
+  String get v2OnbSwipeTitle => '滑動清理';
+
+  @override
+  String get v2OnbSwipeBody => '向左滑刪除，向右滑保留。整理從未如此快速。';
+
+  @override
+  String get v2OnbVideoTitle => '壓縮影片';
+
+  @override
+  String get v2OnbVideoBody => '縮小大影片，留住回憶。';
+
+  @override
+  String v2TryDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '試用 $days 天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2ForFree => '免費！';
+
+  @override
+  String get v2ExtrasTitle => '更多工具';
+
+  @override
+  String get v2ExtrasUtilities => '實用工具';
+
+  @override
+  String get v2ExtrasPrivate => '隱私';
+
+  @override
+  String get v2ChargingTitle => '充電動畫';
+
+  @override
+  String get v2ChargingBody => '個人化你的充電畫面';
+
+  @override
+  String get v2SecretTitle => '私密相簿';
+
+  @override
+  String get v2SecretBody => '保護你的私密照片';
+
+  @override
+  String get v2ScanPaused => '掃描已暫停';
+
+  @override
+  String get v2ContinueScan => '繼續掃描';
+
+  @override
+  String get v2PauseScan => '暫停掃描';
 }

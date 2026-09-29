@@ -1450,4 +1450,474 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get homePhotoScopeChanged =>
       'Доступ к фото мог измениться. Сканируйте снова, чтобы обновить доступные фото.';
+
+  @override
+  String get navOptimize => 'Оптимизация';
+
+  @override
+  String get navExtras => 'Ещё';
+
+  @override
+  String get v2Before => 'До';
+
+  @override
+  String get v2After => 'После';
+
+  @override
+  String get v2Best => 'Лучшее';
+
+  @override
+  String get v2Cancel => 'Отмена';
+
+  @override
+  String get v2Select => 'Выбрать';
+
+  @override
+  String get v2SelectAll => 'Выбрать все';
+
+  @override
+  String get v2DeselectAll => 'Снять выбор';
+
+  @override
+  String v2SelectedCount(int count) {
+    return 'Выбрано: $count';
+  }
+
+  @override
+  String get v2CatSimilars => 'Похожие';
+
+  @override
+  String get v2CatDuplicates => 'Дубликаты';
+
+  @override
+  String get v2CatVideos => 'Видео';
+
+  @override
+  String get v2CatScreenshots => 'Скриншоты';
+
+  @override
+  String get v2CatBlurred => 'Размытые';
+
+  @override
+  String get v2CatLarge => 'Большие файлы';
+
+  @override
+  String get v2CatOther => 'Другие';
+
+  @override
+  String v2PhotoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count фото',
+      many: '$count фото',
+      few: '$count фото',
+      one: '$count фото',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2VideoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count видео',
+      many: '$count видео',
+      few: '$count видео',
+      one: '$count видео',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2ItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count объекта',
+      many: '$count объектов',
+      few: '$count объекта',
+      one: '$count объект',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Удалить $count объекта',
+      many: 'Удалить $count объектов',
+      few: 'Удалить $count объекта',
+      one: 'Удалить $count объект',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteVideos(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Удалить $count видео',
+      many: 'Удалить $count видео',
+      few: 'Удалить $count видео',
+      one: 'Удалить $count видео',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteSize(String size) {
+    return 'Удалить $size';
+  }
+
+  @override
+  String v2FreeCleanupsLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Осталось $count бесплатной очистки',
+      many: 'Осталось $count бесплатных очисток',
+      few: 'Осталось $count бесплатные очистки',
+      one: 'Осталась $count бесплатная очистка',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SpaceToClean => 'Можно освободить';
+
+  @override
+  String v2StorageUsedOf(String used, String total) {
+    return 'Занято $used из $total';
+  }
+
+  @override
+  String get v2OptimizeTitle => 'Оптимизировать память';
+
+  @override
+  String get v2OptimizeSubtitle => 'Быстро освободите место';
+
+  @override
+  String get v2Scanning => 'Сканирование медиатеки…';
+
+  @override
+  String v2ScanningCount(int done, int total) {
+    return '$done / $total';
+  }
+
+  @override
+  String get v2CheckingDuplicates => 'Проверка дубликатов…';
+
+  @override
+  String get v2ScanStart => 'Сканировать фото';
+
+  @override
+  String get v2PermissionTitle => 'Разрешите доступ к Фото';
+
+  @override
+  String v2PermissionBody(String appName) {
+    return '$appName нужен доступ к фото, чтобы найти дубликаты и освободить место. Фото остаются на вашем устройстве.';
+  }
+
+  @override
+  String get v2OpenSettings => 'Открыть Настройки';
+
+  @override
+  String get v2IntroLeft => 'Влево';
+
+  @override
+  String get v2IntroToDelete => 'удалить';
+
+  @override
+  String get v2IntroRight => 'Вправо';
+
+  @override
+  String get v2IntroToKeep => 'оставить';
+
+  @override
+  String get v2LetsGo => 'Начать';
+
+  @override
+  String get v2IntroSimilars =>
+      'Похожие снимки собраны в группы. Мы оставляем лучший и выбираем остальные за вас.';
+
+  @override
+  String get v2IntroDuplicates =>
+      'Точные копии одного снимка. Оставьте один, а остальные удалите одним касанием.';
+
+  @override
+  String get v2IntroVideos =>
+      'Просмотрите все видео. Отсортируйте по размеру или дате, чтобы найти самые тяжёлые.';
+
+  @override
+  String get v2IntroScreenshots =>
+      'Старые скриншоты быстро копятся. Пролистайте их и удалите ненужные.';
+
+  @override
+  String get v2IntroBlurred =>
+      'Смазанные и нечёткие снимки, которые вряд ли стоит хранить.';
+
+  @override
+  String get v2IntroLarge =>
+      'Самые большие фото и видео. Удалив несколько, вы освободите больше всего места.';
+
+  @override
+  String get v2IntroOther =>
+      'Фото вне категорий. Отсортируйте по размеру или дате и попрощайтесь с лишним.';
+
+  @override
+  String get v2IntroOptimize =>
+      'Находит дубликаты и похожие фото, оставляет лучшие и выбирает остальные. Место — за секунды.';
+
+  @override
+  String get v2SortLargest => 'Крупные';
+
+  @override
+  String get v2SortNewest => 'Новые';
+
+  @override
+  String get v2EmptyCategory => 'Здесь нечего чистить';
+
+  @override
+  String get v2EmptyCategoryBody => 'В этой категории уже чисто.';
+
+  @override
+  String get v2VideoCompress => 'Сжатие видео';
+
+  @override
+  String get v2VideoCompressSubtitle => 'Нажмите, чтобы начать';
+
+  @override
+  String get v2VideoCompressBody =>
+      'Сжимайте видео в копии поменьше, чтобы сэкономить место.';
+
+  @override
+  String get v2CongratsTitle => 'Поздравляем!';
+
+  @override
+  String get v2CongratsDeleted => 'Вы удалили';
+
+  @override
+  String v2CongratsSaved(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Сэкономлено около $minutes минуты',
+      many: 'Сэкономлено около $minutes минут',
+      few: 'Сэкономлено около $minutes минут',
+      one: 'Сэкономлено около $minutes минуты',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2CongratsUsing(String appName) {
+    return 'с $appName';
+  }
+
+  @override
+  String v2CongratsRecentlyDeleted(String size) {
+    return 'Очистите альбом «Недавно удалённые», чтобы освободить $size.';
+  }
+
+  @override
+  String get v2Great => 'Отлично';
+
+  @override
+  String get v2UnlockTitle => 'Откройте безлимитный доступ';
+
+  @override
+  String get v2UnlockFeature1 => 'Мгновенно находите похожие фото';
+
+  @override
+  String get v2UnlockFeature2 => 'Очистка без ограничений';
+
+  @override
+  String get v2UnlockFeature3 => 'Экономьте место и время';
+
+  @override
+  String get v2PrivacyLine =>
+      'Фото анализируются на устройстве и никуда не загружаются.';
+
+  @override
+  String v2PerWeek(String price) {
+    return '$price/неделя, отмена в любой момент';
+  }
+
+  @override
+  String v2PerYear(String price) {
+    return '$price/год';
+  }
+
+  @override
+  String v2SavePercent(int percent) {
+    return 'Скидка $percent%';
+  }
+
+  @override
+  String v2FreeTrialDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days дня бесплатно',
+      many: '$days дней бесплатно',
+      few: '$days дня бесплатно',
+      one: '$days день бесплатно',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2StartFreeTrial(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Начать: $days дня бесплатно',
+      many: 'Начать: $days дней бесплатно',
+      few: 'Начать: $days дня бесплатно',
+      one: 'Начать: $days день бесплатно',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2FreeThen(int days, String price) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days дня бесплатно, затем $price',
+      many: '$days дней бесплатно, затем $price',
+      few: '$days дня бесплатно, затем $price',
+      one: '$days день бесплатно, затем $price',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2TrialEnabled => 'Бесплатный период включён';
+
+  @override
+  String get v2DueToday => 'К оплате сегодня';
+
+  @override
+  String v2DueOn(String date) {
+    return 'К оплате $date';
+  }
+
+  @override
+  String v2DaysFree(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days дня бесплатно',
+      many: '$days дней бесплатно',
+      few: '$days дня бесплатно',
+      one: '$days день бесплатно',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2TryFree => 'Попробовать бесплатно';
+
+  @override
+  String get v2CleanYourStorage => 'Очистите память';
+
+  @override
+  String get v2GetRidOf => 'Избавьтесь от лишнего';
+
+  @override
+  String get v2ProFeatures =>
+      'Умная очистка, сжатие видео, тайное хранилище и никаких лимитов.';
+
+  @override
+  String v2WelcomeTitle(String appName) {
+    return 'Добро пожаловать в $appName';
+  }
+
+  @override
+  String v2WelcomeAccess(String appName) {
+    return '$appName нужен доступ к Фото, чтобы освободить место.';
+  }
+
+  @override
+  String get v2WelcomePrivacy =>
+      'Фото анализируются на устройстве и никогда не загружаются на наши серверы.';
+
+  @override
+  String get v2GetStarted => 'Начать';
+
+  @override
+  String get v2Next => 'Далее';
+
+  @override
+  String get v2OnbDupTitle => 'Удаляйте дубликаты фото';
+
+  @override
+  String get v2OnbDupBody =>
+      'Находите дубликаты за секунды и возвращайте место.';
+
+  @override
+  String get v2OnbSwipeTitle => 'Смахивайте для очистки';
+
+  @override
+  String get v2OnbSwipeBody =>
+      'Влево — удалить, вправо — оставить. Так быстро ещё не было.';
+
+  @override
+  String get v2OnbVideoTitle => 'Сжимайте видео';
+
+  @override
+  String get v2OnbVideoBody =>
+      'Уменьшайте большие видео и сохраняйте воспоминания.';
+
+  @override
+  String v2TryDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Попробуйте $days дня',
+      many: 'Попробуйте $days дней',
+      few: 'Попробуйте $days дня',
+      one: 'Попробуйте $days день',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2ForFree => 'Бесплатно!';
+
+  @override
+  String get v2ExtrasTitle => 'Доп. инструменты';
+
+  @override
+  String get v2ExtrasUtilities => 'Утилиты';
+
+  @override
+  String get v2ExtrasPrivate => 'Личное';
+
+  @override
+  String get v2ChargingTitle => 'Анимация зарядки';
+
+  @override
+  String get v2ChargingBody => 'Настройте экран зарядки';
+
+  @override
+  String get v2SecretTitle => 'Тайная медиатека';
+
+  @override
+  String get v2SecretBody => 'Защитите личные фото';
+
+  @override
+  String get v2ScanPaused => 'Сканирование на паузе';
+
+  @override
+  String get v2ContinueScan => 'Продолжить';
+
+  @override
+  String get v2PauseScan => 'Приостановить';
 }

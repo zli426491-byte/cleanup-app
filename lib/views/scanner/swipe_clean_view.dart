@@ -4,14 +4,12 @@ import 'package:cleanup_app/l10n/l10n.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/photo_scanner_service.dart';
-import '../../services/subscription_manager.dart';
 import '../../utils/app_theme.dart';
-import '../paywall/paywall_view.dart';
 import 'asset_thumbnail.dart';
 import 'asset_preview.dart';
 import 'photo_asset_labels.dart';
-import 'delete_review.dart';
 import '../../services/review_checkpoint_service.dart';
+import '../v2/delete_flow.dart';
 
 /// Tinder-style swipe to delete/keep photos
 class SwipeCleanView extends StatefulWidget {
@@ -1318,14 +1316,6 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
         _toDelete.isEmpty) {
       return;
     }
-    final sub = context.read<SubscriptionManager>();
-    if (!sub.isPro) {
-      await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const PaywallView()),
-      );
-      return;
-    }
     final result = scanner.scanResult;
     final currentVersions = {
       for (final asset in result.allAssets)
@@ -1338,37 +1328,19 @@ class _SwipeCleanViewState extends State<SwipeCleanView>
       _reviewChanged();
       return;
     }
-    final confirmed = await showDeleteReview(
-      context,
-      assets: List.of(_toDelete),
-      previewReadyIds: _previewReadyIds,
-      reviewGroups: [
-        for (final group in result.duplicateGroups)
-          group.assets.map((a) => a.id).toSet(),
-        for (final group in result.similarGroups)
-          group.assets.map((a) => a.id).toSet(),
-      ],
-    );
-    if (!mounted || confirmed == null || confirmed.isEmpty) {
-      return;
-    }
-    if (!identical(result, scanner.scanResult)) {
-      _reviewChanged();
-      return;
-    }
-    final confirmedIds = confirmed.map((a) => a.id).toSet();
-    for (final excluded in _toDelete.where(
-      (a) => !confirmedIds.contains(a.id),
-    )) {
-      _persistChoice(excluded, null);
-    }
-    _toDelete.removeWhere((a) => !confirmedIds.contains(a.id));
-    if (!sub.isPro || _isDeleting || scanner.isScanning || scanner.isDeleting) {
-      return;
-    }
+    // Only photos whose preview was shown can be deleted from a swipe review.
+    final confirmed = [
+      for (final asset in _toDelete)
+        if (_previewReadyIds.contains(asset.id)) asset,
+    ];
+    if (confirmed.isEmpty) return;
     setState(() => _isDeleting = true);
-    final requested = _toDelete.length;
-    final deletedIds = await scanner.deleteAssetsWithResult(confirmed);
+    final requested = confirmed.length;
+    final deletedIds = await DeleteFlow.run(
+      context,
+      confirmed,
+      source: 'swipe_${widget.categoryId ?? 'photos'}',
+    );
     for (final asset in confirmed.where((a) => deletedIds.contains(a.id))) {
       _persistChoice(asset, null);
     }

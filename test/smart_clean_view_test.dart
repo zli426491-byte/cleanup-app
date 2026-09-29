@@ -9,8 +9,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image/image.dart' as img;
 
 import 'package:cleanup_app/services/photo_scanner_service.dart';
-import 'package:cleanup_app/l10n/l10n.dart';
-import 'package:cleanup_app/views/scanner/delete_review.dart';
 import 'package:cleanup_app/services/subscription_manager.dart';
 import 'package:cleanup_app/views/scanner/asset_thumbnail.dart';
 import 'package:cleanup_app/views/scanner/smart_clean_view.dart';
@@ -353,23 +351,30 @@ void main() {
     await tester.tap(swipeKeep);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
+    // Pro deletion goes straight to the system confirmation, then shows the
+    // congratulations page before returning to the grid.
     await tester.tap(find.text('刪除 1 張照片'));
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(find.byType(DeleteReview), findsOneWidget);
-    final confirm = find.widgetWithText(
-      FilledButton,
-      appStringsOf().reviewConfirmCount(1),
-    );
-    expect(tester.widget<FilledButton>(confirm).onPressed, isNotNull);
-    await tester.tap(find.text(appStringsOf().reviewConfirmCount(1)));
-    await tester.pump(const Duration(milliseconds: 400));
-    for (var i = 0; i < 30 && scanner.assets.length != 1; i++) {
+    final great = find.byKey(const ValueKey('congrats-great'));
+    for (var i = 0; i < 30 && great.evaluate().isEmpty; i++) {
       await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 20)),
       );
       await tester.pump(const Duration(milliseconds: 100));
     }
     expect(scanner.assets.single.id, 'grid-1');
+    await tester.tap(great);
+    // Leaving the review flushes its file checkpoint before popping.
+    for (
+      var i = 0;
+      i < 30 && find.byType(SwipeCleanView).evaluate().isNotEmpty;
+      i++
+    ) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.byType(SwipeCleanView), findsNothing);
     expect(find.text('已選擇 1 個項目'), findsNothing);
     expect(find.text('預覽並刪除 1 個項目'), findsNothing);
   });

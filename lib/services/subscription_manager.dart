@@ -42,6 +42,7 @@ class SubscriptionManager extends ChangeNotifier {
   String _statusMessage = '';
   List<Package> _availablePackages = [];
   List<StoreProduct> _storeProducts = [];
+  Set<String> _trialEligibleIds = const {};
 
   bool get isPro => _isPlaceholder ? false : _isPro;
   bool get isLoading =>
@@ -186,6 +187,7 @@ class SubscriptionManager extends ChangeNotifier {
       _statusMessage = _storeProducts.isEmpty
           ? '目前沒有可顯示的訂閱方案。請確認 RevenueCat 產品 ID 與 App Store Connect 產品一致。'
           : '';
+      await _loadTrialEligibility();
 
       debugPrint(
         'SubscriptionManager: loaded ${_availablePackages.length} packages '
@@ -202,6 +204,48 @@ class SubscriptionManager extends ChangeNotifier {
     }
 
     return _availablePackages;
+  }
+
+  /// Free-trial length for [product], or null when the store does not confirm
+  /// that this customer is eligible. Unknown eligibility never shows a trial.
+  int? freeTrialDays(StoreProduct product) {
+    final intro = product.introductoryPrice;
+    if (intro == null || intro.price != 0) return null;
+    if (!_trialEligibleIds.contains(product.identifier)) return null;
+    final units = intro.periodNumberOfUnits * intro.cycles;
+    final days = switch (intro.periodUnit) {
+      PeriodUnit.day => units,
+      PeriodUnit.week => units * 7,
+      PeriodUnit.month => units * 30,
+      PeriodUnit.year => units * 365,
+      _ => 0,
+    };
+    return days > 0 ? days : null;
+  }
+
+  Future<void> _loadTrialEligibility() async {
+    final candidates = [
+      for (final product in _storeProducts)
+        if (product.introductoryPrice?.price == 0) product.identifier,
+    ];
+    if (candidates.isEmpty) {
+      _trialEligibleIds = const {};
+      return;
+    }
+    try {
+      final eligibility = await Purchases.checkTrialOrIntroductoryPriceEligibility(
+        candidates,
+      ).timeout(_revenueCatTimeout);
+      _trialEligibleIds = {
+        for (final entry in eligibility.entries)
+          if (entry.value.status ==
+              IntroEligibilityStatus.introEligibilityStatusEligible)
+            entry.key,
+      };
+    } catch (e) {
+      debugPrint('SubscriptionManager trial eligibility error: $e');
+      _trialEligibleIds = const {};
+    }
   }
 
   /// User-triggered recovery after a setup or product fetch failure.

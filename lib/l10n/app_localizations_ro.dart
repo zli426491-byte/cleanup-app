@@ -1450,4 +1450,462 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get homePhotoScopeChanged =>
       'Este posibil ca accesul la fotografii să se fi schimbat. Scanează din nou pentru a actualiza fotografiile disponibile.';
+
+  @override
+  String get navOptimize => 'Optimizare';
+
+  @override
+  String get navExtras => 'Mai mult';
+
+  @override
+  String get v2Before => 'Înainte';
+
+  @override
+  String get v2After => 'După';
+
+  @override
+  String get v2Best => 'Cea mai bună';
+
+  @override
+  String get v2Cancel => 'Anulează';
+
+  @override
+  String get v2Select => 'Selectează';
+
+  @override
+  String get v2SelectAll => 'Selectează tot';
+
+  @override
+  String get v2DeselectAll => 'Deselectează tot';
+
+  @override
+  String v2SelectedCount(int count) {
+    return '$count selectate';
+  }
+
+  @override
+  String get v2CatSimilars => 'Similare';
+
+  @override
+  String get v2CatDuplicates => 'Duplicate';
+
+  @override
+  String get v2CatVideos => 'Clipuri';
+
+  @override
+  String get v2CatScreenshots => 'Capturi de ecran';
+
+  @override
+  String get v2CatBlurred => 'Neclare';
+
+  @override
+  String get v2CatLarge => 'Fișiere mari';
+
+  @override
+  String get v2CatOther => 'Altele';
+
+  @override
+  String v2PhotoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de fotografii',
+      few: '$count fotografii',
+      one: '1 fotografie',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2VideoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de clipuri',
+      few: '$count clipuri',
+      one: '1 clip',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2ItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de elemente',
+      few: '$count elemente',
+      one: '1 element',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Șterge $count de elemente',
+      few: 'Șterge $count elemente',
+      one: 'Șterge 1 element',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteVideos(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Șterge $count de clipuri',
+      few: 'Șterge $count clipuri',
+      one: 'Șterge 1 clip',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteSize(String size) {
+    return 'Șterge $size';
+  }
+
+  @override
+  String v2FreeCleanupsLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ți-au rămas $count de curățări gratuite',
+      few: 'Ți-au rămas $count curățări gratuite',
+      one: 'Ți-a rămas 1 curățare gratuită',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SpaceToClean => 'Spațiu de eliberat';
+
+  @override
+  String v2StorageUsedOf(String used, String total) {
+    return '$used din $total folosiți';
+  }
+
+  @override
+  String get v2OptimizeTitle => 'Optimizează spațiul';
+
+  @override
+  String get v2OptimizeSubtitle => 'Eliberează rapid spațiu';
+
+  @override
+  String get v2Scanning => 'Se scanează biblioteca…';
+
+  @override
+  String v2ScanningCount(int done, int total) {
+    return '$done / $total';
+  }
+
+  @override
+  String get v2CheckingDuplicates => 'Se verifică duplicatele…';
+
+  @override
+  String get v2ScanStart => 'Scanează pozele';
+
+  @override
+  String get v2PermissionTitle => 'Permite accesul la Poze';
+
+  @override
+  String v2PermissionBody(String appName) {
+    return '$appName are nevoie de acces la poze pentru a găsi duplicatele și a elibera spațiu. Pozele rămân pe dispozitiv.';
+  }
+
+  @override
+  String get v2OpenSettings => 'Deschide Setări';
+
+  @override
+  String get v2IntroLeft => 'Stânga';
+
+  @override
+  String get v2IntroToDelete => 'pentru ștergere';
+
+  @override
+  String get v2IntroRight => 'Dreapta';
+
+  @override
+  String get v2IntroToKeep => 'pentru păstrare';
+
+  @override
+  String get v2LetsGo => 'Să începem';
+
+  @override
+  String get v2IntroSimilars =>
+      'Pozele asemănătoare sunt grupate. O păstrăm pe cea mai bună și le selectăm pe celelalte pentru tine.';
+
+  @override
+  String get v2IntroDuplicates =>
+      'Copii identice ale aceleiași poze. Păstrează una și șterge restul dintr-o atingere.';
+
+  @override
+  String get v2IntroVideos =>
+      'Revizuiește toate clipurile. Sortează-le după mărime sau dată ca să le vezi pe cele mai mari.';
+
+  @override
+  String get v2IntroScreenshots =>
+      'Capturile vechi se adună repede. Parcurge-le și șterge-le pe cele de care nu mai ai nevoie.';
+
+  @override
+  String get v2IntroBlurred =>
+      'Poze mișcate sau neclare pe care probabil nu vrei să le păstrezi.';
+
+  @override
+  String get v2IntroLarge =>
+      'Cele mai mari poze și clipuri. Ștergând câteva eliberezi cel mai mult spațiu.';
+
+  @override
+  String get v2IntroOther =>
+      'Poze care nu aparțin niciunei categorii. Sortează-le după mărime sau dată și scapă de cele inutile.';
+
+  @override
+  String get v2IntroOptimize =>
+      'Găsește pozele duplicate și similare, le păstrează pe cele mai bune și le selectează pe restul. Spațiu în câteva secunde.';
+
+  @override
+  String get v2SortLargest => 'Cele mai mari';
+
+  @override
+  String get v2SortNewest => 'Cele mai noi';
+
+  @override
+  String get v2EmptyCategory => 'Nimic de curățat aici';
+
+  @override
+  String get v2EmptyCategoryBody => 'Categoria aceasta e deja curată.';
+
+  @override
+  String get v2VideoCompress => 'Comprimă clipuri';
+
+  @override
+  String get v2VideoCompressSubtitle => 'Atinge pentru a începe';
+
+  @override
+  String get v2VideoCompressBody =>
+      'Comprimă clipurile în copii mai mici ca să economisești spațiu.';
+
+  @override
+  String get v2CongratsTitle => 'Felicitări!';
+
+  @override
+  String get v2CongratsDeleted => 'Ai șters';
+
+  @override
+  String v2CongratsSaved(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Ai economisit cam $minutes de minute',
+      few: 'Ai economisit cam $minutes minute',
+      one: 'Ai economisit cam 1 minut',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2CongratsUsing(String appName) {
+    return 'cu $appName';
+  }
+
+  @override
+  String v2CongratsRecentlyDeleted(String size) {
+    return 'Golește albumul „Șterse recent” ca să eliberezi $size.';
+  }
+
+  @override
+  String get v2Great => 'Grozav';
+
+  @override
+  String get v2UnlockTitle => 'Deblochează accesul nelimitat';
+
+  @override
+  String get v2UnlockFeature1 => 'Găsește instant pozele similare';
+
+  @override
+  String get v2UnlockFeature2 => 'Curățare fără limite';
+
+  @override
+  String get v2UnlockFeature3 => 'Economisești spațiu și timp';
+
+  @override
+  String get v2PrivacyLine =>
+      'Pozele sunt analizate pe dispozitiv și nu sunt încărcate niciodată.';
+
+  @override
+  String v2PerWeek(String price) {
+    return '$price/săptămână, anulezi oricând';
+  }
+
+  @override
+  String v2PerYear(String price) {
+    return '$price/an';
+  }
+
+  @override
+  String v2SavePercent(int percent) {
+    return 'Economisești $percent%';
+  }
+
+  @override
+  String v2FreeTrialDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Probă gratuită de $days de zile',
+      few: 'Probă gratuită de $days zile',
+      one: 'Probă gratuită de 1 zi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2StartFreeTrial(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Începe proba gratuită de $days de zile',
+      few: 'Începe proba gratuită de $days zile',
+      one: 'Începe proba gratuită de 1 zi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2FreeThen(int days, String price) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Gratuit $days de zile, apoi $price',
+      few: 'Gratuit $days zile, apoi $price',
+      one: 'Gratuit 1 zi, apoi $price',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2TrialEnabled => 'Proba gratuită activată';
+
+  @override
+  String get v2DueToday => 'De plată azi';
+
+  @override
+  String v2DueOn(String date) {
+    return 'De plată pe $date';
+  }
+
+  @override
+  String v2DaysFree(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days de zile gratuite',
+      few: '$days zile gratuite',
+      one: '1 zi gratuită',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2TryFree => 'Încearcă gratuit';
+
+  @override
+  String get v2CleanYourStorage => 'Curăță spațiul de stocare';
+
+  @override
+  String get v2GetRidOf => 'Scapă de ce nu îți trebuie';
+
+  @override
+  String get v2ProFeatures =>
+      'Curățare inteligentă, comprimare video, spațiu secret și fără limite.';
+
+  @override
+  String v2WelcomeTitle(String appName) {
+    return 'Bun venit în $appName';
+  }
+
+  @override
+  String v2WelcomeAccess(String appName) {
+    return '$appName are nevoie de acces la Poze pentru a elibera spațiu.';
+  }
+
+  @override
+  String get v2WelcomePrivacy =>
+      'Pozele sunt analizate pe dispozitiv și nu ajung niciodată pe serverele noastre.';
+
+  @override
+  String get v2GetStarted => 'Începe';
+
+  @override
+  String get v2Next => 'Înainte';
+
+  @override
+  String get v2OnbDupTitle => 'Șterge pozele duplicate';
+
+  @override
+  String get v2OnbDupBody =>
+      'Găsește duplicatele în câteva secunde și recuperează spațiul.';
+
+  @override
+  String get v2OnbSwipeTitle => 'Glisează pentru curățare';
+
+  @override
+  String get v2OnbSwipeBody =>
+      'Glisează la stânga pentru ștergere, la dreapta pentru păstrare. Niciodată nu a fost atât de rapid.';
+
+  @override
+  String get v2OnbVideoTitle => 'Comprimă clipurile';
+
+  @override
+  String get v2OnbVideoBody =>
+      'Micșorează clipurile mari și păstrează-ți amintirile.';
+
+  @override
+  String v2TryDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Încearcă $days de zile',
+      few: 'Încearcă $days zile',
+      one: 'Încearcă 1 zi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2ForFree => 'Gratuit!';
+
+  @override
+  String get v2ExtrasTitle => 'Instrumente extra';
+
+  @override
+  String get v2ExtrasUtilities => 'Utilitare';
+
+  @override
+  String get v2ExtrasPrivate => 'Privat';
+
+  @override
+  String get v2ChargingTitle => 'Animație de încărcare';
+
+  @override
+  String get v2ChargingBody => 'Personalizează ecranul de încărcare';
+
+  @override
+  String get v2SecretTitle => 'Bibliotecă secretă';
+
+  @override
+  String get v2SecretBody => 'Protejează-ți pozele private';
+
+  @override
+  String get v2ScanPaused => 'Scanare întreruptă';
+
+  @override
+  String get v2ContinueScan => 'Continuă';
+
+  @override
+  String get v2PauseScan => 'Întrerupe scanarea';
 }

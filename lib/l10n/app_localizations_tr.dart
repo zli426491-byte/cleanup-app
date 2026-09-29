@@ -1420,4 +1420,437 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get homePhotoScopeChanged =>
       'Fotoğraf erişimi değişmiş olabilir. Erişilebilir fotoğrafları yenilemek için tekrar tarayın.';
+
+  @override
+  String get navOptimize => 'Optimize Et';
+
+  @override
+  String get navExtras => 'Diğer';
+
+  @override
+  String get v2Before => 'Önce';
+
+  @override
+  String get v2After => 'Sonra';
+
+  @override
+  String get v2Best => 'En iyi';
+
+  @override
+  String get v2Cancel => 'Vazgeç';
+
+  @override
+  String get v2Select => 'Seç';
+
+  @override
+  String get v2SelectAll => 'Tümünü seç';
+
+  @override
+  String get v2DeselectAll => 'Seçimi kaldır';
+
+  @override
+  String v2SelectedCount(int count) {
+    return '$count seçildi';
+  }
+
+  @override
+  String get v2CatSimilars => 'Benzerler';
+
+  @override
+  String get v2CatDuplicates => 'Kopyalar';
+
+  @override
+  String get v2CatVideos => 'Videolar';
+
+  @override
+  String get v2CatScreenshots => 'Ekran görüntüleri';
+
+  @override
+  String get v2CatBlurred => 'Bulanık';
+
+  @override
+  String get v2CatLarge => 'Büyük dosyalar';
+
+  @override
+  String get v2CatOther => 'Diğerleri';
+
+  @override
+  String v2PhotoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fotoğraf',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2VideoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count video',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2ItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count öge',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ögeyi sil',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteVideos(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count videoyu sil',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteSize(String size) {
+    return '$size sil';
+  }
+
+  @override
+  String v2FreeCleanupsLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ücretsiz temizlik hakkı kaldı',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SpaceToClean => 'Temizlenebilir alan';
+
+  @override
+  String v2StorageUsedOf(String used, String total) {
+    return '$total alanın $used kadarı dolu';
+  }
+
+  @override
+  String get v2OptimizeTitle => 'Depolamayı optimize et';
+
+  @override
+  String get v2OptimizeSubtitle => 'Dosyalarınızdan hızla yer açın';
+
+  @override
+  String get v2Scanning => 'Arşiviniz taranıyor…';
+
+  @override
+  String v2ScanningCount(int done, int total) {
+    return '$done / $total';
+  }
+
+  @override
+  String get v2CheckingDuplicates => 'Kopyalar kontrol ediliyor…';
+
+  @override
+  String get v2ScanStart => 'Fotoğraflarımı tara';
+
+  @override
+  String get v2PermissionTitle => 'Fotoğraflara erişime izin verin';
+
+  @override
+  String v2PermissionBody(String appName) {
+    return '$appName, kopyaları bulup yer açmak için fotoğraflarınıza erişmelidir. Fotoğraflarınız cihazınızda kalır.';
+  }
+
+  @override
+  String get v2OpenSettings => 'Ayarları aç';
+
+  @override
+  String get v2IntroLeft => 'Sola';
+
+  @override
+  String get v2IntroToDelete => 'sil';
+
+  @override
+  String get v2IntroRight => 'Sağa';
+
+  @override
+  String get v2IntroToKeep => 'sakla';
+
+  @override
+  String get v2LetsGo => 'Başlayalım';
+
+  @override
+  String get v2IntroSimilars =>
+      'Benzer kareler gruplanır. En iyisini tutar, kalanları sizin için seçeriz.';
+
+  @override
+  String get v2IntroDuplicates =>
+      'Aynı fotoğrafın birebir kopyaları. Birini tutun, kalanını tek dokunuşla silin.';
+
+  @override
+  String get v2IntroVideos =>
+      'Tüm videolarınızı inceleyin. En çok yer kaplayanları görmek için boyuta veya tarihe göre sıralayın.';
+
+  @override
+  String get v2IntroScreenshots =>
+      'Eski ekran görüntüleri hızla birikir. Kaydırarak göz atın, gerekmeyenleri silin.';
+
+  @override
+  String get v2IntroBlurred =>
+      'Muhtemelen saklamak istemeyeceğiniz bulanık ve odak dışı kareler.';
+
+  @override
+  String get v2IntroLarge =>
+      'En büyük fotoğraf ve videolarınız. Birkaçını silmek en çok yeri açar.';
+
+  @override
+  String get v2IntroOther =>
+      'Hiçbir kategoriye girmeyen fotoğraflar. Boyuta veya tarihe göre sıralayın, gereksizlere veda edin.';
+
+  @override
+  String get v2IntroOptimize =>
+      'Kopya ve benzer fotoğrafları bulur, en iyilerini tutar, kalanları seçer. Saniyeler içinde yer açın.';
+
+  @override
+  String get v2SortLargest => 'En büyük';
+
+  @override
+  String get v2SortNewest => 'En yeni';
+
+  @override
+  String get v2EmptyCategory => 'Burada temizlenecek bir şey yok';
+
+  @override
+  String get v2EmptyCategoryBody => 'Bu kategori zaten temiz.';
+
+  @override
+  String get v2VideoCompress => 'Video sıkıştır';
+
+  @override
+  String get v2VideoCompressSubtitle => 'Başlamak için dokunun';
+
+  @override
+  String get v2VideoCompressBody =>
+      'Yer kazanmak için videoları daha küçük kopyalara sıkıştırın.';
+
+  @override
+  String get v2CongratsTitle => 'Tebrikler!';
+
+  @override
+  String get v2CongratsDeleted => 'Sildiğiniz';
+
+  @override
+  String v2CongratsSaved(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Yaklaşık $minutes dakika kazandınız',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2CongratsUsing(String appName) {
+    return '$appName ile';
+  }
+
+  @override
+  String v2CongratsRecentlyDeleted(String size) {
+    return '$size yer açmak için iPhone’unuzdaki “Son Silinenler” albümünü boşaltın.';
+  }
+
+  @override
+  String get v2Great => 'Harika';
+
+  @override
+  String get v2UnlockTitle => 'Sınırsız erişimin kilidini açın';
+
+  @override
+  String get v2UnlockFeature1 => 'Benzer fotoğrafları anında bulun';
+
+  @override
+  String get v2UnlockFeature2 => 'Sınırsız temizlik';
+
+  @override
+  String get v2UnlockFeature3 => 'Hem yerden hem zamandan tasarruf';
+
+  @override
+  String get v2PrivacyLine =>
+      'Fotoğraflarınız cihazınızda analiz edilir, asla yüklenmez.';
+
+  @override
+  String v2PerWeek(String price) {
+    return 'Haftalık $price, istediğiniz zaman iptal';
+  }
+
+  @override
+  String v2PerYear(String price) {
+    return 'Yıllık $price';
+  }
+
+  @override
+  String v2SavePercent(int percent) {
+    return '%$percent tasarruf';
+  }
+
+  @override
+  String v2FreeTrialDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days gün ücretsiz deneme',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2StartFreeTrial(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days günlük ücretsiz denemeyi başlat',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2FreeThen(int days, String price) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days gün ücretsiz, sonra $price',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2TrialEnabled => 'Ücretsiz deneme etkin';
+
+  @override
+  String get v2DueToday => 'Bugün ödenecek';
+
+  @override
+  String v2DueOn(String date) {
+    return '$date tarihinde ödenecek';
+  }
+
+  @override
+  String v2DaysFree(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days gün ücretsiz',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2TryFree => 'Ücretsiz dene';
+
+  @override
+  String get v2CleanYourStorage => 'Depolamanızı temizleyin';
+
+  @override
+  String get v2GetRidOf => 'İhtiyacınız olmayandan kurtulun';
+
+  @override
+  String get v2ProFeatures =>
+      'Akıllı temizlik, video sıkıştırma, gizli alan ve sınırsız kullanım.';
+
+  @override
+  String v2WelcomeTitle(String appName) {
+    return '$appName uygulamasına hoş geldiniz';
+  }
+
+  @override
+  String v2WelcomeAccess(String appName) {
+    return '$appName, yer açmak için Fotoğraflar erişimine ihtiyaç duyar.';
+  }
+
+  @override
+  String get v2WelcomePrivacy =>
+      'Fotoğraflarınız cihazınızda analiz edilir, sunucularımıza asla yüklenmez.';
+
+  @override
+  String get v2GetStarted => 'Başla';
+
+  @override
+  String get v2Next => 'İleri';
+
+  @override
+  String get v2OnbDupTitle => 'Kopya fotoğrafları silin';
+
+  @override
+  String get v2OnbDupBody =>
+      'Kopya fotoğrafları saniyeler içinde bulun, alanınızı geri kazanın.';
+
+  @override
+  String get v2OnbSwipeTitle => 'Kaydırarak temizleyin';
+
+  @override
+  String get v2OnbSwipeBody =>
+      'Silmek için sola, saklamak için sağa kaydırın. Temizlik hiç bu kadar hızlı olmamıştı.';
+
+  @override
+  String get v2OnbVideoTitle => 'Videoları sıkıştırın';
+
+  @override
+  String get v2OnbVideoBody => 'Büyük videoları küçültün, anılarınızı koruyun.';
+
+  @override
+  String v2TryDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days gün deneyin',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2ForFree => 'Ücretsiz!';
+
+  @override
+  String get v2ExtrasTitle => 'Ek araçlar';
+
+  @override
+  String get v2ExtrasUtilities => 'Araçlar';
+
+  @override
+  String get v2ExtrasPrivate => 'Gizli';
+
+  @override
+  String get v2ChargingTitle => 'Şarj animasyonu';
+
+  @override
+  String get v2ChargingBody => 'Şarj ekranınızı kişiselleştirin';
+
+  @override
+  String get v2SecretTitle => 'Gizli arşiv';
+
+  @override
+  String get v2SecretBody => 'Özel fotoğraflarınızı koruyun';
+
+  @override
+  String get v2ScanPaused => 'Tarama duraklatıldı';
+
+  @override
+  String get v2ContinueScan => 'Devam et';
+
+  @override
+  String get v2PauseScan => 'Taramayı duraklat';
 }

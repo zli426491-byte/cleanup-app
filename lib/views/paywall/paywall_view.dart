@@ -7,16 +7,53 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:photo_manager/photo_manager.dart' show AssetType;
+
 import '../../analytics/analytics_manager.dart';
+import '../../services/photo_scanner_service.dart';
 import '../../services/subscription_manager.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
 import '../home/main_tab_view.dart';
+import '../v2/ui_kit.dart';
+
+/// A: after onboarding, framed around the free trial.
+/// B: when a free user starts a Pro action ("Unlock Unlimited Access").
+enum PaywallVariant { trial, unlock }
 
 class PaywallView extends StatefulWidget {
   final bool fromOnboarding;
+  final PaywallVariant variant;
+  final String? source;
 
-  const PaywallView({super.key, this.fromOnboarding = false});
+  /// Free cleanups a user can still finish by closing this page (B only).
+  final int? freeCleanupsLeft;
+
+  const PaywallView({
+    super.key,
+    this.fromOnboarding = false,
+    PaywallVariant? variant,
+    this.source,
+    this.freeCleanupsLeft,
+  }) : variant =
+           variant ??
+           (fromOnboarding ? PaywallVariant.trial : PaywallVariant.unlock);
+
+  /// Presents variant B and completes when it closes.
+  static Future<void> showUnlock(
+    BuildContext context, {
+    required String source,
+    int? freeCleanupsLeft,
+  }) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      fullscreenDialog: true,
+      builder: (_) => PaywallView(
+        variant: PaywallVariant.unlock,
+        source: source,
+        freeCleanupsLeft: freeCleanupsLeft,
+      ),
+    ),
+  );
 
   @override
   State<PaywallView> createState() => _PaywallViewState();
@@ -24,6 +61,7 @@ class PaywallView extends StatefulWidget {
 
 class _PaywallViewState extends State<PaywallView> {
   _PlanOption? _selectedPlan;
+  bool _userPickedPlan = false;
   bool _isPurchasing = false;
   bool _hasTrackedClose = false;
   bool _isDismissing = false;
@@ -32,12 +70,15 @@ class _PaywallViewState extends State<PaywallView> {
   bool get _pageIsActive =>
       mounted && !_isDismissing && (ModalRoute.of(context)?.isCurrent ?? true);
 
+  String get _source =>
+      widget.source ?? (widget.fromOnboarding ? 'onboarding' : 'in_app');
+
   @override
   void initState() {
     super.initState();
     AnalyticsManager.instance.track(
       AnalyticsEvent.paywallShown.name,
-      properties: {'source': widget.fromOnboarding ? 'onboarding' : 'in_app'},
+      properties: {'source': _source, 'variant': widget.variant.name},
     );
     if (kDebugMode) _loadBuildNumber();
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadPlans());
@@ -47,207 +88,422 @@ class _PaywallViewState extends State<PaywallView> {
   Widget build(BuildContext context) {
     final sub = context.watch<SubscriptionManager>();
     final plans = _sortedPlans(sub);
-    _selectedPlan = plans.isEmpty
-        ? null
-        : plans.firstWhere(
-            (plan) =>
-                plan.product.identifier == _selectedPlan?.product.identifier,
-            orElse: () => plans.first,
-          );
+    if (plans.isEmpty) {
+      _selectedPlan = null;
+    } else if (!_userPickedPlan) {
+      // Lead with a plan that really has a free trial for this customer.
+      _selectedPlan = plans.firstWhere(
+        (plan) => sub.freeTrialDays(plan.product) != null,
+        orElse: () => plans.firstWhere(
+          (plan) =>
+              plan.product.identifier == _selectedPlan?.product.identifier,
+          orElse: () => plans.first,
+        ),
+      );
+    } else {
+      _selectedPlan = plans.firstWhere(
+        (plan) => plan.product.identifier == _selectedPlan?.product.identifier,
+        orElse: () => plans.first,
+      );
+    }
     final canPurchase =
         !sub.isPlaceholder &&
         _selectedPlan != null &&
         !sub.isLoading &&
         !_isPurchasing;
+    final trialDays = _selectedPlan == null
+        ? null
+        : sub.freeTrialDays(_selectedPlan!.product);
+
+    final purchaseButton = _PurchaseButton(
+      isEnabled: canPurchase,
+      isLoading: sub.isLoading || _isPurchasing,
+      label: sub.isPlaceholder
+          ? context.l10n.paywallNotConfigured
+          : trialDays != null
+          ? (widget.variant == PaywallVariant.trial
+                ? context.l10n.v2TryFree
+                : context.l10n.v2StartFreeTrial(trialDays))
+          : _purchaseLabel,
+      loadingLabel: _loadingLabel(sub),
+      onTap: () => _purchase(sub),
+    );
 
     return PopScope(
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) _isDismissing = true;
       },
       child: Scaffold(
-        appBar: AppBar(
-          leading: const SizedBox(),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.close),
-              tooltip: context.l10n.paywallClose,
-              onPressed: () => _dismiss(context),
-            ),
-          ],
-        ),
         body: SafeArea(
           child: Align(
             alignment: Alignment.topCenter,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    ShaderMask(
-                      shaderCallback: (bounds) =>
-                          AppTheme.primaryGradient.createShader(bounds),
-                      child: const Icon(
-                        Icons.auto_awesome,
-                        size: 60,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      context.l10n.paywallTitle,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (kDebugMode && _buildNumber != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        context.l10n.paywallBuild(_buildNumber!),
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 6),
-                    Text(
-                      context.l10n.paywallDescription,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      context.l10n.paywallFreePreviewNote,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppTheme.textSecondary),
-                    ),
-                    const SizedBox(height: 24),
-                    if (sub.statusMessage.isNotEmpty) ...[
-                      _StatusBanner(
-                        message: context.localizeServiceMessage(
-                          sub.statusMessage,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                    ..._features.map(
-                      (feature) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Row(
-                          children: [
-                            Icon(feature.icon, color: feature.color, size: 22),
-                            const SizedBox(width: 12),
-                            Expanded(child: Text(feature.label)),
-                            const Icon(
-                              Icons.check_circle,
-                              color: AppTheme.success,
-                              size: 18,
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Column(
+                children: [
+                  _topBar(sub),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (widget.variant == PaywallVariant.trial)
+                            ..._trialHeader(sub, trialDays)
+                          else
+                            ..._unlockHeader(),
+                          if (kDebugMode && _buildNumber != null)
+                            Text(
+                              context.l10n.paywallBuild(_buildNumber!),
+                              textAlign: TextAlign.center,
+                              style: AppTheme.small,
+                            ),
+                          if (sub.statusMessage.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            _StatusBanner(
+                              message: context.localizeServiceMessage(
+                                sub.statusMessage,
+                              ),
                             ),
                           ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    if (plans.isEmpty) ...[
-                      _EmptyPlans(isLoading: sub.isLoading),
-                      TextButton.icon(
-                        onPressed: sub.isLoading ? null : () => sub.retry(),
-                        icon: const Icon(Icons.refresh),
-                        label: Text(context.l10n.paywallReloadPlans),
-                      ),
-                    ] else
-                      ...plans.map(
-                        (plan) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: _PlanCard(
-                            key: ValueKey(
-                              'paywall-plan-${plan.product.identifier}',
+                          const SizedBox(height: 20),
+                          if (plans.isEmpty) ...[
+                            _EmptyPlans(isLoading: sub.isLoading),
+                            TextButton.icon(
+                              onPressed: sub.isLoading
+                                  ? null
+                                  : () => sub.retry(),
+                              icon: const Icon(Icons.refresh),
+                              label: Text(context.l10n.paywallReloadPlans),
                             ),
-                            title: _titleFor(plan),
-                            subtitle: _subtitleFor(plan),
-                            price: plan.product.priceString,
-                            isSelected:
-                                plan.product.identifier ==
-                                _selectedPlan?.product.identifier,
-                            onTap: sub.isLoading || _isPurchasing
-                                ? null
-                                : () => setState(() => _selectedPlan = plan),
-                          ),
-                        ),
+                          ] else if (widget.variant == PaywallVariant.unlock ||
+                              trialDays == null)
+                            ...plans.map(
+                              (plan) => Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: _PlanCard(
+                                  key: ValueKey(
+                                    'paywall-plan-${plan.product.identifier}',
+                                  ),
+                                  title: _priceLine(plan),
+                                  subtitle: _planSubtitle(sub, plan),
+                                  badge: _savingsBadge(plan, plans),
+                                  isSelected:
+                                      plan.product.identifier ==
+                                      _selectedPlan?.product.identifier,
+                                  onTap: sub.isLoading || _isPurchasing
+                                      ? null
+                                      : () => setState(() {
+                                          _userPickedPlan = true;
+                                          _selectedPlan = plan;
+                                        }),
+                                ),
+                              ),
+                            )
+                          else
+                            _TrialTimeline(
+                              days: trialDays,
+                              price: _selectedPlan!.product.priceString,
+                              dueToday:
+                                  _selectedPlan!
+                                      .product
+                                      .introductoryPrice
+                                      ?.priceString ??
+                                  '',
+                            ),
+                          if (_selectedPlan != null)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+                              child: Text(
+                                _renewalNotice,
+                                textAlign: TextAlign.center,
+                                style: AppTheme.small.copyWith(fontSize: 11),
+                              ),
+                            ),
+                          if (widget.freeCleanupsLeft != null &&
+                              widget.freeCleanupsLeft! > 0 &&
+                              !sub.isPro) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              context.l10n.v2FreeCleanupsLeft(
+                                widget.freeCleanupsLeft!,
+                              ),
+                              textAlign: TextAlign.center,
+                              style: AppTheme.small,
+                            ),
+                          ],
+                        ],
                       ),
-                    const SizedBox(height: 16),
-                    _PurchaseButton(
-                      isEnabled: canPurchase,
-                      isLoading: sub.isLoading || _isPurchasing,
-                      label: sub.isPlaceholder
-                          ? context.l10n.paywallNotConfigured
-                          : _purchaseLabel,
-                      loadingLabel: _loadingLabel(sub),
-                      onTap: () => _purchase(sub),
                     ),
-                    if (_selectedPlan != null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        _renewalNotice,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: AppTheme.textSecondary),
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                    Text(
-                      context.l10n.paywallStoreNotice,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 4,
-                      children: [
-                        TextButton(
-                          onPressed: sub.isPlaceholder || sub.isLoading
-                              ? null
-                              : () => _restore(sub),
-                          child: Text(
-                            context.l10n.paywallRestorePurchases,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () => launchUrl(
-                            Uri.parse(AppConstants.privacyPolicyUrl),
-                          ),
-                          child: Text(
-                            context.l10n.paywallPrivacyPolicy,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () =>
-                              launchUrl(Uri.parse(AppConstants.termsUrl)),
-                          child: Text(
-                            context.l10n.paywallTerms,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                    child: purchaseButton,
+                  ),
+                  _footer(sub),
+                ],
               ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  Widget _topBar(SubscriptionManager sub) {
+    final close = IconButton(
+      key: const ValueKey('paywall-close'),
+      icon: const Icon(Icons.close_rounded, color: AppTheme.textMuted),
+      tooltip: context.l10n.paywallClose,
+      onPressed: () => _dismiss(context),
+    );
+    if (widget.variant == PaywallVariant.unlock) {
+      return Align(alignment: AlignmentDirectional.centerStart, child: close);
+    }
+    return Row(
+      children: [
+        Expanded(
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton(
+              onPressed: sub.isPlaceholder || sub.isLoading
+                  ? null
+                  : () => _restore(sub),
+              child: Text(
+                context.l10n.paywallRestorePurchases,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppTheme.textMuted,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+        ),
+        close,
+      ],
+    );
+  }
+
+  List<Widget> _trialHeader(SubscriptionManager sub, int? trialDays) {
+    final l10n = context.l10n;
+    final scanner = context.watch<PhotoScannerService>();
+    var photos = 0;
+    var videos = 0;
+    for (final asset in scanner.scanResult.allAssets) {
+      if (asset.type == AssetType.video) {
+        videos++;
+      } else {
+        photos++;
+      }
+    }
+    return [
+      Text(
+        l10n.v2CleanYourStorage,
+        textAlign: TextAlign.center,
+        style: AppTheme.heading1.copyWith(fontSize: 30),
+      ),
+      const SizedBox(height: 6),
+      Text(
+        l10n.v2GetRidOf,
+        textAlign: TextAlign.center,
+        style: AppTheme.body.copyWith(color: AppTheme.textSecondary),
+      ),
+      const SizedBox(height: 24),
+      Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 36,
+        runSpacing: 16,
+        children: [
+          _BadgeIcon(
+            icon: Icons.photo_library_rounded,
+            label: l10n.scanCategoryPhotos,
+            badge: photos,
+            colors: const [Color(0xFFFFB347), Color(0xFFFF5E62)],
+          ),
+          _BadgeIcon(
+            icon: Icons.video_library_rounded,
+            label: l10n.v2CatVideos,
+            badge: videos,
+            colors: const [Color(0xFF5AC8FA), Color(0xFF0A7AFF)],
+          ),
+        ],
+      ),
+      const SizedBox(height: 24),
+      TintCard(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${l10n.appName} Pro',
+              style: AppTheme.heading3.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(l10n.v2ProFeatures, style: AppTheme.caption),
+            if (trialDays != null && _selectedPlan != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                l10n.v2FreeThen(trialDays, _priceLine(_selectedPlan!)),
+                style: AppTheme.body.copyWith(fontWeight: FontWeight.w500),
+              ),
+            ],
+          ],
+        ),
+      ),
+      if (trialDays != null) ...[
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryLight,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.primary, width: 1.5),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.v2TrialEnabled,
+                  style: AppTheme.heading3,
+                ),
+              ),
+              const Icon(Icons.verified_rounded, color: AppTheme.success),
+            ],
+          ),
+        ),
+      ],
+    ];
+  }
+
+  List<Widget> _unlockHeader() {
+    final l10n = context.l10n;
+    final features = [
+      (Icons.donut_large_rounded, l10n.v2UnlockFeature1),
+      (Icons.all_inclusive_rounded, l10n.v2UnlockFeature2),
+      (Icons.savings_rounded, l10n.v2UnlockFeature3),
+    ];
+    return [
+      const SizedBox(height: 8),
+      Text(
+        l10n.v2UnlockTitle,
+        textAlign: TextAlign.center,
+        style: AppTheme.heading1.copyWith(fontSize: 32),
+      ),
+      const SizedBox(height: 24),
+      for (final (icon, label) in features)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 7),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppTheme.primary,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppTheme.body.copyWith(fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+        ),
+      const SizedBox(height: 12),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.lock_outline_rounded,
+            size: 15,
+            color: AppTheme.textMuted,
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              l10n.v2PrivacyLine,
+              textAlign: TextAlign.center,
+              style: AppTheme.small,
+            ),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  Widget _footer(SubscriptionManager sub) {
+    final links = [
+      TextButton(
+        onPressed: () => launchUrl(Uri.parse(AppConstants.termsUrl)),
+        child: Text(
+          context.l10n.paywallTerms,
+          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+        ),
+      ),
+      if (widget.variant == PaywallVariant.trial)
+        TextButton(
+          onPressed: () =>
+              launchUrl(Uri.parse(AppConstants.privacyPolicyUrl)),
+          child: Text(
+            context.l10n.paywallPrivacyPolicy,
+            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+          ),
+        )
+      else
+        TextButton(
+          onPressed: sub.isPlaceholder || sub.isLoading
+              ? null
+              : () => _restore(sub),
+          child: Text(
+            context.l10n.paywallRestorePurchases,
+            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+          ),
+        ),
+    ];
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        children: links,
+      ),
+    );
+  }
+
+  String _priceLine(_PlanOption plan) =>
+      switch (plan.product.identifier) {
+        AppConstants.weeklyProductId => context.l10n.v2PerWeek(
+          plan.product.priceString,
+        ),
+        AppConstants.yearlyProductId => context.l10n.v2PerYear(
+          plan.product.priceString,
+        ),
+        _ => '${_titleFor(plan)} · ${plan.product.priceString}',
+      };
+
+  String _planSubtitle(SubscriptionManager sub, _PlanOption plan) {
+    final days = sub.freeTrialDays(plan.product);
+    if (days != null) return context.l10n.v2FreeTrialDays(days);
+    return _subtitleFor(plan);
+  }
+
+  /// "Save N%" on the yearly plan versus paying weekly for a year.
+  String? _savingsBadge(_PlanOption plan, List<_PlanOption> plans) {
+    if (plan.product.identifier != AppConstants.yearlyProductId) return null;
+    final weekly = plans.where(
+      (p) => p.product.identifier == AppConstants.weeklyProductId,
+    );
+    if (weekly.isEmpty) return null;
+    final perYearWeekly = weekly.first.product.price * 52;
+    if (perYearWeekly <= 0) return null;
+    final percent = ((1 - plan.product.price / perYearWeekly) * 100).floor();
+    return percent >= 5 ? context.l10n.v2SavePercent(percent) : null;
   }
 
   Future<void> _loadPlans() async {
@@ -338,7 +594,7 @@ class _PaywallViewState extends State<PaywallView> {
       _hasTrackedClose = true;
       AnalyticsManager.instance.track(
         AnalyticsEvent.paywallClosed.name,
-        properties: {'source': widget.fromOnboarding ? 'onboarding' : 'in_app'},
+        properties: {'source': _source, 'variant': widget.variant.name},
       );
     }
 
@@ -435,18 +691,6 @@ class _PaywallViewState extends State<PaywallView> {
           : context.l10n.paywallLoadingPlans,
   };
 
-  List<_PaywallFeature> get _features => [
-    _PaywallFeature(
-      Icons.copy,
-      context.l10n.paywallPhotoFeature,
-      AppTheme.danger,
-    ),
-    _PaywallFeature(
-      Icons.compress,
-      context.l10n.paywallVideoFeature,
-      AppTheme.warning,
-    ),
-  ];
 }
 
 class _PlanOption {
@@ -454,14 +698,6 @@ class _PlanOption {
   final Package? package;
 
   const _PlanOption({required this.product, this.package});
-}
-
-class _PaywallFeature {
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  const _PaywallFeature(this.icon, this.label, this.color);
 }
 
 class _StatusBanner extends StatelessWidget {
@@ -608,7 +844,7 @@ class _PurchaseButton extends StatelessWidget {
 class _PlanCard extends StatelessWidget {
   final String title;
   final String subtitle;
-  final String price;
+  final String? badge;
   final bool isSelected;
   final VoidCallback? onTap;
 
@@ -616,9 +852,9 @@ class _PlanCard extends StatelessWidget {
     super.key,
     required this.title,
     required this.subtitle,
-    required this.price,
     required this.isSelected,
     required this.onTap,
+    this.badge,
   });
 
   @override
@@ -629,74 +865,236 @@ class _PlanCard extends StatelessWidget {
         selected: isSelected,
         inMutuallyExclusiveGroup: true,
         enabled: onTap != null,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: isSelected ? AppTheme.primary : Colors.grey[300]!,
-                  width: isSelected ? 2 : 1,
-                ),
-                borderRadius: BorderRadius.circular(12),
-                color: isSelected
-                    ? AppTheme.primary.withValues(alpha: 0.05)
-                    : null,
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    isSelected
-                        ? Icons.radio_button_checked
-                        : Icons.radio_button_off,
-                    color: isSelected ? AppTheme.primary : AppTheme.textMuted,
-                    size: 20,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Material(
+              color: isSelected ? AppTheme.primaryLight : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          spacing: 8,
-                          runSpacing: 4,
-                          children: [
-                            Text(
-                              title,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          subtitle,
-                          style: const TextStyle(
-                            color: AppTheme.textMuted,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          price,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isSelected ? AppTheme.primary : AppTheme.border,
+                      width: isSelected ? 2 : 1.5,
                     ),
                   ),
-                ],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textTitle,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(subtitle, style: AppTheme.small),
+                    ],
+                  ),
+                ),
               ),
             ),
+            if (badge != null)
+              PositionedDirectional(
+                end: 0,
+                top: -10,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    badge!,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Rounded app icon with a red count badge (Photos / Videos).
+class _BadgeIcon extends StatelessWidget {
+  const _BadgeIcon({
+    required this.icon,
+    required this.label,
+    required this.badge,
+    required this.colors,
+  });
+
+  final IconData icon;
+  final String label;
+  final int badge;
+  final List<Color> colors;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 84,
+            height: 84,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: ShaderMask(
+              shaderCallback: (bounds) => LinearGradient(
+                colors: colors,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ).createShader(bounds),
+              child: Icon(icon, size: 48, color: Colors.white),
+            ),
+          ),
+          if (badge > 0)
+            Positioned(
+              top: -8,
+              right: -8,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 30),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.danger,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Text(
+                  badge > 999 ? '999+' : '$badge',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+      const SizedBox(height: 8),
+      Text(label, style: AppTheme.heading3.copyWith(fontSize: 15)),
+    ],
+  );
+}
+
+/// "Due today – N days free – 0" / "Due (date) – price" for a trial plan.
+class _TrialTimeline extends StatelessWidget {
+  const _TrialTimeline({
+    required this.days,
+    required this.price,
+    required this.dueToday,
+  });
+  final int days;
+  final String price;
+
+  /// The store-formatted introductory price (a zero amount in local currency).
+  final String dueToday;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final due = MaterialLocalizations.of(
+      context,
+    ).formatMediumDate(DateTime.now().add(Duration(days: days)));
+    Widget row(String label, Widget trailing, {bool first = false}) => Row(
+      children: [
+        Icon(
+          first ? Icons.radio_button_checked_rounded : Icons.circle,
+          size: first ? 14 : 10,
+          color: AppTheme.textTitle,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            label,
+            style: AppTheme.body.copyWith(fontWeight: FontWeight.w600),
           ),
         ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Align(alignment: AlignmentDirectional.centerEnd, child: trailing),
+        ),
+      ],
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+      child: Column(
+        children: [
+          row(
+            l10n.v2DueToday,
+            Wrap(
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.success,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    l10n.v2DaysFree(days),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  dueToday,
+                  style: AppTheme.body.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+            first: true,
+          ),
+          const SizedBox(height: 14),
+          row(
+            l10n.v2DueOn(due),
+            Text(
+              price,
+              style: AppTheme.body.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
       ),
     );
   }

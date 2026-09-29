@@ -728,7 +728,16 @@
   "scanClearSelection": "Clear selection",
   "scanKeepOneSelectOthers": "Keep this, select other photos with loaded previews",
   "scanGroupReadyOthers": "Other photos ready to select: {ready} of {total}",
-  "@scanGroupReadyOthers": {"placeholders": {"ready": {"type": "int"}, "total": {"type": "int"}}},
+  "@scanGroupReadyOthers": {
+    "placeholders": {
+      "ready": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "scanSelectOthersHint": "Preview the suggested photo to keep, then select the rest of this group in one go.",
   "scanNotChecked": "To check",
   "scanPendingCheckCount": "{count, plural, one{{count} item to check} other{{count} items to check}}",
@@ -736,7 +745,11 @@
   "swipeDragSelectHint": "Hold and drag across thumbnails to select loaded previews.",
   "swipeMarkSelectedForDeletion": "Mark {count} for deletion",
   "@swipeMarkSelectedForDeletion": {
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "swipeGestureTitle": "Quick swipe cleanup",
   "swipeGestureDelete": "Swipe left to mark for deletion",
@@ -919,5 +932,292 @@
     }
   },
   "scanSelectLoaded": "Select loaded previews",
-  "homePhotoScopeChanged": "Photo access may have changed. Scan again to refresh available photos."
+  "homePhotoScopeChanged": "Photo access may have changed. Scan again to refresh available photos.",
+  "navOptimize": "Optimize",
+  "navExtras": "Extras",
+  "v2Before": "Before",
+  "v2After": "After",
+  "v2Best": "Best",
+  "v2Cancel": "Cancel",
+  "v2Select": "Select",
+  "v2SelectAll": "Select All",
+  "v2DeselectAll": "Deselect All",
+  "v2SelectedCount": "{count} selected",
+  "@v2SelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "v2CatSimilars": "Similar",
+  "v2CatDuplicates": "Duplicates",
+  "v2CatVideos": "Videos",
+  "v2CatScreenshots": "Screenshots",
+  "v2CatBlurred": "Blurred",
+  "v2CatLarge": "Large Files",
+  "v2CatOther": "Other",
+  "v2PhotoCount": "{count, plural, one{1 Photo} other{{count} Photos}}",
+  "@v2PhotoCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "v2VideoCount": "{count, plural, one{1 Video} other{{count} Videos}}",
+  "@v2VideoCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "v2ItemCount": "{count, plural, one{1 item} other{{count} items}}",
+  "@v2ItemCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "v2DeleteCount": "{count, plural, one{Delete 1 Item} other{Delete {count} Items}}",
+  "@v2DeleteCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "v2DeleteVideos": "{count, plural, one{Delete 1 Video} other{Delete {count} Videos}}",
+  "@v2DeleteVideos": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "v2DeleteSize": "Delete {size}",
+  "@v2DeleteSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "v2FreeCleanupsLeft": "{count, plural, one{1 free cleanup left} other{{count} free cleanups left}}",
+  "@v2FreeCleanupsLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "v2SpaceToClean": "Space to Clean",
+  "v2StorageUsedOf": "{used} of {total} used",
+  "@v2StorageUsedOf": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "v2OptimizeTitle": "Optimize Storage",
+  "v2OptimizeSubtitle": "Free up space from your files quickly",
+  "v2Scanning": "Scanning your library…",
+  "v2ScanningCount": "{done} / {total}",
+  "@v2ScanningCount": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "v2CheckingDuplicates": "Checking duplicates…",
+  "v2ScanStart": "Scan my photos",
+  "v2PermissionTitle": "Allow access to Photos",
+  "v2PermissionBody": "{appName} needs access to your photos to find duplicates and free up storage. Your photos stay on your device.",
+  "@v2PermissionBody": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "v2OpenSettings": "Open Settings",
+  "v2IntroLeft": "Left",
+  "v2IntroToDelete": "to Delete",
+  "v2IntroRight": "Right",
+  "v2IntroToKeep": "to Keep",
+  "v2LetsGo": "Let's go",
+  "v2IntroSimilars": "Similar shots are grouped together. We keep the best one and select the rest for you.",
+  "v2IntroDuplicates": "Exact copies of the same photo. Keep one and delete the rest in one tap.",
+  "v2IntroVideos": "Review all your videos. Sort them by size or date to see the ones that take the most space.",
+  "v2IntroScreenshots": "Old screenshots pile up fast. Swipe through them and clear the ones you no longer need.",
+  "v2IntroBlurred": "Blurry and out-of-focus shots you probably don't want to keep.",
+  "v2IntroLarge": "Your biggest photos and videos. Deleting a few of them frees the most space.",
+  "v2IntroOther": "Photos that don't belong to any category. Sort them by size or date and say goodbye to the ones you don't need.",
+  "v2IntroOptimize": "Finds duplicate and similar photos, keeps the best ones and selects the rest. Free up space in seconds.",
+  "v2SortLargest": "Largest",
+  "v2SortNewest": "Newest",
+  "v2EmptyCategory": "Nothing to clean here",
+  "v2EmptyCategoryBody": "This category is already clean.",
+  "v2VideoCompress": "Video Compress",
+  "v2VideoCompressSubtitle": "Tap to start the process",
+  "v2VideoCompressBody": "Compress videos into smaller copies to save storage.",
+  "v2CongratsTitle": "Congratulations!",
+  "v2CongratsDeleted": "You have deleted",
+  "v2CongratsSaved": "{minutes, plural, one{Saved about 1 minute} other{Saved about {minutes} minutes}}",
+  "@v2CongratsSaved": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "v2CongratsUsing": "using {appName}",
+  "@v2CongratsUsing": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "v2CongratsRecentlyDeleted": "Empty the “Recently Deleted” album on your iPhone to free up {size}.",
+  "@v2CongratsRecentlyDeleted": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "v2Great": "Great",
+  "v2UnlockTitle": "Unlock Unlimited Access",
+  "v2UnlockFeature1": "Instantly find similar photos",
+  "v2UnlockFeature2": "No limits on cleanup",
+  "v2UnlockFeature3": "Save both storage and time",
+  "v2PrivacyLine": "Your photos are analyzed on your device and never uploaded.",
+  "v2PerWeek": "{price}/week, cancel anytime",
+  "@v2PerWeek": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "v2PerYear": "{price}/year",
+  "@v2PerYear": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "v2SavePercent": "Save {percent}%",
+  "@v2SavePercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "v2FreeTrialDays": "{days, plural, one{1-day free trial} other{{days}-day free trial}}",
+  "@v2FreeTrialDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "v2StartFreeTrial": "{days, plural, one{Start my 1-day free trial} other{Start my {days}-day free trial}}",
+  "@v2StartFreeTrial": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "v2FreeThen": "{days, plural, one{Free for 1 day, then {price}} other{Free for {days} days, then {price}}}",
+  "@v2FreeThen": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "v2TrialEnabled": "Free trial enabled",
+  "v2DueToday": "Due today",
+  "v2DueOn": "Due {date}",
+  "@v2DueOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "v2DaysFree": "{days, plural, one{1 day free} other{{days} days free}}",
+  "@v2DaysFree": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "v2TryFree": "Try Free",
+  "v2CleanYourStorage": "Clean your Storage",
+  "v2GetRidOf": "Get rid of what you don't need",
+  "v2ProFeatures": "Smart cleanup, video compression, secret space and no limits.",
+  "v2WelcomeTitle": "Welcome to {appName}",
+  "@v2WelcomeTitle": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "v2WelcomeAccess": "{appName} needs access to your Photos to free up storage.",
+  "@v2WelcomeAccess": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "v2WelcomePrivacy": "Your photos are analyzed on your device and never uploaded to our servers.",
+  "v2GetStarted": "Get started",
+  "v2Next": "Next",
+  "v2OnbDupTitle": "Delete Duplicate Photos",
+  "v2OnbDupBody": "Find duplicate photos in seconds and reclaim your storage.",
+  "v2OnbSwipeTitle": "Swipe to Clean",
+  "v2OnbSwipeBody": "Swipe left to delete, right to keep. Cleaning up has never been this quick.",
+  "v2OnbVideoTitle": "Compress Videos",
+  "v2OnbVideoBody": "Shrink large videos and keep your memories.",
+  "v2TryDays": "{days, plural, one{Try 1 day} other{Try {days} days}}",
+  "@v2TryDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "v2ForFree": "For free!",
+  "v2ExtrasTitle": "Extra Tools",
+  "v2ExtrasUtilities": "Utilities",
+  "v2ExtrasPrivate": "Private",
+  "v2ChargingTitle": "Charging Animation",
+  "v2ChargingBody": "Personalize your charging screen",
+  "v2SecretTitle": "Secret Library",
+  "v2SecretBody": "Protect your private photos",
+  "v2ScanPaused": "Scan paused",
+  "v2ContinueScan": "Continue",
+  "v2PauseScan": "Pause scan"
 }

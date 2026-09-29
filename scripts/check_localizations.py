@@ -23,11 +23,12 @@ SHARED_KEYS = {
     'assetDimensions', 'assetPreviewDetails', 'videoSizeGb', 'videoSizeMb',
     'assetSizeGigabytes', 'assetSizeMegabytes', 'assetSizeKilobytes',
     'paywallTitle', 'homeAppName', 'settingsProPlan', 'appName',
+    'v2ScanningCount',
 }
 SHARED_WORDS = {
     'de': {'videoPauseOriginal', 'paywallBuild', 'videoOriginalSize',
            'homeScreenshots', 'settingsVersion', 'scanCategoryScreenshots',
-           'scanCategoryVideos'},
+           'scanCategoryVideos', 'v2VideoCount'},
     'es': {'videoOriginalSize', 'settingsStorageTotal', 'settingsGeneral',
            'homeStorageTotal'},
     'fr': {'settingsStorageTotal', 'settingsVersion', 'homeStorageTotal',

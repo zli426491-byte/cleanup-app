@@ -205,7 +205,7 @@ void main() {
     final observer = _RouteObserver();
     await _openPaywall(tester, subscriptions, observer);
     final close = tester
-        .widget<IconButton>(find.widgetWithIcon(IconButton, Icons.close))
+        .widget<IconButton>(find.byKey(const ValueKey('paywall-close')))
         .onPressed!;
     close();
     close();
@@ -292,7 +292,7 @@ void main() {
       await _openPaywall(tester, subscriptions, _RouteObserver());
       final strings = tester.element(find.byType(PaywallView)).l10n;
       expect(find.text(strings.paywallBestValue), findsNothing);
-      expect(find.text(strings.paywallFreePreviewNote), findsOneWidget);
+      expect(find.text(strings.v2UnlockTitle), findsOneWidget);
       expect(
         find.text(strings.paywallYearlyRenewal('NT\$990')),
         findsOneWidget,
@@ -337,14 +337,17 @@ void main() {
           );
           await tester.ensureVisible(weekly);
           await tester.pump();
-          expect(find.text('NT\$90'), findsOneWidget);
+          expect(
+            find.descendant(of: weekly, matching: find.textContaining('NT\$90')),
+            findsOneWidget,
+          );
           expect(
             Directionality.of(tester.element(weekly)),
             ['ar', 'he'].contains(locale.languageCode)
                 ? TextDirection.rtl
                 : TextDirection.ltr,
           );
-          expect(tester.getRect(weekly).width, lessThanOrEqualTo(640 - 48));
+          expect(tester.getRect(weekly).width, lessThanOrEqualTo(560 - 40));
           expect(tester.takeException(), isNull);
           await tester.pumpWidget(const SizedBox.shrink());
           subscriptions.dispose();

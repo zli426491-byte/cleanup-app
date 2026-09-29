@@ -1349,4 +1349,423 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get homePhotoScopeChanged =>
       'アクセスできる写真が変わった可能性があります。再スキャンして表示できる写真を更新してください。';
+
+  @override
+  String get navOptimize => '最適化';
+
+  @override
+  String get navExtras => 'その他';
+
+  @override
+  String get v2Before => '前';
+
+  @override
+  String get v2After => '後';
+
+  @override
+  String get v2Best => 'ベスト';
+
+  @override
+  String get v2Cancel => 'キャンセル';
+
+  @override
+  String get v2Select => '選択';
+
+  @override
+  String get v2SelectAll => 'すべて選択';
+
+  @override
+  String get v2DeselectAll => 'すべて解除';
+
+  @override
+  String v2SelectedCount(int count) {
+    return '$count件選択';
+  }
+
+  @override
+  String get v2CatSimilars => '類似';
+
+  @override
+  String get v2CatDuplicates => '重複';
+
+  @override
+  String get v2CatVideos => 'ビデオ';
+
+  @override
+  String get v2CatScreenshots => 'スクリーンショット';
+
+  @override
+  String get v2CatBlurred => 'ぼやけた写真';
+
+  @override
+  String get v2CatLarge => '大きなファイル';
+
+  @override
+  String get v2CatOther => 'その他';
+
+  @override
+  String v2PhotoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count枚',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2VideoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count本のビデオ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2ItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件を削除',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteVideos(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count本のビデオを削除',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteSize(String size) {
+    return '$sizeを削除';
+  }
+
+  @override
+  String v2FreeCleanupsLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '無料クリーンアップ残り$count回',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SpaceToClean => '削除できる容量';
+
+  @override
+  String v2StorageUsedOf(String used, String total) {
+    return '$total中$used使用済み';
+  }
+
+  @override
+  String get v2OptimizeTitle => 'ストレージを最適化';
+
+  @override
+  String get v2OptimizeSubtitle => 'ファイルからすばやく空き容量を確保';
+
+  @override
+  String get v2Scanning => 'ライブラリをスキャン中…';
+
+  @override
+  String v2ScanningCount(int done, int total) {
+    return '$done / $total';
+  }
+
+  @override
+  String get v2CheckingDuplicates => '重複を確認中…';
+
+  @override
+  String get v2ScanStart => '写真をスキャン';
+
+  @override
+  String get v2PermissionTitle => '写真へのアクセスを許可';
+
+  @override
+  String v2PermissionBody(String appName) {
+    return '$appNameは重複を見つけて空き容量を増やすために写真へのアクセスが必要です。写真はデバイスから外に出ません。';
+  }
+
+  @override
+  String get v2OpenSettings => '設定を開く';
+
+  @override
+  String get v2IntroLeft => '左へ';
+
+  @override
+  String get v2IntroToDelete => 'で削除';
+
+  @override
+  String get v2IntroRight => '右へ';
+
+  @override
+  String get v2IntroToKeep => 'で残す';
+
+  @override
+  String get v2LetsGo => 'はじめる';
+
+  @override
+  String get v2IntroSimilars => '似た写真をまとめて表示します。ベストな1枚を残し、残りを選択しておきます。';
+
+  @override
+  String get v2IntroDuplicates => 'まったく同じ写真のコピーです。1枚残して、残りをワンタップで削除できます。';
+
+  @override
+  String get v2IntroVideos => 'すべてのビデオを確認できます。サイズや日付で並べ替えて、容量の大きいものを見つけましょう。';
+
+  @override
+  String get v2IntroScreenshots => '古いスクリーンショットはすぐにたまります。スワイプして不要なものを削除しましょう。';
+
+  @override
+  String get v2IntroBlurred => 'ブレたりピンぼけしたりして、残す必要がなさそうな写真です。';
+
+  @override
+  String get v2IntroLarge => '最も大きな写真とビデオです。いくつか削除するだけで大きく空きます。';
+
+  @override
+  String get v2IntroOther => 'どのカテゴリにも入らない写真です。サイズや日付で並べ替えて、不要なものを整理しましょう。';
+
+  @override
+  String get v2IntroOptimize => '重複写真と類似写真を見つけ、ベストを残して残りを選択します。数秒で容量を確保。';
+
+  @override
+  String get v2SortLargest => 'サイズ順';
+
+  @override
+  String get v2SortNewest => '新しい順';
+
+  @override
+  String get v2EmptyCategory => '整理するものはありません';
+
+  @override
+  String get v2EmptyCategoryBody => 'このカテゴリはすでに整理済みです。';
+
+  @override
+  String get v2VideoCompress => 'ビデオ圧縮';
+
+  @override
+  String get v2VideoCompressSubtitle => 'タップして開始';
+
+  @override
+  String get v2VideoCompressBody => 'ビデオを小さなコピーに圧縮して容量を節約します。';
+
+  @override
+  String get v2CongratsTitle => 'おめでとうございます！';
+
+  @override
+  String get v2CongratsDeleted => '削除した項目';
+
+  @override
+  String v2CongratsSaved(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '約$minutes分を節約',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2CongratsUsing(String appName) {
+    return '$appNameを使って';
+  }
+
+  @override
+  String v2CongratsRecentlyDeleted(String size) {
+    return '「最近削除した項目」を空にすると$sizeが解放されます。';
+  }
+
+  @override
+  String get v2Great => 'OK';
+
+  @override
+  String get v2UnlockTitle => 'すべての機能を無制限に';
+
+  @override
+  String get v2UnlockFeature1 => '類似写真をすぐに発見';
+
+  @override
+  String get v2UnlockFeature2 => 'クリーンアップ無制限';
+
+  @override
+  String get v2UnlockFeature3 => '容量も時間も節約';
+
+  @override
+  String get v2PrivacyLine => '写真はデバイス上で分析され、アップロードされません。';
+
+  @override
+  String v2PerWeek(String price) {
+    return '$price/週・いつでも解約可';
+  }
+
+  @override
+  String v2PerYear(String price) {
+    return '$price/年';
+  }
+
+  @override
+  String v2SavePercent(int percent) {
+    return '$percent%お得';
+  }
+
+  @override
+  String v2FreeTrialDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days日間の無料トライアル',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2StartFreeTrial(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days日間の無料トライアルを開始',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2FreeThen(int days, String price) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days日間無料、その後$price',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2TrialEnabled => '無料トライアル有効';
+
+  @override
+  String get v2DueToday => '本日のお支払い';
+
+  @override
+  String v2DueOn(String date) {
+    return '$dateのお支払い';
+  }
+
+  @override
+  String v2DaysFree(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days日間無料',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2TryFree => '無料で試す';
+
+  @override
+  String get v2CleanYourStorage => 'ストレージをきれいに';
+
+  @override
+  String get v2GetRidOf => 'いらないものを手放そう';
+
+  @override
+  String get v2ProFeatures => 'スマート整理、ビデオ圧縮、シークレットスペース、制限なし。';
+
+  @override
+  String v2WelcomeTitle(String appName) {
+    return '$appNameへようこそ';
+  }
+
+  @override
+  String v2WelcomeAccess(String appName) {
+    return '$appNameは空き容量を増やすために写真へのアクセスが必要です。';
+  }
+
+  @override
+  String get v2WelcomePrivacy => '写真はデバイス上で分析され、当社のサーバーにアップロードされることはありません。';
+
+  @override
+  String get v2GetStarted => 'はじめる';
+
+  @override
+  String get v2Next => '次へ';
+
+  @override
+  String get v2OnbDupTitle => '重複写真を削除';
+
+  @override
+  String get v2OnbDupBody => '数秒で重複写真を見つけて、容量を取り戻しましょう。';
+
+  @override
+  String get v2OnbSwipeTitle => 'スワイプで整理';
+
+  @override
+  String get v2OnbSwipeBody => '左で削除、右で保存。こんなに速く整理できるのは初めて。';
+
+  @override
+  String get v2OnbVideoTitle => 'ビデオを圧縮';
+
+  @override
+  String get v2OnbVideoBody => '大きなビデオを小さくして、思い出はそのまま残しましょう。';
+
+  @override
+  String v2TryDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days日間お試し',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2ForFree => '無料！';
+
+  @override
+  String get v2ExtrasTitle => '便利ツール';
+
+  @override
+  String get v2ExtrasUtilities => 'ユーティリティ';
+
+  @override
+  String get v2ExtrasPrivate => 'プライベート';
+
+  @override
+  String get v2ChargingTitle => '充電アニメーション';
+
+  @override
+  String get v2ChargingBody => '充電画面をカスタマイズ';
+
+  @override
+  String get v2SecretTitle => 'シークレットライブラリ';
+
+  @override
+  String get v2SecretBody => 'プライベートな写真を保護';
+
+  @override
+  String get v2ScanPaused => 'スキャンを一時停止中';
+
+  @override
+  String get v2ContinueScan => '再開';
+
+  @override
+  String get v2PauseScan => 'スキャンを一時停止';
 }

@@ -7,6 +7,9 @@ import 'package:cleanup_app/services/subscription_manager.dart';
 import 'package:cleanup_app/views/home/home_view.dart';
 import 'package:cleanup_app/views/home/main_tab_view.dart';
 import 'package:cleanup_app/views/scanner/smart_clean_view.dart';
+import 'package:cleanup_app/views/v2/category_grid_view.dart';
+import 'package:cleanup_app/views/v2/cleanup_category.dart';
+import 'package:cleanup_app/views/v2/optimize_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
@@ -162,30 +165,29 @@ void main() {
   );
 
   testWidgets(
-    'Home tools reuse the cleanup tab and preserve category context',
+    'Home categories open over the tabs and switching tabs keeps Home state',
     (tester) async {
       final scanner = _Scanner();
       await _mount(tester, scanner, const MainTabView());
-      await tester.ensureVisible(find.text('Large files').first);
-      await tester.tap(find.text('Large files').first);
+      final large = find.byKey(const ValueKey('home-category-largeFiles'));
+      await tester.ensureVisible(large);
       await tester.pumpAndSettle();
-      expect(find.byType(SmartCleanView, skipOffstage: false), findsOneWidget);
+      await tester.tap(large);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('intro-lets-go')));
+      await tester.pumpAndSettle();
       expect(
-        tester
-            .widget<SmartCleanView>(find.byType(SmartCleanView))
-            .initialCategory,
-        'largeFiles',
+        tester.widget<CategoryGridView>(find.byType(CategoryGridView)).category,
+        CleanupCategory.largeFiles,
       );
-      await tester.tap(find.byKey(const ValueKey('main-tab-0')));
+      await tester.pageBack();
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('main-tab-1')));
       await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<SmartCleanView>(find.byType(SmartCleanView))
-            .initialCategory,
-        'largeFiles',
-      );
+      expect(find.byType(OptimizeTabView), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('main-tab-0')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('home-category-largeFiles')), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
     },
   );

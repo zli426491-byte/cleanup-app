@@ -1416,4 +1416,439 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get homePhotoScopeChanged =>
       'Akses foto mungkin berubah. Pindai lagi untuk memperbarui foto yang tersedia.';
+
+  @override
+  String get navOptimize => 'Optimalkan';
+
+  @override
+  String get navExtras => 'Lainnya';
+
+  @override
+  String get v2Before => 'Sebelum';
+
+  @override
+  String get v2After => 'Sesudah';
+
+  @override
+  String get v2Best => 'Terbaik';
+
+  @override
+  String get v2Cancel => 'Batal';
+
+  @override
+  String get v2Select => 'Pilih';
+
+  @override
+  String get v2SelectAll => 'Pilih semua';
+
+  @override
+  String get v2DeselectAll => 'Batalkan semua';
+
+  @override
+  String v2SelectedCount(int count) {
+    return '$count dipilih';
+  }
+
+  @override
+  String get v2CatSimilars => 'Mirip';
+
+  @override
+  String get v2CatDuplicates => 'Duplikat';
+
+  @override
+  String get v2CatVideos => 'Video';
+
+  @override
+  String get v2CatScreenshots => 'Tangkapan layar';
+
+  @override
+  String get v2CatBlurred => 'Buram';
+
+  @override
+  String get v2CatLarge => 'File besar';
+
+  @override
+  String get v2CatOther => 'Lainnya';
+
+  @override
+  String v2PhotoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count foto',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2VideoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count video',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2ItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Hapus $count item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteVideos(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Hapus $count video',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2DeleteSize(String size) {
+    return 'Hapus $size';
+  }
+
+  @override
+  String v2FreeCleanupsLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Sisa $count pembersihan gratis',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2SpaceToClean => 'Ruang untuk dibersihkan';
+
+  @override
+  String v2StorageUsedOf(String used, String total) {
+    return '$used dari $total terpakai';
+  }
+
+  @override
+  String get v2OptimizeTitle => 'Optimalkan penyimpanan';
+
+  @override
+  String get v2OptimizeSubtitle =>
+      'Kosongkan ruang dari file Anda dengan cepat';
+
+  @override
+  String get v2Scanning => 'Memindai pustaka Anda…';
+
+  @override
+  String v2ScanningCount(int done, int total) {
+    return '$done / $total';
+  }
+
+  @override
+  String get v2CheckingDuplicates => 'Memeriksa duplikat…';
+
+  @override
+  String get v2ScanStart => 'Pindai foto saya';
+
+  @override
+  String get v2PermissionTitle => 'Izinkan akses ke Foto';
+
+  @override
+  String v2PermissionBody(String appName) {
+    return '$appName memerlukan akses ke foto Anda untuk menemukan duplikat dan mengosongkan ruang. Foto Anda tetap di perangkat Anda.';
+  }
+
+  @override
+  String get v2OpenSettings => 'Buka Pengaturan';
+
+  @override
+  String get v2IntroLeft => 'Kiri';
+
+  @override
+  String get v2IntroToDelete => 'untuk hapus';
+
+  @override
+  String get v2IntroRight => 'Kanan';
+
+  @override
+  String get v2IntroToKeep => 'untuk simpan';
+
+  @override
+  String get v2LetsGo => 'Ayo mulai';
+
+  @override
+  String get v2IntroSimilars =>
+      'Foto yang mirip dikelompokkan. Kami menyimpan yang terbaik dan memilih sisanya untuk Anda.';
+
+  @override
+  String get v2IntroDuplicates =>
+      'Salinan persis dari foto yang sama. Simpan satu dan hapus sisanya sekali ketuk.';
+
+  @override
+  String get v2IntroVideos =>
+      'Tinjau semua video Anda. Urutkan menurut ukuran atau tanggal untuk melihat yang paling besar.';
+
+  @override
+  String get v2IntroScreenshots =>
+      'Tangkapan layar lama cepat menumpuk. Geser dan hapus yang tidak lagi Anda perlukan.';
+
+  @override
+  String get v2IntroBlurred =>
+      'Foto buram dan tidak fokus yang mungkin tidak ingin Anda simpan.';
+
+  @override
+  String get v2IntroLarge =>
+      'Foto dan video terbesar Anda. Menghapus beberapa saja membebaskan ruang paling banyak.';
+
+  @override
+  String get v2IntroOther =>
+      'Foto yang tidak termasuk kategori apa pun. Urutkan menurut ukuran atau tanggal dan hapus yang tidak perlu.';
+
+  @override
+  String get v2IntroOptimize =>
+      'Menemukan foto duplikat dan mirip, menyimpan yang terbaik, dan memilih sisanya. Kosongkan ruang dalam hitungan detik.';
+
+  @override
+  String get v2SortLargest => 'Terbesar';
+
+  @override
+  String get v2SortNewest => 'Terbaru';
+
+  @override
+  String get v2EmptyCategory => 'Tidak ada yang perlu dibersihkan';
+
+  @override
+  String get v2EmptyCategoryBody => 'Kategori ini sudah bersih.';
+
+  @override
+  String get v2VideoCompress => 'Kompres video';
+
+  @override
+  String get v2VideoCompressSubtitle => 'Ketuk untuk mulai';
+
+  @override
+  String get v2VideoCompressBody =>
+      'Kompres video menjadi salinan lebih kecil untuk menghemat ruang.';
+
+  @override
+  String get v2CongratsTitle => 'Selamat!';
+
+  @override
+  String get v2CongratsDeleted => 'Anda telah menghapus';
+
+  @override
+  String v2CongratsSaved(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Menghemat sekitar $minutes menit',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2CongratsUsing(String appName) {
+    return 'dengan $appName';
+  }
+
+  @override
+  String v2CongratsRecentlyDeleted(String size) {
+    return 'Kosongkan album “Baru Dihapus” di iPhone Anda untuk membebaskan $size.';
+  }
+
+  @override
+  String get v2Great => 'Mantap';
+
+  @override
+  String get v2UnlockTitle => 'Buka akses tanpa batas';
+
+  @override
+  String get v2UnlockFeature1 => 'Temukan foto mirip seketika';
+
+  @override
+  String get v2UnlockFeature2 => 'Bersihkan tanpa batas';
+
+  @override
+  String get v2UnlockFeature3 => 'Hemat ruang dan waktu';
+
+  @override
+  String get v2PrivacyLine =>
+      'Foto dianalisis di perangkat Anda dan tidak pernah diunggah.';
+
+  @override
+  String v2PerWeek(String price) {
+    return '$price/minggu, batalkan kapan saja';
+  }
+
+  @override
+  String v2PerYear(String price) {
+    return '$price/tahun';
+  }
+
+  @override
+  String v2SavePercent(int percent) {
+    return 'Hemat $percent%';
+  }
+
+  @override
+  String v2FreeTrialDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Uji coba gratis $days hari',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2StartFreeTrial(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Mulai uji coba gratis $days hari',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String v2FreeThen(int days, String price) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Gratis $days hari, lalu $price',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2TrialEnabled => 'Uji coba gratis aktif';
+
+  @override
+  String get v2DueToday => 'Bayar hari ini';
+
+  @override
+  String v2DueOn(String date) {
+    return 'Bayar pada $date';
+  }
+
+  @override
+  String v2DaysFree(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days hari gratis',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2TryFree => 'Coba gratis';
+
+  @override
+  String get v2CleanYourStorage => 'Bersihkan penyimpanan';
+
+  @override
+  String get v2GetRidOf => 'Singkirkan yang tidak Anda perlukan';
+
+  @override
+  String get v2ProFeatures =>
+      'Pembersihan pintar, kompres video, ruang rahasia, dan tanpa batas.';
+
+  @override
+  String v2WelcomeTitle(String appName) {
+    return 'Selamat datang di $appName';
+  }
+
+  @override
+  String v2WelcomeAccess(String appName) {
+    return '$appName memerlukan akses ke Foto untuk mengosongkan ruang.';
+  }
+
+  @override
+  String get v2WelcomePrivacy =>
+      'Foto dianalisis di perangkat Anda dan tidak pernah diunggah ke server kami.';
+
+  @override
+  String get v2GetStarted => 'Mulai';
+
+  @override
+  String get v2Next => 'Berikutnya';
+
+  @override
+  String get v2OnbDupTitle => 'Hapus foto duplikat';
+
+  @override
+  String get v2OnbDupBody =>
+      'Temukan foto duplikat dalam hitungan detik dan dapatkan kembali ruang Anda.';
+
+  @override
+  String get v2OnbSwipeTitle => 'Geser untuk bersihkan';
+
+  @override
+  String get v2OnbSwipeBody =>
+      'Geser ke kiri untuk hapus, ke kanan untuk simpan. Bersih-bersih jadi secepat ini.';
+
+  @override
+  String get v2OnbVideoTitle => 'Kompres video';
+
+  @override
+  String get v2OnbVideoBody =>
+      'Perkecil video besar dan tetap simpan kenangan Anda.';
+
+  @override
+  String v2TryDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Coba $days hari',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get v2ForFree => 'Gratis!';
+
+  @override
+  String get v2ExtrasTitle => 'Alat tambahan';
+
+  @override
+  String get v2ExtrasUtilities => 'Utilitas';
+
+  @override
+  String get v2ExtrasPrivate => 'Pribadi';
+
+  @override
+  String get v2ChargingTitle => 'Animasi pengisian daya';
+
+  @override
+  String get v2ChargingBody => 'Personalisasi layar pengisian daya';
+
+  @override
+  String get v2SecretTitle => 'Pustaka rahasia';
+
+  @override
+  String get v2SecretBody => 'Lindungi foto pribadi Anda';
+
+  @override
+  String get v2ScanPaused => 'Pemindaian dijeda';
+
+  @override
+  String get v2ContinueScan => 'Lanjutkan';
+
+  @override
+  String get v2PauseScan => 'Jeda pemindaian';
 }

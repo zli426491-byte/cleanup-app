@@ -82,7 +82,7 @@ void main() {
 
     subscription.finishStartup();
     await tester.pump();
-    expect(find.text('年訂閱'), findsOneWidget);
+    expect(find.text(tester.element(find.byType(PaywallView)).l10n.v2PerYear('NT\$990')), findsOneWidget);
     final subscribe = tester
         .element(find.byType(PaywallView))
         .l10n
@@ -112,7 +112,10 @@ void main() {
     await tester.tap(find.text('重新載入方案'));
     await tester.pump();
     expect(empty.retryCalls, 1);
-    expect(find.text('年訂閱'), findsOneWidget);
+    expect(
+      find.text(tester.element(find.byType(PaywallView)).l10n.v2PerYear('NT\$990')),
+      findsOneWidget,
+    );
     await tester.pumpWidget(const SizedBox.shrink());
     empty.dispose();
   });

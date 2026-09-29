@@ -1,12 +1,15 @@
 import 'package:cleanup_app/l10n/app_localizations.dart';
+import 'package:cleanup_app/l10n/l10n.dart';
 import 'package:cleanup_app/services/photo_scanner_service.dart';
 import 'package:cleanup_app/services/subscription_manager.dart';
 import 'package:cleanup_app/views/home/home_view.dart';
+import 'package:cleanup_app/views/v2/group_review_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:photo_manager/photo_manager.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _PhaseScanner extends PhotoScannerService {
   ScanPhase phase = ScanPhase.fetchingAssets;
@@ -127,7 +130,6 @@ class _LocalizedScanningPair extends _PairScanner {
 Future<void> _mount(
   WidgetTester tester,
   PhotoScannerService scanner, {
-  ValueChanged<String>? onOpenReview,
   Locale? locale,
   double textScale = 1,
 }) async {
@@ -147,12 +149,10 @@ Future<void> _mount(
           ).copyWith(textScaler: TextScaler.linear(textScale)),
           child: child!,
         ),
-        locale:
-            locale ??
-            const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+        locale: locale ?? const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: HomeView(onOpenReview: onOpenReview),
+        home: const HomeView(),
       ),
     ),
   );
@@ -160,20 +160,18 @@ Future<void> _mount(
 }
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   testWidgets(
     'home shows advancing analysis and verification after 42k indexing',
     (tester) async {
       final scanner = _PhaseScanner();
       await _mount(tester, scanner);
+      final strings = tester.element(find.byType(HomeView)).l10n;
       final strip = find.byKey(const ValueKey('home-scan-progress'));
       expect(
-        find.descendant(of: strip, matching: find.text('讀取相簿目錄')),
+        find.descendant(of: strip, matching: find.text(strings.v2Scanning)),
         findsOneWidget,
-      );
-      expect(
-        tester.getTopLeft(find.text('讀取相簿目錄')).dy,
-        lessThan(tester.getTopLeft(find.text('已讀取 42683 / 42683 個項目')).dy),
-        reason: 'The changing phase should lead before the fixed index total.',
       );
 
       scanner.phase = ScanPhase.computingHashes;
@@ -181,11 +179,7 @@ void main() {
       scanner.notifyListeners();
       await tester.pump();
       expect(
-        find.descendant(of: strip, matching: find.text('分析本機照片畫面')),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(of: strip, matching: find.text('照片畫面已處理 17 / 42682 張')),
+        find.descendant(of: strip, matching: find.text('17 / 42682')),
         findsOneWidget,
       );
       final previewProgress = tester.widget<LinearProgressIndicator>(
@@ -199,7 +193,7 @@ void main() {
       scanner.notifyListeners();
       await tester.pump();
       expect(
-        find.descendant(of: strip, matching: find.text('照片畫面已處理 18 / 42682 張')),
+        find.descendant(of: strip, matching: find.text('18 / 42682')),
         findsOneWidget,
       );
 
@@ -208,20 +202,17 @@ void main() {
       scanner.notifyListeners();
       await tester.pump();
       expect(
-        find.descendant(of: strip, matching: find.text('正在檢查真重複照片')),
+        find.descendant(
+          of: strip,
+          matching: find.text(strings.v2CheckingDuplicates),
+        ),
         findsOneWidget,
       );
       expect(
-        find.descendant(of: strip, matching: find.text('已處理 20 / 42682')),
+        find.descendant(of: strip, matching: find.text('20 / 42682')),
         findsOneWidget,
       );
-      expect(
-        find.descendant(of: strip, matching: find.textContaining('已等待 15 秒')),
-        findsOneWidget,
-      );
-      await tester.tap(
-        find.descendant(of: strip, matching: find.text('取消掃描並保留進度')),
-      );
+      await tester.tap(find.byKey(const ValueKey('home-scan-pause')));
       expect(scanner.cancels, 1);
       await tester.pumpWidget(const SizedBox());
     },
@@ -229,57 +220,51 @@ void main() {
 
   for (final withExact in [true, false]) {
     testWidgets(
-      'home hero displays a real ${withExact ? 'exact' : 'similar'} pair and opens its category',
+      'home card shows the real ${withExact ? 'exact' : 'similar'} pair and opens it',
       (tester) async {
+        SharedPreferences.setMockInitialValues({
+          'v2.intro.duplicates': true,
+          'v2.intro.similar': true,
+        });
         final semantics = tester.ensureSemantics();
         final scanner = _PairScanner(withExact: withExact);
-        String? opened;
-        await _mount(tester, scanner, onOpenReview: (value) => opened = value);
+        await _mount(tester, scanner);
+        final strings = tester.element(find.byType(HomeView)).l10n;
         final category = withExact ? 'duplicates' : 'similar';
-        final hero = find.byKey(ValueKey('home-photo-hero-$category'));
-        expect(hero, findsOneWidget);
-        expect(
-          find.descendant(
-            of: hero,
-            matching: find.byKey(const ValueKey('home-photo-preview-pair-a')),
-          ),
-          findsOneWidget,
-        );
-        expect(
-          find.descendant(
-            of: hero,
-            matching: find.byKey(const ValueKey('home-photo-preview-pair-b')),
-          ),
-          findsOneWidget,
-        );
-        expect(
-          find.descendant(
-            of: hero,
-            matching: find.byKey(
-              const ValueKey('home-photo-preview-unrelated'),
+        final other = withExact ? 'similar' : 'duplicates';
+        final card = find.byKey(ValueKey('home-category-$category'));
+        expect(card, findsOneWidget);
+        for (final id in ['pair-a', 'pair-b']) {
+          expect(
+            find.descendant(
+              of: card,
+              matching: find.byKey(ValueKey('home-preview-$id')),
             ),
+            findsOneWidget,
+          );
+        }
+        expect(find.byKey(const ValueKey('home-preview-unrelated')), findsNothing);
+        // A pair confirmed as an exact duplicate is not repeated as similar.
+        expect(
+          find.descendant(
+            of: find.byKey(ValueKey('home-category-$other')),
+            matching: find.byKey(const ValueKey('home-preview-pair-a')),
           ),
           findsNothing,
         );
+        final title = withExact
+            ? strings.v2CatDuplicates
+            : strings.v2CatSimilars;
         expect(
-          find.descendant(
-            of: hero,
-            matching: find.byWidgetPredicate(
-              (widget) =>
-                  widget is Semantics &&
-                  widget.properties.label?.contains(
-                        withExact ? '真重複照片' : '視覺相似照片',
-                      ) ==
-                      true &&
-                  widget.properties.onTap != null,
-            ),
-          ),
+          find.bySemanticsLabel('$title, ${strings.v2PhotoCount(2)}'),
           findsOneWidget,
         );
-        await tester.tap(
-          find.descendant(of: hero, matching: find.text('整理已載入照片')),
+        await tester.tap(card);
+        await tester.pumpAndSettle();
+        final review = tester.widget<GroupReviewView>(
+          find.byType(GroupReviewView),
         );
-        expect(opened, category);
+        expect(review.sections.single.id, category);
         await tester.pumpWidget(const SizedBox());
         semantics.dispose();
       },
@@ -287,7 +272,7 @@ void main() {
   }
 
   for (final viewport in [const Size(390, 844), const Size(1180, 820)]) {
-    testWidgets('home keeps photos first and adapts cards to $viewport', (
+    testWidgets('home keeps grouped photos first and adapts tiles to $viewport', (
       tester,
     ) async {
       tester.view.physicalSize = viewport;
@@ -295,26 +280,23 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       await _mount(tester, _PairScanner(withExact: true));
-      final hero = find.byKey(const ValueKey('home-photo-hero-duplicates'));
-      final swipe = find.byKey(const ValueKey('home-swipe-entry'));
-      final tools = find.byKey(const ValueKey('home-category-duplicates'));
-      expect(tester.getTopLeft(hero).dy, lessThan(tester.getTopLeft(swipe).dy));
+      final duplicates = find.byKey(const ValueKey('home-category-duplicates'));
+      final videos = find.byKey(const ValueKey('home-category-videos'));
+      final other = find.byKey(const ValueKey('home-category-other'));
       expect(
-        tester.getTopLeft(swipe).dy,
-        lessThan(tester.getTopLeft(tools).dy),
+        tester.getTopLeft(duplicates).dy,
+        lessThan(tester.getTopLeft(videos).dy),
       );
-      final preview = find.byKey(
-        const ValueKey('home-tool-preview-duplicates'),
-      );
-      expect(
-        tester.getSize(preview).width,
-        viewport.width < 540 ? 112 : greaterThan(200),
-      );
+      // Two columns on iPhone; iPad adds columns instead of stretching tiles.
+      final tileWidth = tester.getSize(videos).width;
+      expect(tileWidth, lessThanOrEqualTo(viewport.width / 2));
+      expect(tileWidth, lessThan(260));
+      expect(tester.getSize(other).width, tileWidth);
       expect(
         tester
-            .getSize(find.byKey(const ValueKey('home-photo-preview-pair-a')))
+            .getSize(find.byKey(const ValueKey('home-preview-pair-a')))
             .height,
-        viewport.width < 540 ? greaterThan(140) : greaterThan(250),
+        greaterThan(140),
       );
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
@@ -341,7 +323,7 @@ void main() {
           findsOneWidget,
         );
         expect(
-          find.byKey(const ValueKey('home-photo-hero-duplicates')),
+          find.byKey(const ValueKey('home-category-duplicates')),
           findsOneWidget,
         );
         expect(

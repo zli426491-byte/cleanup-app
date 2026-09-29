@@ -200,7 +200,7 @@ void main() {
     },
   );
 
-  testWidgets('partially indexed home never marks empty categories complete', (
+  testWidgets('partially indexed home offers to continue; complete home does not', (
     tester,
   ) async {
     await _mount(
@@ -208,17 +208,12 @@ void main() {
       const HomeView(),
       scanner: _Scanner(indexComplete: false),
     );
-    expect(find.text('Done ✓'), findsNothing);
-    expect(
-      find.text(
-        'The library is still being indexed. This category will update as indexing progresses.',
-      ),
-      findsNWidgets(4),
-    );
+    // One of two items indexed: the scan is shown as paused, never as done.
+    expect(find.byKey(const ValueKey('home-scan-paused')), findsOneWidget);
+    expect(find.text('1 / 2'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     await _mount(tester, const HomeView());
-    // Photos have not been measured, so large files must remain pending.
-    expect(find.text('Done ✓'), findsNWidgets(4));
+    expect(find.byKey(const ValueKey('home-scan-paused')), findsNothing);
     await tester.pumpWidget(const SizedBox());
   });
 

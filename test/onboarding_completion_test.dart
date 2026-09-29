@@ -1,5 +1,4 @@
-import 'dart:ui' show SemanticsAction;
-
+import 'package:cleanup_app/l10n/app_localizations.dart';
 import 'package:cleanup_app/l10n/locale_controller.dart';
 import 'package:cleanup_app/services/photo_scanner_service.dart';
 import 'package:cleanup_app/services/subscription_manager.dart';
@@ -13,47 +12,52 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _PushObserver extends NavigatorObserver {
-  int pushes = 0;
-  @override
-  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) => pushes++;
-}
-
 void main() {
-  const channel = MethodChannel('app_tracking_transparency');
+  TestWidgetsFlutterBinding.ensureInitialized();
+  const tracking = MethodChannel('app_tracking_transparency');
+  const photos = MethodChannel('com.fluttercandies/photo_manager');
   late int attRequests;
+  late int permissionRequests;
   late SubscriptionManager subscription;
   late PhotoScannerService scanner;
   late LocaleController locales;
-  late _PushObserver observer;
+  final messenger =
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
   setUp(() {
     attRequests = 0;
+    permissionRequests = 0;
     subscription = SubscriptionManager();
     scanner = PhotoScannerService();
     locales = LocaleController();
-    observer = _PushObserver();
     SharedPreferences.setMockInitialValues({});
     PackageInfo.setMockInitialValues(
       appName: 'Cleanup',
       packageName: 'com.cleanupapp.cleaner',
       version: '1.1.3',
-      buildNumber: '43',
+      buildNumber: '46',
       buildSignature: '',
     );
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(channel, (call) async {
-          attRequests++;
-          return 3;
-        });
+    messenger.setMockMethodCallHandler(tracking, (call) async {
+      attRequests++;
+      return 3;
+    });
+    // Photos access is declined: onboarding must still continue.
+    messenger.setMockMethodCallHandler(photos, (call) async {
+      if (call.method == 'requestPermissionExtend') {
+        permissionRequests++;
+        return 2;
+      }
+      return null;
+    });
   });
 
   tearDown(() {
     subscription.dispose();
     scanner.dispose();
     locales.dispose();
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(channel, null);
+    messenger.setMockMethodCallHandler(tracking, null);
+    messenger.setMockMethodCallHandler(photos, null);
   });
 
   Future<void> mount(WidgetTester tester) async {
@@ -67,7 +71,9 @@ void main() {
           ChangeNotifierProvider<LocaleController>.value(value: locales),
         ],
         child: MaterialApp(
-          navigatorObservers: [observer],
+          locale: const Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           builder: (context, child) => MediaQuery(
             data: MediaQuery.of(context).copyWith(disableAnimations: true),
             child: child!,
@@ -79,45 +85,54 @@ void main() {
     await tester.pump();
   }
 
-  Future<void> verifyFinished(WidgetTester tester) async {
+  Future<void> reachPaywall(WidgetTester tester) async {
+    await tester.tap(find.byKey(const ValueKey('onboarding-get-started')));
     await tester.pumpAndSettle();
+    expect(permissionRequests, 1);
+    for (var step = 0; step < 3; step++) {
+      await tester.tap(find.byKey(const ValueKey('onboarding-next')));
+      await tester.pumpAndSettle();
+    }
+    expect(find.byType(PaywallView), findsOneWidget);
     expect(
       (await SharedPreferences.getInstance()).getBool('hasCompletedOnboarding'),
-      isTrue,
+      isNull,
     );
-    expect(find.byType(MainTabView), findsOneWidget);
-    expect(find.byType(PaywallView), findsNothing);
-    expect(attRequests, 0);
-    expect(observer.pushes, 2);
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox.shrink());
   }
 
-  testWidgets('skip saves completion and opens the app immediately', (
-    tester,
-  ) async {
-    await mount(tester);
-    final semantics = tester.ensureSemantics();
-    final skip = find.widgetWithText(TextButton, '跳過');
-    final node = tester.getSemantics(skip);
-    node.owner!.performAction(node.id, SemanticsAction.tap);
-    await verifyFinished(tester);
-    semantics.dispose();
-  });
-
   testWidgets(
-    'start free double activation navigates once without ATT or paywall',
+    'Get started asks for Photos once and the steps lead to the paywall',
     (tester) async {
       await mount(tester);
-      for (var page = 1; page < 4; page++) {
-        await tester.tap(find.text('繼續'));
-        await tester.pumpAndSettle();
-      }
-      expect(find.text('4/4'), findsOneWidget);
-      final button = tester.widget<InkWell>(find.byType(InkWell).last);
-      button.onTap!();
-      button.onTap!();
-      await verifyFinished(tester);
+      await reachPaywall(tester);
+      expect(attRequests, 0);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets(
+    'closing the onboarding paywall twice completes onboarding once',
+    (tester) async {
+      await mount(tester);
+      await reachPaywall(tester);
+      final close = tester.widget<IconButton>(
+        find.byKey(const ValueKey('paywall-close')),
+      );
+      close.onPressed!();
+      close.onPressed!();
+      await tester.pumpAndSettle();
+      expect(
+        (await SharedPreferences.getInstance()).getBool(
+          'hasCompletedOnboarding',
+        ),
+        isTrue,
+      );
+      expect(find.byType(MainTabView), findsOneWidget);
+      expect(find.byType(PaywallView), findsNothing);
+      expect(attRequests, 0);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
     },
   );
 }

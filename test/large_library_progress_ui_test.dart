@@ -6,6 +6,8 @@ import 'package:cleanup_app/services/subscription_manager.dart';
 import 'package:cleanup_app/views/home/home_view.dart';
 import 'package:cleanup_app/views/scanner/asset_thumbnail.dart';
 import 'package:cleanup_app/views/scanner/smart_clean_view.dart';
+import 'package:cleanup_app/views/v2/category_grid_view.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -272,23 +274,29 @@ void main() {
   testWidgets(
     'home exposes indexed photos before the first analysis finishes',
     (tester) async {
+      SharedPreferences.setMockInitialValues({'v2.intro.other': true});
       final scanner = _LargeScanner();
       await _mount(tester, scanner, const HomeView());
-      expect(find.text('尚待原始素材驗證'), findsNWidgets(2));
-      expect(find.text('尚待畫面分析'), findsOneWidget);
-      expect(find.text('已完成 ✓'), findsNothing);
-      await tester.ensureVisible(find.text('整理已載入照片'));
+      final strings = tester.element(find.byType(HomeView)).l10n;
+      // Indexing is complete, so the status reports analysis progress.
+      expect(find.text(strings.v2ScanningCount(0, 42682)), findsOneWidget);
+      expect(find.text(strings.v2PhotoCount(42680)), findsOneWidget);
+      scanner.assets.reads = 0;
+      scanner.tickWait();
       await tester.pump();
-      await tester.tap(find.text('整理已載入照片'));
+      expect(
+        scanner.assets.reads,
+        0,
+        reason: 'A wait heartbeat must not re-filter the 42k library on Home.',
+      );
+      final other = find.byKey(const ValueKey('home-category-other'));
+      await tester.ensureVisible(other);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(other);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
-      expect(find.byType(SmartCleanView), findsOneWidget);
-      expect(
-        tester
-            .widget<SmartCleanView>(find.byType(SmartCleanView))
-            .initialCategory,
-        'photos',
-      );
+      expect(find.byType(CategoryGridView), findsOneWidget);
+      expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
     },
   );

@@ -1,11 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:cleanup_app/l10n/l10n.dart';
-import 'package:smooth_page_indicator/smooth_page_indicator.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../../analytics/analytics_manager.dart';
-import '../../utils/app_theme.dart';
-import '../home/main_tab_view.dart';
+import 'package:photo_manager/photo_manager.dart';
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../analytics/analytics_manager.dart';
+import '../../models/storage_info.dart';
+import '../../services/photo_scanner_service.dart';
+import '../../services/subscription_manager.dart';
+import '../../utils/app_theme.dart';
+import '../../utils/constants.dart';
+import '../paywall/paywall_view.dart';
+import '../v2/ui_kit.dart';
+
+/// Welcome → Photos permission → three feature steps → trial teaser →
+/// onboarding paywall. Closing the paywall completes onboarding.
 class OnboardingView extends StatefulWidget {
   const OnboardingView({super.key});
 
@@ -13,442 +24,549 @@ class OnboardingView extends StatefulWidget {
   State<OnboardingView> createState() => _OnboardingViewState();
 }
 
-class _OnboardingViewState extends State<OnboardingView>
-    with TickerProviderStateMixin {
-  final _controller = PageController();
-  int _currentPage = 0;
-  bool _isCompleting = false;
-  bool _reduceMotion = false;
-  late AnimationController _pulseController;
+class _OnboardingViewState extends State<OnboardingView> {
+  static const _stepCount = 3;
 
-  List<_PageData> get _pages => [
-    _PageData(
-      Icons.auto_awesome_rounded,
-      context.l10n.onboardingSmartTitle,
-      context.l10n.onboardingSmartSubtitle,
-      AppTheme.primary,
-      AppTheme.primaryMuted,
-    ),
-    _PageData(
-      Icons.photo_library_rounded,
-      context.l10n.onboardingPhotosTitle,
-      context.l10n.onboardingPhotosSubtitle,
-      AppTheme.warning,
-      AppTheme.accent,
-    ),
-    _PageData(
-      Icons.swipe_rounded,
-      context.l10n.onboardingSwipeTitle,
-      context.l10n.onboardingSwipeSubtitle,
-      AppTheme.primary,
-      AppTheme.primaryMuted,
-    ),
-    _PageData(
-      Icons.check_circle_outline_rounded,
-      context.l10n.onboardingChoiceTitle,
-      context.l10n.onboardingChoiceSubtitle,
-      AppTheme.primary,
-      AppTheme.primaryMuted,
-    ),
-  ];
+  /// -1 = welcome, 0.._stepCount-1 = feature steps.
+  int _step = -1;
+  bool _busy = false;
+  StorageInfo _storage = StorageInfo.unknown;
 
   @override
   void initState() {
     super.initState();
     AnalyticsManager.instance.track(AnalyticsEvent.onboardingStarted.name);
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    );
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _reduceMotion = MediaQuery.disableAnimationsOf(context);
-    if (_reduceMotion) {
-      _pulseController.stop();
-      _pulseController.value = 0;
-    } else if (!_pulseController.isAnimating) {
-      _pulseController.repeat(reverse: true);
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _pulseController.dispose();
-    super.dispose();
+    StorageInfo.current().then((info) {
+      if (mounted) setState(() => _storage = info);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final page = _pages[_currentPage];
-
     return Scaffold(
-      backgroundColor: AppTheme.bg,
-      body: Stack(
-        children: [
-          // Animated background gradient blobs
-          AnimatedBuilder(
-            animation: _pulseController,
-            builder: (_, child) => Stack(
-              children: [
-                Positioned(
-                  top: -60 + _pulseController.value * 20,
-                  right: -40,
-                  child: Container(
-                    width: 200,
-                    height: 200,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          page.c1.withValues(alpha: 0.12),
-                          page.c1.withValues(alpha: 0),
-                        ],
-                      ),
+      body: SafeArea(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: AnimatedSwitcher(
+              duration: MediaQuery.disableAnimationsOf(context)
+                  ? Duration.zero
+                  : const Duration(milliseconds: 220),
+              child: _step < 0
+                  ? _Welcome(
+                      key: const ValueKey('onboarding-welcome'),
+                      storage: _storage,
+                      busy: _busy,
+                      onStart: _requestAccess,
+                    )
+                  : _FeatureStep(
+                      key: ValueKey('onboarding-step-$_step'),
+                      step: _step,
+                      count: _stepCount,
+                      busy: _busy,
+                      onNext: _next,
                     ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _requestAccess() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      final state = await PhotoManager.requestPermissionExtend();
+      if (!mounted) return;
+      if (state.hasAccess) {
+        // Start finding clutter while the user reads the next steps, so the
+        // trial page and home screen already show real counts.
+        unawaited(context.read<PhotoScannerService>().startContinuousScan());
+      }
+    } catch (_) {
+      // Home keeps a manual scan action and a Settings shortcut.
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _step = 0;
+        });
+      }
+    }
+  }
+
+  Future<void> _next() async {
+    if (_busy) return;
+    if (_step < _stepCount - 1) {
+      setState(() => _step++);
+      return;
+    }
+    setState(() => _busy = true);
+    AnalyticsManager.instance.track(AnalyticsEvent.onboardingCompleted.name);
+    final sub = context.read<SubscriptionManager>();
+    final trialDays = [
+      for (final product in sub.storeProducts) sub.freeTrialDays(product),
+    ].whereType<int>().fold<int?>(null, (a, b) => a == null || b > a ? b : a);
+    if (trialDays != null) {
+      await Navigator.of(context).push(
+        PageRouteBuilder<void>(
+          opaque: true,
+          transitionDuration: const Duration(milliseconds: 250),
+          pageBuilder: (_, _, _) => _TrialTeaser(days: trialDays),
+          transitionsBuilder: (_, animation, _, child) =>
+              FadeTransition(opacity: animation, child: child),
+        ),
+      );
+      if (!mounted) return;
+    }
+    await Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(
+        builder: (_) => const PaywallView(fromOnboarding: true),
+      ),
+    );
+  }
+}
+
+class _Welcome extends StatelessWidget {
+  const _Welcome({
+    super.key,
+    required this.storage,
+    required this.busy,
+    required this.onStart,
+  });
+
+  final StorageInfo storage;
+  final bool busy;
+  final VoidCallback onStart;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final known = !storage.isEstimate && storage.totalSpace > 0;
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 48, 24, 16),
+            child: Column(
+              children: [
+                Text(
+                  l10n.v2WelcomeTitle(l10n.appName),
+                  textAlign: TextAlign.center,
+                  style: AppTheme.heading1.copyWith(fontSize: 34, height: 1.15),
+                ),
+                const SizedBox(height: 48),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 40,
+                  runSpacing: 16,
+                  children: [
+                    _AppTile(
+                      icon: Icons.photo_library_rounded,
+                      label: l10n.scanCategoryPhotos,
+                      colors: const [Color(0xFFFFB347), Color(0xFFFF5E62)],
+                    ),
+                    _AppTile(
+                      icon: Icons.video_library_rounded,
+                      label: l10n.v2CatVideos,
+                      colors: const [Color(0xFF5AC8FA), Color(0xFF0A7AFF)],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 36),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: known ? storage.usedPercentage : 0.9,
+                    minHeight: 16,
+                    color: AppTheme.danger,
+                    backgroundColor: AppTheme.primaryLight,
                   ),
                 ),
-                Positioned(
-                  bottom: 100 - _pulseController.value * 15,
-                  left: -60,
-                  child: Container(
-                    width: 180,
-                    height: 180,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          page.c2.withValues(alpha: 0.1),
-                          page.c2.withValues(alpha: 0),
-                        ],
-                      ),
+                const SizedBox(height: 14),
+                if (known)
+                  Text(
+                    l10n.v2StorageUsedOf(
+                      storage.usedSpaceFormatted,
+                      storage.totalSpaceFormatted,
                     ),
+                    style: AppTheme.heading2.copyWith(fontSize: 22),
                   ),
+                const SizedBox(height: 40),
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: '${l10n.v2WelcomeAccess(l10n.appName)} ',
+                        style: const TextStyle(color: AppTheme.textTitle),
+                      ),
+                      TextSpan(text: l10n.v2WelcomePrivacy),
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
+                  style: AppTheme.caption.copyWith(height: 1.4),
                 ),
               ],
             ),
           ),
+        ),
+        BottomAction(
+          child: BigButton(
+            key: const ValueKey('onboarding-get-started'),
+            label: l10n.v2GetStarted,
+            loading: busy,
+            onPressed: onStart,
+          ),
+        ),
+        const _LegalLinks(),
+      ],
+    );
+  }
+}
 
-          SafeArea(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 640),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 12),
-                    // Top bar
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // Step indicator
-                          Expanded(
-                            child: Semantics(
-                              liveRegion: true,
-                              child: Text(
-                                context.l10n.onboardingStep(
-                                  _currentPage + 1,
-                                  _pages.length,
-                                ),
-                                style: const TextStyle(
-                                  color: AppTheme.textMuted,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                          if (_currentPage < _pages.length - 1)
-                            Flexible(
-                              child: TextButton(
-                                style: TextButton.styleFrom(
-                                  minimumSize: const Size(44, 44),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                  ),
-                                  foregroundColor: AppTheme.textSecondary,
-                                ),
-                                onPressed: _isCompleting
-                                    ? null
-                                    : _completeOnboarding,
-                                child: Text(
-                                  context.l10n.onboardingSkip,
-                                  textAlign: TextAlign.end,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
+class _FeatureStep extends StatelessWidget {
+  const _FeatureStep({
+    super.key,
+    required this.step,
+    required this.count,
+    required this.busy,
+    required this.onNext,
+  });
+
+  final int step;
+  final int count;
+  final bool busy;
+  final VoidCallback onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final (title, body, art) = switch (step) {
+      0 => (
+        l10n.v2OnbDupTitle,
+        l10n.v2OnbDupBody,
+        const _StackedPhotos() as Widget,
+      ),
+      1 => (l10n.v2OnbSwipeTitle, l10n.v2OnbSwipeBody, const _SwipeArt()),
+      _ => (l10n.v2OnbVideoTitle, l10n.v2OnbVideoBody, const _VideoArt()),
+    };
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+          child: Semantics(
+            container: true,
+            label: l10n.onboardingStep(step + 1, count),
+            child: Row(
+              children: [
+                for (var i = 0; i < count; i++) ...[
+                  if (i > 0) const SizedBox(width: 6),
+                  Expanded(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: i <= step
+                            ? AppTheme.primary
+                            : AppTheme.primaryLight,
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-
-                    // Pages
-                    Expanded(
-                      child: PageView.builder(
-                        controller: _controller,
-                        onPageChanged: (i) => setState(() => _currentPage = i),
-                        itemCount: _pages.length,
-                        itemBuilder: (ctx, i) => _buildPage(_pages[i]),
-                      ),
-                    ),
-
-                    // Bottom section
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(28, 0, 28, 16),
-                      child: Column(
-                        children: [
-                          ExcludeSemantics(
-                            child: SmoothPageIndicator(
-                              controller: _controller,
-                              count: _pages.length,
-                              effect: ExpandingDotsEffect(
-                                dotHeight: 6,
-                                dotWidth: 6,
-                                expansionFactor: 4,
-                                activeDotColor: page.c1,
-                                dotColor: const Color(0xFFE2E8F0),
-                                spacing: 5,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-                          // CTA
-                          _buildButton(),
-                          const SizedBox(height: 20),
-                        ],
-                      ),
-                    ),
-                  ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(28, 36, 28, 16),
+            child: Column(
+              children: [
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: AppTheme.heading1.copyWith(fontSize: 32, height: 1.15),
                 ),
+                const SizedBox(height: 12),
+                Text(
+                  body,
+                  textAlign: TextAlign.center,
+                  style: AppTheme.body.copyWith(color: AppTheme.textSecondary),
+                ),
+                const SizedBox(height: 40),
+                FittedBox(fit: BoxFit.scaleDown, child: art),
+              ],
+            ),
+          ),
+        ),
+        BottomAction(
+          child: BigButton(
+            key: const ValueKey('onboarding-next'),
+            label: l10n.v2Next,
+            loading: busy,
+            onPressed: onNext,
+          ),
+        ),
+        const _LegalLinks(),
+      ],
+    );
+  }
+}
+
+class _LegalLinks extends StatelessWidget {
+  const _LegalLinks();
+
+  @override
+  Widget build(BuildContext context) {
+    const style = TextStyle(
+      fontSize: 12,
+      color: AppTheme.textSecondary,
+      decoration: TextDecoration.underline,
+    );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        children: [
+          TextButton(
+            onPressed: () => launchUrl(Uri.parse(AppConstants.privacyPolicyUrl)),
+            child: Text(context.l10n.paywallPrivacyPolicy, style: style),
+          ),
+          TextButton(
+            onPressed: () => launchUrl(Uri.parse(AppConstants.termsUrl)),
+            child: Text(context.l10n.paywallTerms, style: style),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Full-screen "Try N days / For free!" moment before the trial paywall.
+class _TrialTeaser extends StatefulWidget {
+  const _TrialTeaser({required this.days});
+  final int days;
+
+  @override
+  State<_TrialTeaser> createState() => _TrialTeaserState();
+}
+
+class _TrialTeaserState extends State<_TrialTeaser> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(const Duration(milliseconds: 1400), () {
+      if (mounted) Navigator.of(context).pop();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: RadialGradient(
+          colors: [Color(0xFFDDEBFF), Colors.white],
+          radius: 0.8,
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.auto_awesome_rounded,
+              color: Color(0xFF7FB3FF),
+              size: 36,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              context.l10n.v2TryDays(widget.days),
+              style: const TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF2EA8FF),
+              ),
+            ),
+            Text(
+              context.l10n.v2ForFree,
+              style: AppTheme.heading1.copyWith(fontSize: 46),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+// ── Illustrations (shapes only, no bitmap assets) ──
+
+class _AppTile extends StatelessWidget {
+  const _AppTile({
+    required this.icon,
+    required this.label,
+    required this.colors,
+  });
+
+  final IconData icon;
+  final String label;
+  final List<Color> colors;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      Container(
+        width: 96,
+        height: 96,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: ShaderMask(
+          shaderCallback: (bounds) => LinearGradient(
+            colors: colors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ).createShader(bounds),
+          child: Icon(icon, size: 56, color: Colors.white),
+        ),
+      ),
+      const SizedBox(height: 10),
+      Text(label, style: AppTheme.heading3.copyWith(fontSize: 17)),
+    ],
+  );
+}
+
+Widget _photoCard(List<Color> colors, IconData icon, {double w = 150}) =>
+    Container(
+      width: w,
+      height: w * 0.78,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: LinearGradient(
+          colors: colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Icon(icon, color: Colors.white.withValues(alpha: 0.9), size: 54),
+    );
+
+class _StackedPhotos extends StatelessWidget {
+  const _StackedPhotos();
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: Column(
+      children: [
+        _photoCard(
+          const [Color(0xFFB8D8FF), Color(0xFF5B8DEF)],
+          Icons.landscape_rounded,
+        ),
+        const SizedBox(height: 10),
+        _photoCard(
+          const [Color(0xFFFFD39B), Color(0xFFF08A5D)],
+          Icons.face_rounded,
+        ),
+        const SizedBox(height: 10),
+        _photoCard(
+          const [Color(0xFFE3E7EE), Color(0xFFA7B1C2)],
+          Icons.pets_rounded,
+        ),
+      ],
+    ),
+  );
+}
+
+class _SwipeArt extends StatelessWidget {
+  const _SwipeArt();
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: SizedBox(
+      height: 260,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Transform.translate(
+            offset: const Offset(-70, 20),
+            child: Transform.rotate(
+              angle: -0.18,
+              child: _photoCard(
+                const [Color(0xFFFFC2C2), Color(0xFFE5302A)],
+                Icons.delete_outline_rounded,
+                w: 160,
+              ),
+            ),
+          ),
+          Transform.translate(
+            offset: const Offset(70, -10),
+            child: Transform.rotate(
+              angle: 0.16,
+              child: _photoCard(
+                const [Color(0xFFBFF0CF), Color(0xFF1FA84F)],
+                Icons.check_rounded,
+                w: 160,
               ),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildPage(_PageData page) {
-    return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: constraints.maxHeight),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Triple ring icon
-                AnimatedBuilder(
-                  animation: _pulseController,
-                  builder: (_, child) {
-                    final scale = 1.0 + _pulseController.value * 0.03;
-                    return Transform.scale(
-                      scale: scale,
-                      child: Container(
-                        width: 160,
-                        height: 160,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: page.c1.withValues(alpha: 0.06),
-                            width: 1,
-                          ),
-                        ),
-                        child: Center(
-                          child: Container(
-                            width: 120,
-                            height: 120,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: page.c1.withValues(alpha: 0.1),
-                                width: 1,
-                              ),
-                            ),
-                            child: Center(
-                              child: Container(
-                                width: 80,
-                                height: 80,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: LinearGradient(
-                                    colors: [page.c1, page.c2],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: page.c1.withValues(alpha: 0.35),
-                                      blurRadius: 30,
-                                      offset: const Offset(0, 12),
-                                    ),
-                                  ],
-                                ),
-                                child: Icon(
-                                  page.icon,
-                                  size: 36,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 48),
-                Text(
-                  page.title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.textPrimary,
-                    letterSpacing: -0.8,
-                    height: 1.1,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  page.subtitle,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    color: AppTheme.textSecondary,
-                    height: 1.7,
-                    letterSpacing: 0.1,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildButton() {
-    return Container(
-      width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 56),
-      decoration: BoxDecoration(
-        color: AppTheme.primary,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primary.withValues(alpha: 0.25),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: _isCompleting ? null : _onNext,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: Text(
-                    _isCompleting
-                        ? context.l10n.onboardingPreparing
-                        : _currentPage < _pages.length - 1
-                        ? context.l10n.onboardingContinue
-                        : context.l10n.onboardingStartFree,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                if (_isCompleting)
-                  const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                else
-                  const Icon(
-                    Icons.arrow_forward_rounded,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _onNext() async {
-    if (_isCompleting || !mounted) return;
-    if (_currentPage < _pages.length - 1) {
-      if (_reduceMotion) {
-        _controller.jumpToPage(_currentPage + 1);
-      } else {
-        _controller.nextPage(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-        );
-      }
-    } else {
-      await _completeOnboarding();
-    }
-  }
-
-  Future<void> _completeOnboarding() async {
-    if (_isCompleting || !mounted) return;
-    setState(() => _isCompleting = true);
-    try {
-      final preferences = await SharedPreferences.getInstance();
-      if (!await preferences.setBool('hasCompletedOnboarding', true)) {
-        throw StateError('Could not complete onboarding');
-      }
-      if (!mounted || !(ModalRoute.of(context)?.isCurrent ?? true)) return;
-      AnalyticsManager.instance.track(AnalyticsEvent.onboardingCompleted.name);
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const MainTabView()),
-        (route) => false,
-      );
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.serviceOperationFailed)),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isCompleting = false);
-    }
-  }
+    ),
+  );
 }
 
-class _PageData {
-  final IconData icon;
-  final String title, subtitle;
-  final Color c1, c2;
-  const _PageData(this.icon, this.title, this.subtitle, this.c1, this.c2);
+class _VideoArt extends StatelessWidget {
+  const _VideoArt();
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _photoCard(
+          const [Color(0xFF9CC7FF), Color(0xFF0A7AFF)],
+          Icons.play_arrow_rounded,
+          w: 140,
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8),
+          child: Icon(
+            Icons.keyboard_double_arrow_right_rounded,
+            color: AppTheme.primary,
+            size: 32,
+          ),
+        ),
+        _photoCard(
+          const [Color(0xFF9CC7FF), Color(0xFF0A7AFF)],
+          Icons.play_arrow_rounded,
+          w: 96,
+        ),
+      ],
+    ),
+  );
 }
