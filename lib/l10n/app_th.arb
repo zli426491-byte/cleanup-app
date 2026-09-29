@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "คุณลบไปแล้ว",
   "v2CongratsSaved": "{minutes, plural, other{ประหยัดเวลาประมาณ {minutes} นาที}}",
   "v2CongratsUsing": "ด้วย {appName}",
-  "v2CongratsRecentlyDeleted": "ล้างอัลบั้ม \"ที่เพิ่งลบ\" บน iPhone เพื่อเพิ่มพื้นที่ {size}",
+  "v2CongratsRecentlyDeleted": "รายการเหล่านี้จะอยู่ใน \"ที่เพิ่งลบ\" 30 วัน ลบออกจากที่นั่นเพื่อเพิ่มพื้นที่ประมาณ {size} ทันที",
   "v2Great": "เยี่ยม",
   "v2UnlockTitle": "ปลดล็อกการใช้งานไม่จำกัด",
   "v2UnlockFeature1": "ค้นหารูปที่คล้ายกันได้ทันที",
@@ -481,5 +481,6 @@
   "v2DailyLimitTitle": "ถึงขีดจำกัดการลบรายวันแล้ว",
   "v2DailyLimitBody": "เวอร์ชันฟรีลบได้วันละ {limit} รายการ ปลดล็อก Pro เพื่อยกเลิกขีดจำกัด",
   "v2DailyLimitRemaining": "{count, plural, other{วันนี้ลบฟรีได้อีก {count} รายการ เลือกให้น้อยลงหรือปลดล็อก Pro}}",
-  "v2SeeProOptions": "ดูตัวเลือก Pro"
+  "v2SeeProOptions": "ดูตัวเลือก Pro",
+  "v2SelectionOverLimitTitle": "เลือกเกินจำนวนของวันนี้"
 }

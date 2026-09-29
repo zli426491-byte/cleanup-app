@@ -1710,7 +1710,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Opróżnij album „Ostatnio usunięte”, aby zwolnić $size.';
+    return 'Te elementy pozostają w „Ostatnio usunięte” przez 30 dni. Usuń je tam, aby teraz zwolnić około $size.';
   }
 
   @override
@@ -1941,4 +1941,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get v2SeeProOptions => 'Zobacz opcje Pro';
+
+  @override
+  String get v2SelectionOverLimitTitle => 'Za dużo elementów na dziś';
 }

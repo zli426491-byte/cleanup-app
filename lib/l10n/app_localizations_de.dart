@@ -1747,7 +1747,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Leere das Album „Zuletzt gelöscht“, um $size freizugeben.';
+    return 'Diese Objekte bleiben 30 Tage in „Zuletzt gelöscht“. Lösche sie dort, um jetzt etwa $size freizugeben.';
   }
 
   @override
@@ -1965,4 +1965,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get v2SeeProOptions => 'Pro-Optionen ansehen';
+
+  @override
+  String get v2SelectionOverLimitTitle => 'Zu viele Objekte für heute';
 }

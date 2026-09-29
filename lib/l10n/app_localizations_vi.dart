@@ -1659,7 +1659,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Dọn album “Đã xóa gần đây” trên iPhone để giải phóng $size.';
+    return 'Các mục này nằm trong “Đã xóa gần đây” 30 ngày. Xóa chúng ở đó để giải phóng khoảng $size ngay.';
   }
 
   @override
@@ -1869,4 +1869,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get v2SeeProOptions => 'Xem các gói Pro';
+
+  @override
+  String get v2SelectionOverLimitTitle => 'Quá nhiều mục cho hôm nay';
 }

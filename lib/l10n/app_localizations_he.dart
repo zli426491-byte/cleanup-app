@@ -1672,7 +1672,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'רוקנו את האלבום „נמחקו לאחרונה” כדי לפנות \u2068$size\u2069.';
+    return 'הפריטים נשארים 30 יום ב„נמחקו לאחרונה”. מחקו אותם שם כדי לפנות כעת כ־\u2068$size\u2069.';
   }
 
   @override
@@ -1894,4 +1894,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get v2SeeProOptions => 'הצגת אפשרויות Pro';
+
+  @override
+  String get v2SelectionOverLimitTitle => 'יותר מדי פריטים להיום';
 }

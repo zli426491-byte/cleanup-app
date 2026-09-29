@@ -1769,7 +1769,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Esvazie o álbum “Apagados” no iPhone para libertar $size.';
+    return 'Estes itens ficam 30 dias em “Apagados”. Apague-os aí para libertar cerca de $size agora.';
   }
 
   @override
@@ -1987,4 +1987,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get v2SeeProOptions => 'Ver opções Pro';
+
+  @override
+  String get v2SelectionOverLimitTitle => 'Demasiados itens para hoje';
 }

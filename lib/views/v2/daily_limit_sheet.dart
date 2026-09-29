@@ -68,7 +68,9 @@ class DailyLimitSheet extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                l10n.v2DailyLimitTitle,
+                remaining > 0
+                    ? l10n.v2SelectionOverLimitTitle
+                    : l10n.v2DailyLimitTitle,
                 textAlign: TextAlign.center,
                 style: AppTheme.heading2.copyWith(fontSize: 22),
               ),

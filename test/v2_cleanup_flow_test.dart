@@ -599,6 +599,8 @@ void main() {
         find.text(strings.v2DailyLimitRemaining(AppConstants.maxFreeDeletes)),
         findsOneWidget,
       );
+      expect(find.text(strings.v2SelectionOverLimitTitle), findsOneWidget);
+      expect(find.text(strings.v2DailyLimitTitle), findsNothing);
       await tester.tap(find.byKey(const ValueKey('daily-limit-close')));
       await tester.pumpAndSettle();
       expect(await run, isEmpty);

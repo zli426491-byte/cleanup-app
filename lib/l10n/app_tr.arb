@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Sildiğiniz",
   "v2CongratsSaved": "{minutes, plural, other{Yaklaşık {minutes} dakika kazandınız}}",
   "v2CongratsUsing": "{appName} ile",
-  "v2CongratsRecentlyDeleted": "{size} yer açmak için iPhone’unuzdaki “Son Silinenler” albümünü boşaltın.",
+  "v2CongratsRecentlyDeleted": "Bu ögeler 30 gün boyunca “Son Silinenler”de kalır. Şimdi yaklaşık {size} yer açmak için onları orada silin.",
   "v2Great": "Harika",
   "v2UnlockTitle": "Sınırsız erişimin kilidini açın",
   "v2UnlockFeature1": "Benzer fotoğrafları anında bulun",
@@ -481,5 +481,6 @@
   "v2DailyLimitTitle": "Günlük silme sınırına ulaştınız",
   "v2DailyLimitBody": "Ücretsiz sürümde günde {limit} öge silebilirsiniz. Sınırı kaldırmak için Pro’ya geçin.",
   "v2DailyLimitRemaining": "{count, plural, other{Bugün {count} öge daha ücretsiz silebilirsiniz. Daha az seçin veya Pro’ya geçin.}}",
-  "v2SeeProOptions": "Pro seçeneklerini gör"
+  "v2SeeProOptions": "Pro seçeneklerini gör",
+  "v2SelectionOverLimitTitle": "Bugün için çok fazla öge"
 }

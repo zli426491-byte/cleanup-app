@@ -1721,7 +1721,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Очистите альбом «Недавно удалённые», чтобы освободить $size.';
+    return 'Эти объекты хранятся в «Недавно удалённых» 30 дней. Удалите их там, чтобы сразу освободить около $size.';
   }
 
   @override
@@ -1953,4 +1953,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get v2SeeProOptions => 'Посмотреть Pro';
+
+  @override
+  String get v2SelectionOverLimitTitle => 'Слишком много объектов на сегодня';
 }

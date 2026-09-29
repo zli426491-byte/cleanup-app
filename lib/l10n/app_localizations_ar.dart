@@ -1716,7 +1716,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'أفرغ ألبوم «المحذوفة مؤخرًا» على جهازك لتحرير \u2068$size\u2069.';
+    return 'تبقى هذه العناصر في «المحذوفة مؤخرًا» لمدة 30 يومًا. احذفها من هناك لتحرير نحو \u2068$size\u2069 الآن.';
   }
 
   @override
@@ -1955,4 +1955,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get v2SeeProOptions => 'عرض خيارات Pro';
+
+  @override
+  String get v2SelectionOverLimitTitle => 'عناصر كثيرة جدًا لليوم';
 }

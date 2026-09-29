@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "削除した項目",
   "v2CongratsSaved": "{minutes, plural, other{約{minutes}分を節約}}",
   "v2CongratsUsing": "{appName}を使って",
-  "v2CongratsRecentlyDeleted": "「最近削除した項目」を空にすると{size}が解放されます。",
+  "v2CongratsRecentlyDeleted": "これらの項目は「最近削除した項目」に30日間残ります。そこで削除すると、今すぐ約{size}を解放できます。",
   "v2Great": "OK",
   "v2UnlockTitle": "すべての機能を無制限に",
   "v2UnlockFeature1": "類似写真をすぐに発見",
@@ -481,5 +481,6 @@
   "v2DailyLimitTitle": "本日の削除上限に達しました",
   "v2DailyLimitBody": "無料版では1日に{limit}件まで削除できます。Proで制限を解除できます。",
   "v2DailyLimitRemaining": "{count, plural, other{本日あと{count}件まで無料で削除できます。選択を減らすか、Proを解除してください。}}",
-  "v2SeeProOptions": "Proプランを見る"
+  "v2SeeProOptions": "Proプランを見る",
+  "v2SelectionOverLimitTitle": "本日の上限を超える選択です"
 }

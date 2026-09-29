@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Has eliminado",
   "v2CongratsSaved": "{minutes, plural, one{Has ahorrado 1 minuto aprox.} other{Has ahorrado unos {minutes} minutos}}",
   "v2CongratsUsing": "con {appName}",
-  "v2CongratsRecentlyDeleted": "Vacía el álbum “Eliminado” de tu iPhone para liberar {size}.",
+  "v2CongratsRecentlyDeleted": "Estos elementos permanecen 30 días en “Eliminado”. Elimínalos allí para liberar unos {size} ahora.",
   "v2Great": "Genial",
   "v2UnlockTitle": "Desbloquea acceso ilimitado",
   "v2UnlockFeature1": "Encuentra fotos parecidas al instante",
@@ -481,5 +481,6 @@
   "v2DailyLimitTitle": "Has alcanzado el límite diario de eliminación",
   "v2DailyLimitBody": "Con la versión gratuita puedes eliminar {limit} elementos al día. Desbloquea Pro para quitar el límite.",
   "v2DailyLimitRemaining": "{count, plural, one{Hoy puedes eliminar 1 elemento más gratis. Selecciona menos o desbloquea Pro.} other{Hoy puedes eliminar {count} elementos más gratis. Selecciona menos o desbloquea Pro.}}",
-  "v2SeeProOptions": "Ver opciones Pro"
+  "v2SeeProOptions": "Ver opciones Pro",
+  "v2SelectionOverLimitTitle": "Demasiados elementos para hoy"
 }

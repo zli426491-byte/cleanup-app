@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Apagou",
   "v2CongratsSaved": "{minutes, plural, one{Poupou cerca de 1 minuto} other{Poupou cerca de {minutes} minutos}}",
   "v2CongratsUsing": "com {appName}",
-  "v2CongratsRecentlyDeleted": "Esvazie o álbum “Apagados” no iPhone para libertar {size}.",
+  "v2CongratsRecentlyDeleted": "Estes itens ficam 30 dias em “Apagados”. Apague-os aí para libertar cerca de {size} agora.",
   "v2Great": "Ótimo",
   "v2UnlockTitle": "Desbloqueie acesso ilimitado",
   "v2UnlockFeature1": "Encontre fotos parecidas num instante",
@@ -481,5 +481,6 @@
   "v2DailyLimitTitle": "Atingiu o limite diário de eliminação",
   "v2DailyLimitBody": "Na versão gratuita pode apagar {limit} itens por dia. Desbloqueie o Pro para remover o limite.",
   "v2DailyLimitRemaining": "{count, plural, one{Hoje ainda pode apagar 1 item grátis. Selecione menos ou desbloqueie o Pro.} other{Hoje ainda pode apagar {count} itens grátis. Selecione menos ou desbloqueie o Pro.}}",
-  "v2SeeProOptions": "Ver opções Pro"
+  "v2SeeProOptions": "Ver opções Pro",
+  "v2SelectionOverLimitTitle": "Demasiados itens para hoje"
 }

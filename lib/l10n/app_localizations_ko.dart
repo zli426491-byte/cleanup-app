@@ -1608,7 +1608,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return '\"최근 삭제된 항목\" 앨범을 비우면 $size가 확보됩니다.';
+    return '이 항목은 \"최근 삭제된 항목\"에 30일 동안 남아 있습니다. 그곳에서 삭제하면 지금 약 $size를 확보할 수 있습니다.';
   }
 
   @override
@@ -1812,4 +1812,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get v2SeeProOptions => 'Pro 옵션 보기';
+
+  @override
+  String get v2SelectionOverLimitTitle => '오늘 한도를 넘는 선택입니다';
 }

@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Ai șters",
   "v2CongratsSaved": "{minutes, plural, one{Ai economisit cam 1 minut} few{Ai economisit cam {minutes} minute} other{Ai economisit cam {minutes} de minute}}",
   "v2CongratsUsing": "cu {appName}",
-  "v2CongratsRecentlyDeleted": "Golește albumul „Șterse recent” ca să eliberezi {size}.",
+  "v2CongratsRecentlyDeleted": "Aceste elemente rămân 30 de zile în „Șterse recent”. Șterge-le de acolo ca să eliberezi acum aproximativ {size}.",
   "v2Great": "Grozav",
   "v2UnlockTitle": "Deblochează accesul nelimitat",
   "v2UnlockFeature1": "Găsește instant pozele similare",
@@ -481,5 +481,6 @@
   "v2DailyLimitTitle": "Ai atins limita zilnică de ștergere",
   "v2DailyLimitBody": "Versiunea gratuită permite ștergerea a {limit} elemente pe zi. Deblochează Pro pentru a elimina limita.",
   "v2DailyLimitRemaining": "{count, plural, one{Azi mai poți șterge gratuit 1 element. Selectează mai puține sau deblochează Pro.} few{Azi mai poți șterge gratuit {count} elemente. Selectează mai puține sau deblochează Pro.} other{Azi mai poți șterge gratuit {count} de elemente. Selectează mai puține sau deblochează Pro.}}",
-  "v2SeeProOptions": "Vezi opțiunile Pro"
+  "v2SeeProOptions": "Vezi opțiunile Pro",
+  "v2SelectionOverLimitTitle": "Prea multe elemente pentru azi"
 }

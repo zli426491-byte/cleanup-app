@@ -1714,7 +1714,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Golește albumul „Șterse recent” ca să eliberezi $size.';
+    return 'Aceste elemente rămân 30 de zile în „Șterse recent”. Șterge-le de acolo ca să eliberezi acum aproximativ $size.';
   }
 
   @override
@@ -1939,4 +1939,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get v2SeeProOptions => 'Vezi opțiunile Pro';
+
+  @override
+  String get v2SelectionOverLimitTitle => 'Prea multe elemente pentru azi';
 }

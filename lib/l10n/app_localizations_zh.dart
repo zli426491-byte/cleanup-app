@@ -1554,7 +1554,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return '清空 iPhone 上的“最近删除”相簿即可释放 $size。';
+    return '这些项目会在“最近删除”中保留 30 天。在那里删除它们，即可立即释放约 $size。';
   }
 
   @override
@@ -1758,6 +1758,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get v2SeeProOptions => '查看 Pro 方案';
+
+  @override
+  String get v2SelectionOverLimitTitle => '超过今日可免费删除的数量';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -3310,7 +3313,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return '清空 iPhone 上的“最近删除”相簿即可释放 $size。';
+    return '这些项目会在“最近删除”中保留 30 天。在那里删除它们，即可立即释放约 $size。';
   }
 
   @override
@@ -3514,6 +3517,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get v2SeeProOptions => '查看 Pro 方案';
+
+  @override
+  String get v2SelectionOverLimitTitle => '超过今日可免费删除的数量';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5029,7 +5035,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return '清空 iPhone 上的「最近刪除」相簿即可釋放 $size。';
+    return '這些項目會在「最近刪除」中保留 30 天。在那裡刪除它們，即可立即釋放約 $size。';
   }
 
   @override
@@ -5233,4 +5239,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get v2SeeProOptions => '查看 Pro 方案';
+
+  @override
+  String get v2SelectionOverLimitTitle => '超過今日可免費刪除的數量';
 }

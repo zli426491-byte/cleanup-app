@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "מחקתם",
   "v2CongratsSaved": "{minutes, plural, one{חסכתם כדקה} two{חסכתם כשתי דקות} other{חסכתם כ־{minutes} דקות}}",
   "v2CongratsUsing": "בעזרת ⁨{appName}⁩",
-  "v2CongratsRecentlyDeleted": "רוקנו את האלבום „נמחקו לאחרונה” כדי לפנות ⁨{size}⁩.",
+  "v2CongratsRecentlyDeleted": "הפריטים נשארים 30 יום ב„נמחקו לאחרונה”. מחקו אותם שם כדי לפנות כעת כ־⁨{size}⁩.",
   "v2Great": "מעולה",
   "v2UnlockTitle": "פתחו גישה ללא הגבלה",
   "v2UnlockFeature1": "מציאת תמונות דומות מיד",
@@ -481,5 +481,6 @@
   "v2DailyLimitTitle": "הגעתם למגבלת המחיקה היומית",
   "v2DailyLimitBody": "בגרסה החינמית אפשר למחוק {limit} פריטים ביום. פתחו את Pro כדי להסיר את המגבלה.",
   "v2DailyLimitRemaining": "{count, plural, one{היום אפשר למחוק בחינם עוד פריט אחד. בחרו פחות פריטים או פתחו את Pro.} two{היום אפשר למחוק בחינם עוד שני פריטים. בחרו פחות פריטים או פתחו את Pro.} other{היום אפשר למחוק בחינם עוד {count} פריטים. בחרו פחות פריטים או פתחו את Pro.}}",
-  "v2SeeProOptions": "הצגת אפשרויות Pro"
+  "v2SeeProOptions": "הצגת אפשרויות Pro",
+  "v2SelectionOverLimitTitle": "יותר מדי פריטים להיום"
 }

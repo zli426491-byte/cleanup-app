@@ -1089,7 +1089,7 @@
       }
     }
   },
-  "v2CongratsRecentlyDeleted": "Empty the “Recently Deleted” album on your iPhone to free up {size}.",
+  "v2CongratsRecentlyDeleted": "These items stay in “Recently Deleted” for 30 days. Delete them there to free about {size} now.",
   "@v2CongratsRecentlyDeleted": {
     "placeholders": {
       "size": {
@@ -1245,5 +1245,6 @@
       }
     }
   },
-  "v2SeeProOptions": "See Pro Options"
+  "v2SeeProOptions": "See Pro Options",
+  "v2SelectionOverLimitTitle": "Too many items for today"
 }

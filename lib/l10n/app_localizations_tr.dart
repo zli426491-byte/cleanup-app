@@ -1670,7 +1670,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return '$size yer açmak için iPhone’unuzdaki “Son Silinenler” albümünü boşaltın.';
+    return 'Bu ögeler 30 gün boyunca “Son Silinenler”de kalır. Şimdi yaklaşık $size yer açmak için onları orada silin.';
   }
 
   @override
@@ -1880,4 +1880,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get v2SeeProOptions => 'Pro seçeneklerini gör';
+
+  @override
+  String get v2SelectionOverLimitTitle => 'Bugün için çok fazla öge';
 }

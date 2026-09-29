@@ -1741,7 +1741,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Empty the “Recently Deleted” album on your iPhone to free up $size.';
+    return 'These items stay in “Recently Deleted” for 30 days. Delete them there to free about $size now.';
   }
 
   @override
@@ -1958,4 +1958,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get v2SeeProOptions => 'See Pro Options';
+
+  @override
+  String get v2SelectionOverLimitTitle => 'Too many items for today';
 }

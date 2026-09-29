@@ -1667,7 +1667,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Kosongkan album “Baru Dihapus” di iPhone Anda untuk membebaskan $size.';
+    return 'Item ini tetap di “Baru Dihapus” selama 30 hari. Hapus di sana untuk membebaskan sekitar $size sekarang.';
   }
 
   @override
@@ -1878,4 +1878,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get v2SeeProOptions => 'Lihat opsi Pro';
+
+  @override
+  String get v2SelectionOverLimitTitle => 'Terlalu banyak item untuk hari ini';
 }

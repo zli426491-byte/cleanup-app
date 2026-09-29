@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Hai eliminato",
   "v2CongratsSaved": "{minutes, plural, one{Circa 1 minuto risparmiato} other{Circa {minutes} minuti risparmiati}}",
   "v2CongratsUsing": "con {appName}",
-  "v2CongratsRecentlyDeleted": "Svuota l’album “Eliminati di recente” per liberare {size}.",
+  "v2CongratsRecentlyDeleted": "Questi elementi restano 30 giorni in “Eliminati di recente”. Eliminali lì per liberare circa {size} ora.",
   "v2Great": "Fantastico",
   "v2UnlockTitle": "Sblocca l’accesso illimitato",
   "v2UnlockFeature1": "Trova subito le foto simili",
@@ -481,5 +481,6 @@
   "v2DailyLimitTitle": "Hai raggiunto il limite giornaliero di eliminazione",
   "v2DailyLimitBody": "Con la versione gratuita puoi eliminare {limit} elementi al giorno. Sblocca Pro per rimuovere il limite.",
   "v2DailyLimitRemaining": "{count, plural, one{Oggi puoi eliminare ancora 1 elemento gratis. Selezionane meno o sblocca Pro.} other{Oggi puoi eliminare ancora {count} elementi gratis. Selezionane meno o sblocca Pro.}}",
-  "v2SeeProOptions": "Vedi le opzioni Pro"
+  "v2SeeProOptions": "Vedi le opzioni Pro",
+  "v2SelectionOverLimitTitle": "Troppi elementi per oggi"
 }

@@ -1755,7 +1755,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Vacía el álbum “Eliminado” de tu iPhone para liberar $size.';
+    return 'Estos elementos permanecen 30 días en “Eliminado”. Elimínalos allí para liberar unos $size ahora.';
   }
 
   @override
@@ -1974,4 +1974,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get v2SeeProOptions => 'Ver opciones Pro';
+
+  @override
+  String get v2SelectionOverLimitTitle => 'Demasiados elementos para hoy';
 }

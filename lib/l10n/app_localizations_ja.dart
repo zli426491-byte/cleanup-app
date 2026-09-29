@@ -1590,7 +1590,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return '「最近削除した項目」を空にすると$sizeが解放されます。';
+    return 'これらの項目は「最近削除した項目」に30日間残ります。そこで削除すると、今すぐ約$sizeを解放できます。';
   }
 
   @override
@@ -1794,4 +1794,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get v2SeeProOptions => 'Proプランを見る';
+
+  @override
+  String get v2SelectionOverLimitTitle => '本日の上限を超える選択です';
 }

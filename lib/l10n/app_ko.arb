@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "삭제한 항목",
   "v2CongratsSaved": "{minutes, plural, other{약 {minutes}분 절약}}",
   "v2CongratsUsing": "{appName} 사용",
-  "v2CongratsRecentlyDeleted": "\"최근 삭제된 항목\" 앨범을 비우면 {size}가 확보됩니다.",
+  "v2CongratsRecentlyDeleted": "이 항목은 \"최근 삭제된 항목\"에 30일 동안 남아 있습니다. 그곳에서 삭제하면 지금 약 {size}를 확보할 수 있습니다.",
   "v2Great": "좋아요",
   "v2UnlockTitle": "무제한 이용 잠금 해제",
   "v2UnlockFeature1": "유사한 사진을 바로 찾기",
@@ -481,5 +481,6 @@
   "v2DailyLimitTitle": "오늘의 삭제 한도에 도달했습니다",
   "v2DailyLimitBody": "무료 버전은 하루에 {limit}개까지 삭제할 수 있습니다. Pro로 한도를 해제하세요.",
   "v2DailyLimitRemaining": "{count, plural, other{오늘은 {count}개 더 무료로 삭제할 수 있습니다. 선택을 줄이거나 Pro를 이용하세요.}}",
-  "v2SeeProOptions": "Pro 옵션 보기"
+  "v2SeeProOptions": "Pro 옵션 보기",
+  "v2SelectionOverLimitTitle": "오늘 한도를 넘는 선택입니다"
 }

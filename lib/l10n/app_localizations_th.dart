@@ -1647,7 +1647,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'ล้างอัลบั้ม \"ที่เพิ่งลบ\" บน iPhone เพื่อเพิ่มพื้นที่ $size';
+    return 'รายการเหล่านี้จะอยู่ใน \"ที่เพิ่งลบ\" 30 วัน ลบออกจากที่นั่นเพื่อเพิ่มพื้นที่ประมาณ $size ทันที';
   }
 
   @override
@@ -1856,4 +1856,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get v2SeeProOptions => 'ดูตัวเลือก Pro';
+
+  @override
+  String get v2SelectionOverLimitTitle => 'เลือกเกินจำนวนของวันนี้';
 }

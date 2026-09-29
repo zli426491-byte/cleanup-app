@@ -1771,7 +1771,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Videz l’album « Supprimés récemment » pour libérer $size.';
+    return 'Ces éléments restent 30 jours dans « Supprimés récemment ». Supprimez-les là-bas pour libérer environ $size maintenant.';
   }
 
   @override
@@ -1989,4 +1989,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get v2SeeProOptions => 'Voir les offres Pro';
+
+  @override
+  String get v2SelectionOverLimitTitle => 'Trop d’éléments pour aujourd’hui';
 }

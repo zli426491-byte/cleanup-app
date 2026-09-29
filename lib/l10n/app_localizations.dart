@@ -2733,7 +2733,7 @@ abstract class AppLocalizations {
   /// No description provided for @v2CongratsRecentlyDeleted.
   ///
   /// In en, this message translates to:
-  /// **'Empty the “Recently Deleted” album on your iPhone to free up {size}.'**
+  /// **'These items stay in “Recently Deleted” for 30 days. Delete them there to free about {size} now.'**
   String v2CongratsRecentlyDeleted(String size);
 
   /// No description provided for @v2Great.
@@ -3023,6 +3023,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'See Pro Options'**
   String get v2SeeProOptions;
+
+  /// No description provided for @v2SelectionOverLimitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many items for today'**
+  String get v2SelectionOverLimitTitle;
 }
 
 class _AppLocalizationsDelegate
