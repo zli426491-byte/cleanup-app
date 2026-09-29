@@ -89,7 +89,10 @@ void main() {
       final watch = Stopwatch()..start();
       final labels = AppLocalizations.of(tester.element(find.byType(HomeView)));
       if (!scanner.isScanning && scanner.scannedAssetCount == 0) {
-        await _tapVisible(tester, find.byKey(const ValueKey('home-scan-start')));
+        await _tapVisible(
+          tester,
+          find.byKey(const ValueKey('home-scan-start')),
+        );
       }
       await _waitUntil(
         tester,
@@ -149,6 +152,33 @@ void main() {
         'automatic exact end',
       );
       stages['automaticExactMs'] = watch.elapsedMilliseconds;
+      // One 60-second round checks between ~350 and ~1,900 originals on CI
+      // simulators, so a large library may need the user's "continue" CTA,
+      // just like the size rounds below.
+      var exactRounds = 1;
+      while (!_hasExactPair(scanner, duplicateIds) && exactRounds < 6) {
+        final verifiedBefore = scanner.verifiedHashAssetCount;
+        await _tapVisible(
+          tester,
+          find.byKey(const ValueKey('verify-originals-cta')).first,
+        );
+        await _waitUntil(
+          tester,
+          () => !scanner.isScanning,
+          'continued exact round end',
+        );
+        exactRounds++;
+        expect(
+          scanner.verifiedHashAssetCount,
+          greaterThanOrEqualTo(verifiedBefore),
+          reason: 'A continued exact round must keep verified hashes.',
+        );
+        debugPrint(
+          'PHOTO_EXACT_ROUND_$exactRounds '
+          'verified=${scanner.verifiedHashAssetCount}',
+        );
+      }
+      stages['exactRounds'] = exactRounds;
       _expectExactPair(scanner, duplicateIds, differentIds);
       stages['exactGroupCount'] = scanner.scanResult.duplicateGroups.length;
       stages['exactVerifiedPhotoCount'] = scanner.verifiedHashAssetCount;
@@ -483,7 +513,7 @@ void main() {
       debugPrint('CLEANUP_REAL_LIBRARY_RESULT ${jsonEncode(report)}');
       expect(tester.takeException(), isNull);
     },
-    timeout: const Timeout(Duration(minutes: 12)),
+    timeout: const Timeout(Duration(minutes: 20)),
   );
 }
 
@@ -626,6 +656,11 @@ void _expectExactPair(
   );
   expect(RegExp(r'^[a-f0-9]{64}$').hasMatch(group.hash), isTrue);
 }
+
+bool _hasExactPair(PhotoScannerService scanner, List<String> ids) => scanner
+    .scanResult
+    .duplicateGroups
+    .any((g) => g.assets.map((a) => a.id).toSet().containsAll(ids));
 
 bool _hasMovies(PhotoScannerService scanner, List<String> ids) =>
     scanner.scanResult.largeFiles.map((a) => a.id).toSet().containsAll(ids);
