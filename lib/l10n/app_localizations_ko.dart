@@ -1608,7 +1608,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return '\"최근 삭제된 항목\" 앨범을 비우면 $size가 확보됩니다.';
+    return '원본 파일 크기 추정치: $size. 실제 확보된 공간은 iPhone 저장 공간에서 확인하세요. \'최근 삭제된 항목\'이 여전히 공간을 차지할 수 있습니다.';
   }
 
   @override
@@ -1786,4 +1786,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get v2PauseScan => '스캔 일시 중지';
+
+  @override
+  String v2ContinueFreeCleanup(int count) {
+    return '무료 정리 계속하기 (남은 횟수 $count회)';
+  }
 }

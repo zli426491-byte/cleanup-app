@@ -1710,7 +1710,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Opróżnij album „Ostatnio usunięte”, aby zwolnić $size.';
+    return 'Szacowany rozmiar oryginalnych plików: $size. Rzeczywiście zwolnione miejsce sprawdzisz w Pamięci iPhone’a; Ostatnio usunięte mogą nadal zajmować miejsce.';
   }
 
   @override
@@ -1908,4 +1908,9 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get v2PauseScan => 'Wstrzymaj skanowanie';
+
+  @override
+  String v2ContinueFreeCleanup(int count) {
+    return 'Kontynuuj darmowe czyszczenie (pozostało $count)';
+  }
 }

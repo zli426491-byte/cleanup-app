@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Sildiğiniz",
   "v2CongratsSaved": "{minutes, plural, other{Yaklaşık {minutes} dakika kazandınız}}",
   "v2CongratsUsing": "{appName} ile",
-  "v2CongratsRecentlyDeleted": "{size} yer açmak için iPhone’unuzdaki “Son Silinenler” albümünü boşaltın.",
+  "v2CongratsRecentlyDeleted": "Tahmini özgün dosya boyutu: {size}. Gerçekte açılan alanı iPhone Saklama Alanı’nda kontrol edin; Son Silinenler hâlâ yer kaplayabilir.",
   "v2Great": "Harika",
   "v2UnlockTitle": "Sınırsız erişimin kilidini açın",
   "v2UnlockFeature1": "Benzer fotoğrafları anında bulun",
@@ -476,5 +476,6 @@
   "v2SecretBody": "Özel fotoğraflarınızı koruyun",
   "v2ScanPaused": "Tarama duraklatıldı",
   "v2ContinueScan": "Devam et",
-  "v2PauseScan": "Taramayı duraklat"
+  "v2PauseScan": "Taramayı duraklat",
+  "v2ContinueFreeCleanup": "Ücretsiz temizliğe devam et ({count} hak kaldı)"
 }

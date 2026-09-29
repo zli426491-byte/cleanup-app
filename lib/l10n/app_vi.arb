@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Bạn đã xóa",
   "v2CongratsSaved": "{minutes, plural, other{Tiết kiệm khoảng {minutes} phút}}",
   "v2CongratsUsing": "nhờ {appName}",
-  "v2CongratsRecentlyDeleted": "Dọn album “Đã xóa gần đây” trên iPhone để giải phóng {size}.",
+  "v2CongratsRecentlyDeleted": "Dung lượng tệp gốc ước tính: {size}. Hãy kiểm tra Dung lượng iPhone để biết dung lượng thực tế đã giải phóng; mục Đã xóa gần đây vẫn có thể chiếm chỗ.",
   "v2Great": "Tuyệt",
   "v2UnlockTitle": "Mở khóa truy cập không giới hạn",
   "v2UnlockFeature1": "Tìm ảnh tương tự ngay lập tức",
@@ -476,5 +476,6 @@
   "v2SecretBody": "Bảo vệ ảnh riêng tư",
   "v2ScanPaused": "Đã tạm dừng quét",
   "v2ContinueScan": "Tiếp tục",
-  "v2PauseScan": "Tạm dừng quét"
+  "v2PauseScan": "Tạm dừng quét",
+  "v2ContinueFreeCleanup": "Tiếp tục dọn dẹp miễn phí (còn {count} lượt)"
 }

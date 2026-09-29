@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Anda telah menghapus",
   "v2CongratsSaved": "{minutes, plural, other{Menghemat sekitar {minutes} menit}}",
   "v2CongratsUsing": "dengan {appName}",
-  "v2CongratsRecentlyDeleted": "Kosongkan album “Baru Dihapus” di iPhone Anda untuk membebaskan {size}.",
+  "v2CongratsRecentlyDeleted": "Perkiraan ukuran asli file: {size}. Periksa Penyimpanan iPhone untuk ruang yang benar-benar kosong; Baru Dihapus mungkin masih memakai ruang.",
   "v2Great": "Mantap",
   "v2UnlockTitle": "Buka akses tanpa batas",
   "v2UnlockFeature1": "Temukan foto mirip seketika",
@@ -476,5 +476,6 @@
   "v2SecretBody": "Lindungi foto pribadi Anda",
   "v2ScanPaused": "Pemindaian dijeda",
   "v2ContinueScan": "Lanjutkan",
-  "v2PauseScan": "Jeda pemindaian"
+  "v2PauseScan": "Jeda pemindaian",
+  "v2ContinueFreeCleanup": "Lanjutkan pembersihan gratis ({count} tersisa)"
 }

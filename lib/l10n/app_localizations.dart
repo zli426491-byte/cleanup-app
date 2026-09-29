@@ -2733,7 +2733,7 @@ abstract class AppLocalizations {
   /// No description provided for @v2CongratsRecentlyDeleted.
   ///
   /// In en, this message translates to:
-  /// **'Empty the “Recently Deleted” album on your iPhone to free up {size}.'**
+  /// **'Estimated original file size: {size}. Check iPhone Storage for the space actually freed; Recently Deleted may still use storage.'**
   String v2CongratsRecentlyDeleted(String size);
 
   /// No description provided for @v2Great.
@@ -2993,6 +2993,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pause scan'**
   String get v2PauseScan;
+
+  /// No description provided for @v2ContinueFreeCleanup.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue free cleanup ({count} remaining)'**
+  String v2ContinueFreeCleanup(int count);
 }
 
 class _AppLocalizationsDelegate

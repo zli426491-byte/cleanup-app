@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "削除した項目",
   "v2CongratsSaved": "{minutes, plural, other{約{minutes}分を節約}}",
   "v2CongratsUsing": "{appName}を使って",
-  "v2CongratsRecentlyDeleted": "「最近削除した項目」を空にすると{size}が解放されます。",
+  "v2CongratsRecentlyDeleted": "元のファイルサイズの推定値：{size}。実際に空いた容量は「iPhoneストレージ」で確認してください。「最近削除した項目」が容量を使っている場合があります。",
   "v2Great": "OK",
   "v2UnlockTitle": "すべての機能を無制限に",
   "v2UnlockFeature1": "類似写真をすぐに発見",
@@ -476,5 +476,6 @@
   "v2SecretBody": "プライベートな写真を保護",
   "v2ScanPaused": "スキャンを一時停止中",
   "v2ContinueScan": "再開",
-  "v2PauseScan": "スキャンを一時停止"
+  "v2PauseScan": "スキャンを一時停止",
+  "v2ContinueFreeCleanup": "無料クリーニングを続ける（残り{count}回）"
 }

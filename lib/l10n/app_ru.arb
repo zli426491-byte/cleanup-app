@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Вы удалили",
   "v2CongratsSaved": "{minutes, plural, one{Сэкономлено около {minutes} минуты} few{Сэкономлено около {minutes} минут} many{Сэкономлено около {minutes} минут} other{Сэкономлено около {minutes} минуты}}",
   "v2CongratsUsing": "с {appName}",
-  "v2CongratsRecentlyDeleted": "Очистите альбом «Недавно удалённые», чтобы освободить {size}.",
+  "v2CongratsRecentlyDeleted": "Оценочный исходный размер файлов: {size}. Фактически освобождённое место проверьте в хранилище iPhone; «Недавно удалённые» могут всё ещё занимать место.",
   "v2Great": "Отлично",
   "v2UnlockTitle": "Откройте безлимитный доступ",
   "v2UnlockFeature1": "Мгновенно находите похожие фото",
@@ -476,5 +476,6 @@
   "v2SecretBody": "Защитите личные фото",
   "v2ScanPaused": "Сканирование на паузе",
   "v2ContinueScan": "Продолжить",
-  "v2PauseScan": "Приостановить"
+  "v2PauseScan": "Приостановить",
+  "v2ContinueFreeCleanup": "Продолжить бесплатную очистку (осталось {count})"
 }

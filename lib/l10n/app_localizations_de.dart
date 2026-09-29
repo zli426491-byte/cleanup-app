@@ -1747,7 +1747,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Leere das Album „Zuletzt gelöscht“, um $size freizugeben.';
+    return 'Geschätzte Originalgröße der Dateien: $size. Den tatsächlich freien Speicher siehst du unter iPhone-Speicher; „Zuletzt gelöscht“ kann weiterhin Platz belegen.';
   }
 
   @override
@@ -1936,4 +1936,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get v2PauseScan => 'Scan pausieren';
+
+  @override
+  String v2ContinueFreeCleanup(int count) {
+    return 'Kostenlose Bereinigung fortsetzen ($count verbleibend)';
+  }
 }

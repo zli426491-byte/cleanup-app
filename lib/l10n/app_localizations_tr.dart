@@ -1670,7 +1670,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return '$size yer açmak için iPhone’unuzdaki “Son Silinenler” albümünü boşaltın.';
+    return 'Tahmini özgün dosya boyutu: $size. Gerçekte açılan alanı iPhone Saklama Alanı’nda kontrol edin; Son Silinenler hâlâ yer kaplayabilir.';
   }
 
   @override
@@ -1853,4 +1853,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get v2PauseScan => 'Taramayı duraklat';
+
+  @override
+  String v2ContinueFreeCleanup(int count) {
+    return 'Ücretsiz temizliğe devam et ($count hak kaldı)';
+  }
 }

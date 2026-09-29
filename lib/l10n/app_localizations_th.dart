@@ -1647,7 +1647,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'ล้างอัลบั้ม \"ที่เพิ่งลบ\" บน iPhone เพื่อเพิ่มพื้นที่ $size';
+    return 'ขนาดไฟล์ต้นฉบับโดยประมาณ: $size ตรวจสอบพื้นที่ที่เพิ่มขึ้นจริงในพื้นที่จัดเก็บข้อมูล iPhone เพราะรายการที่เพิ่งลบอาจยังใช้พื้นที่อยู่';
   }
 
   @override
@@ -1830,4 +1830,9 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get v2PauseScan => 'หยุดสแกนชั่วคราว';
+
+  @override
+  String v2ContinueFreeCleanup(int count) {
+    return 'ทำความสะอาดฟรีต่อ (เหลือ $count ครั้ง)';
+  }
 }

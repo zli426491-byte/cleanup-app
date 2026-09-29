@@ -1755,7 +1755,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Vacía el álbum “Eliminado” de tu iPhone para liberar $size.';
+    return 'Tamaño original estimado de los archivos: $size. Consulta Almacenamiento del iPhone para ver el espacio realmente liberado; Eliminado recientemente puede seguir ocupando espacio.';
   }
 
   @override
@@ -1944,4 +1944,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get v2PauseScan => 'Pausar análisis';
+
+  @override
+  String v2ContinueFreeCleanup(int count) {
+    return 'Continuar limpieza gratuita ($count restantes)';
+  }
 }

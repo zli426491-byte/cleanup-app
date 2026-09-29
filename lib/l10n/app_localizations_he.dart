@@ -1672,7 +1672,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'רוקנו את האלבום „נמחקו לאחרונה” כדי לפנות \u2068$size\u2069.';
+    return 'גודל הקבצים המקורי המשוער: $size. בדקו באחסון ה‑iPhone כמה מקום פונה בפועל; הפריטים ב״נמחקו לאחרונה״ עשויים עדיין לתפוס מקום.';
   }
 
   @override
@@ -1863,4 +1863,9 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get v2PauseScan => 'השהיית הסריקה';
+
+  @override
+  String v2ContinueFreeCleanup(int count) {
+    return 'המשך ניקוי בחינם ($count נותרו)';
+  }
 }

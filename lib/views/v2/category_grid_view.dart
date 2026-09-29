@@ -1,6 +1,15 @@
+import 'dart:async' show unawaited;
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:cleanup_app/l10n/l10n.dart';
-import 'package:photo_manager/photo_manager.dart' show AssetType;
+import 'package:photo_manager/photo_manager.dart'
+    show
+        AssetEntity,
+        AssetType,
+        ThumbnailFormat,
+        ThumbnailOption,
+        ThumbnailSize;
 import 'package:provider/provider.dart';
 
 import '../../models/photo_asset.dart' show formatBytes;
@@ -28,10 +37,14 @@ class CategoryGridView extends StatefulWidget {
 class _CategoryGridViewState extends State<CategoryGridView> {
   final Set<String> _selected = {};
 
-  /// Only items whose preview decoded (for this exact version) can be
-  /// selected, so nothing unseen is ever sent to deletion.
+  /// Selection may include pending offscreen items, but only items whose
+  /// preview decoded for this exact version are sent to deletion.
   final Map<String, PhotoAsset> _ready = {};
   bool _selecting = false;
+  bool _preparingAll = false;
+  bool _validatingAll = false;
+  int _validationRun = 0;
+  int _validatedCount = 0;
 
   bool _isReady(PhotoAsset asset) => identical(_ready[asset.id], asset);
 
@@ -42,10 +55,125 @@ class _CategoryGridViewState extends State<CategoryGridView> {
         _ready[asset.id] = asset;
       } else {
         _ready.remove(asset.id);
-        _selected.remove(asset.id);
+        if (!_validatingAll) _selected.remove(asset.id);
       }
     });
   }
+
+  /// Verify offscreen previews in a bounded queue before a bulk deletion can
+  /// proceed. A select-all action must cover the category, not just its first
+  /// rendered screen, while still rejecting undecodable photos.
+  Future<bool> _verifyPreview(PhotoAsset asset) async {
+    try {
+      var bytes = asset.thumbnail;
+      if (bytes == null) {
+        final entity = await AssetEntity.fromId(
+          asset.id,
+        ).timeout(const Duration(seconds: 30));
+        if (entity == null) return false;
+        bytes = await entity
+            .thumbnailDataWithOption(
+              ThumbnailOption.ios(
+                size: const ThumbnailSize(320, 320),
+                format: ThumbnailFormat.jpeg,
+              ),
+            )
+            .timeout(const Duration(seconds: 30));
+      }
+      if (bytes == null) return false;
+      final codec = await ui
+          .instantiateImageCodec(bytes)
+          .timeout(const Duration(seconds: 30));
+      try {
+        final frame = await codec.getNextFrame().timeout(
+          const Duration(seconds: 30),
+        );
+        frame.image.dispose();
+        return true;
+      } finally {
+        codec.dispose();
+      }
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _toggleAll(List<PhotoAsset> assets) async {
+    if (_preparingAll) return;
+    final ids = {for (final asset in assets) asset.id};
+    final run = ++_validationRun;
+    if (_selected.containsAll(ids)) {
+      setState(() {
+        _selected.clear();
+        _validatingAll = false;
+        _validatedCount = 0;
+      });
+      return;
+    }
+    setState(() => _preparingAll = true);
+    final scanner = context.read<PhotoScannerService>();
+    try {
+      if (scanner.isContinuousScanning) {
+        await scanner.pauseContinuousScan();
+      } else if (scanner.isScanning) {
+        scanner.cancelScan();
+      }
+    } catch (_) {
+      if (mounted && run == _validationRun) {
+        setState(() => _preparingAll = false);
+      }
+      return;
+    }
+    if (!mounted || run != _validationRun) return;
+    if (scanner.isScanning) {
+      setState(() => _preparingAll = false);
+      return;
+    }
+    // Pausing can publish a newer scan result, so use the resulting snapshot.
+    final current = _assets(scanner.scanResult);
+    setState(() {
+      _preparingAll = false;
+      _selected.addAll(current.map((a) => a.id));
+      _validatingAll = true;
+      _validatedCount = 0;
+    });
+    unawaited(_verifyAll(current, run));
+  }
+
+  Future<void> _verifyAll(List<PhotoAsset> assets, int run) async {
+    var next = 0;
+    var completed = 0;
+    Future<void> worker() async {
+      while (mounted && run == _validationRun) {
+        final index = next++;
+        if (index >= assets.length) return;
+        final asset = assets[index];
+        final ready = _isReady(asset) || await _verifyPreview(asset);
+        if (!mounted || run != _validationRun) return;
+        if (ready) _ready[asset.id] = asset;
+        completed++;
+        if (completed % 32 == 0 || completed == assets.length) {
+          setState(() => _validatedCount = completed);
+        }
+      }
+    }
+
+    await Future.wait(List.generate(4, (_) => worker()));
+    if (!mounted || run != _validationRun) return;
+    final versions = {for (final asset in assets) asset.id: asset};
+    setState(() {
+      _validatingAll = false;
+      _validatedCount = completed;
+      _selected.removeWhere((id) => !identical(_ready[id], versions[id]));
+    });
+  }
+
+  @override
+  void dispose() {
+    _validationRun++;
+    super.dispose();
+  }
+
   late GridSort _sort = widget.category == CleanupCategory.other
       ? GridSort.newest
       : GridSort.largest;
@@ -55,6 +183,7 @@ class _CategoryGridViewState extends State<CategoryGridView> {
 
   List<PhotoAsset> _assets(ScanResult result) {
     if (identical(_sortedFor, result) && _sortedBy == _sort) return _sorted;
+    final changedSnapshot = !identical(_sortedFor, result);
     final list = List.of(CategoryIndex.of(result)[widget.category].assets);
     switch (_sort) {
       case GridSort.largest:
@@ -67,6 +196,19 @@ class _CategoryGridViewState extends State<CategoryGridView> {
     // Selection only refers to items that still exist in this snapshot.
     final ids = {for (final a in list) a.id};
     _selected.retainAll(ids);
+    if (changedSnapshot) {
+      if (_validatingAll) {
+        // The original batch has not finished validation. Its progress and
+        // selection cannot authorize deletion from a newer scan snapshot.
+        _validationRun++;
+        _validatingAll = false;
+        _validatedCount = 0;
+        _selected.clear();
+      } else {
+        final versions = {for (final asset in list) asset.id: asset};
+        _selected.removeWhere((id) => !identical(_ready[id], versions[id]));
+      }
+    }
     return _sorted = list;
   }
 
@@ -85,12 +227,8 @@ class _CategoryGridViewState extends State<CategoryGridView> {
       for (final a in assets)
         if (_selected.contains(a.id) && _isReady(a)) a,
     ];
-    final readyIds = [
-      for (final a in assets)
-        if (_isReady(a)) a.id,
-    ];
     final allSelected =
-        readyIds.isNotEmpty && selectedAssets.length == readyIds.length;
+        assets.isNotEmpty && assets.every((a) => _selected.contains(a.id));
 
     return Scaffold(
       body: SafeArea(
@@ -105,13 +243,7 @@ class _CategoryGridViewState extends State<CategoryGridView> {
                       label: allSelected
                           ? l10n.v2DeselectAll
                           : l10n.v2SelectAll,
-                      onPressed: () => setState(() {
-                        if (allSelected) {
-                          _selected.clear();
-                        } else {
-                          _selected.addAll(readyIds);
-                        }
-                      }),
+                      onPressed: () => unawaited(_toggleAll(assets)),
                     )
                   : null,
               trailing: [
@@ -121,7 +253,12 @@ class _CategoryGridViewState extends State<CategoryGridView> {
                     label: _selecting ? l10n.v2Cancel : l10n.v2Select,
                     onPressed: () => setState(() {
                       _selecting = !_selecting;
-                      if (!_selecting) _selected.clear();
+                      if (!_selecting) {
+                        _validationRun++;
+                        _preparingAll = false;
+                        _validatingAll = false;
+                        _selected.clear();
+                      }
                     }),
                   ),
               ],
@@ -250,7 +387,19 @@ class _CategoryGridViewState extends State<CategoryGridView> {
           ],
         ),
       ),
-      bottomNavigationBar: selectedAssets.isEmpty
+      bottomNavigationBar: _preparingAll || _validatingAll
+          ? BottomAction(
+              child: BigButton(
+                label: _preparingAll
+                    ? l10n.v2SelectAll
+                    : '${l10n.v2SelectAll} • '
+                          '${widget.category.countLabel(context, _validatedCount)} / '
+                          '${widget.category.countLabel(context, assets.length)}',
+                loading: true,
+                onPressed: null,
+              ),
+            )
+          : selectedAssets.isEmpty
           ? null
           : BottomAction(
               child: BigButton(
@@ -274,7 +423,12 @@ class _CategoryGridViewState extends State<CategoryGridView> {
       key: ValueKey('grid-tile-${asset.id}'),
       button: true,
       selected: _selecting ? selected : null,
-      label: asset.sizeKnown ? formatBytes(asset.size) : null,
+      label: [
+        widget.category.countLabel(context, index + 1),
+        widget.category.countLabel(context, assets.length),
+        MaterialLocalizations.of(context).formatMediumDate(asset.createDate),
+        if (asset.sizeKnown) formatBytes(asset.size),
+      ].join(', '),
       child: GestureDetector(
         onTap: deleting
             ? null

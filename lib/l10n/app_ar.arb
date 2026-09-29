@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "لقد حذفت",
   "v2CongratsSaved": "{minutes, plural, zero{وفّرت وقتًا} one{وفّرت نحو دقيقة} two{وفّرت نحو دقيقتين} few{وفّرت نحو {minutes} دقائق} many{وفّرت نحو {minutes} دقيقة} other{وفّرت نحو {minutes} دقيقة}}",
   "v2CongratsUsing": "باستخدام ⁨{appName}⁩",
-  "v2CongratsRecentlyDeleted": "أفرغ ألبوم «المحذوفة مؤخرًا» على جهازك لتحرير ⁨{size}⁩.",
+  "v2CongratsRecentlyDeleted": "الحجم الأصلي التقديري للملفات: {size}. تحقق من مساحة تخزين iPhone لمعرفة المساحة الفعلية المستعادة؛ قد تستمر العناصر المحذوفة مؤخرًا في شغل مساحة.",
   "v2Great": "رائع",
   "v2UnlockTitle": "افتح الوصول غير المحدود",
   "v2UnlockFeature1": "اعثر على الصور المتشابهة فورًا",
@@ -476,5 +476,6 @@
   "v2SecretBody": "احمِ صورك الخاصة",
   "v2ScanPaused": "الفحص متوقف مؤقتًا",
   "v2ContinueScan": "متابعة",
-  "v2PauseScan": "إيقاف الفحص مؤقتًا"
+  "v2PauseScan": "إيقاف الفحص مؤقتًا",
+  "v2ContinueFreeCleanup": "متابعة التنظيف المجاني ({count} متبقية)"
 }

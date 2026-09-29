@@ -1554,7 +1554,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return '清空 iPhone 上的“最近删除”相簿即可释放 $size。';
+    return '已删文件的原始大小估计为 $size；实际释放容量请查看 iPhone 储存空间，“最近删除”可能仍占用空间。';
   }
 
   @override
@@ -1732,6 +1732,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get v2PauseScan => '暂停扫描';
+
+  @override
+  String v2ContinueFreeCleanup(int count) {
+    return '继续免费清理（剩余 $count 次）';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -3284,7 +3289,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return '清空 iPhone 上的“最近删除”相簿即可释放 $size。';
+    return '已删文件的原始大小估计为 $size；实际释放容量请查看 iPhone 储存空间，“最近删除”可能仍占用空间。';
   }
 
   @override
@@ -3462,6 +3467,11 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get v2PauseScan => '暂停扫描';
+
+  @override
+  String v2ContinueFreeCleanup(int count) {
+    return '继续免费清理（剩余 $count 次）';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -4977,7 +4987,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return '清空 iPhone 上的「最近刪除」相簿即可釋放 $size。';
+    return '已刪檔案的原始大小估計為 $size；實際釋放容量請查看 iPhone 儲存空間，「最近刪除」可能仍佔用空間。';
   }
 
   @override
@@ -5155,4 +5165,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get v2PauseScan => '暫停掃描';
+
+  @override
+  String v2ContinueFreeCleanup(int count) {
+    return '繼續免費清理（剩餘 $count 次）';
+  }
 }

@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "מחקתם",
   "v2CongratsSaved": "{minutes, plural, one{חסכתם כדקה} two{חסכתם כשתי דקות} other{חסכתם כ־{minutes} דקות}}",
   "v2CongratsUsing": "בעזרת ⁨{appName}⁩",
-  "v2CongratsRecentlyDeleted": "רוקנו את האלבום „נמחקו לאחרונה” כדי לפנות ⁨{size}⁩.",
+  "v2CongratsRecentlyDeleted": "גודל הקבצים המקורי המשוער: {size}. בדקו באחסון ה‑iPhone כמה מקום פונה בפועל; הפריטים ב״נמחקו לאחרונה״ עשויים עדיין לתפוס מקום.",
   "v2Great": "מעולה",
   "v2UnlockTitle": "פתחו גישה ללא הגבלה",
   "v2UnlockFeature1": "מציאת תמונות דומות מיד",
@@ -476,5 +476,6 @@
   "v2SecretBody": "הגנו על התמונות הפרטיות",
   "v2ScanPaused": "הסריקה מושהית",
   "v2ContinueScan": "המשך",
-  "v2PauseScan": "השהיית הסריקה"
+  "v2PauseScan": "השהיית הסריקה",
+  "v2ContinueFreeCleanup": "המשך ניקוי בחינם ({count} נותרו)"
 }

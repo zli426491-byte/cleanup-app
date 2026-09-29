@@ -1714,7 +1714,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Golește albumul „Șterse recent” ca să eliberezi $size.';
+    return 'Dimensiunea originală estimată a fișierelor: $size. Verifică Stocare iPhone pentru spațiul eliberat efectiv; Șterse recent poate ocupa în continuare spațiu.';
   }
 
   @override
@@ -1908,4 +1908,9 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get v2PauseScan => 'Întrerupe scanarea';
+
+  @override
+  String v2ContinueFreeCleanup(int count) {
+    return 'Continuă curățarea gratuită ($count rămase)';
+  }
 }

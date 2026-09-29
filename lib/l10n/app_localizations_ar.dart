@@ -1716,7 +1716,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'أفرغ ألبوم «المحذوفة مؤخرًا» على جهازك لتحرير \u2068$size\u2069.';
+    return 'الحجم الأصلي التقديري للملفات: $size. تحقق من مساحة تخزين iPhone لمعرفة المساحة الفعلية المستعادة؛ قد تستمر العناصر المحذوفة مؤخرًا في شغل مساحة.';
   }
 
   @override
@@ -1921,4 +1921,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get v2PauseScan => 'إيقاف الفحص مؤقتًا';
+
+  @override
+  String v2ContinueFreeCleanup(int count) {
+    return 'متابعة التنظيف المجاني ($count متبقية)';
+  }
 }

@@ -1769,7 +1769,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Esvazie o álbum “Apagados” no iPhone para libertar $size.';
+    return 'Tamanho original estimado dos arquivos: $size. Consulte Armazenamento do iPhone para ver o espaço realmente liberado; Apagados recentemente ainda pode ocupar espaço.';
   }
 
   @override
@@ -1958,4 +1958,9 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get v2PauseScan => 'Pausar análise';
+
+  @override
+  String v2ContinueFreeCleanup(int count) {
+    return 'Continuar limpeza gratuita ($count restantes)';
+  }
 }

@@ -1,0 +1,634 @@
+﻿diff --git a/lib/services/photo_scanner_service.dart b/lib/services/photo_scanner_service.dart
+index b6f232d..bf6c057 100644
+--- a/lib/services/photo_scanner_service.dart
++++ b/lib/services/photo_scanner_service.dart
+@@ -251,7 +251,11 @@ class PhotoScannerService extends ChangeNotifier {
+   final String _instanceId = 'scanner-${++_instances}';
+   final Duration _continuousPreviewRoundBudget;
+   final Duration _continuousScanBudget;
++  final Duration _originalRoundBudget;
+   bool _continuousScanActive = false;
++  bool _continuousOriginalActive = false;
++  bool _hideSnapshotForOriginalAccessRefresh = false;
++  Completer<void>? _originalAccessRefreshDone;
+   bool _continuousStopRequested = false;
+   bool _resumeContinuousAfterAccessRefresh = false;
+   Completer<void>? _continuousStopped;
+@@ -319,23 +323,30 @@ class PhotoScannerService extends ChangeNotifier {
+     Duration continuousPreviewRoundBudget =
+         _defaultContinuousPreviewRoundBudget,
+     Duration continuousScanBudget = _defaultContinuousScanBudget,
++    Duration originalRoundBudget = _resourceRoundBudget,
+   }) : assert(continuousPreviewRoundBudget > Duration.zero),
+        assert(continuousScanBudget > Duration.zero),
++       assert(originalRoundBudget > Duration.zero),
+        _continuousPreviewRoundBudget = continuousPreviewRoundBudget,
+        _continuousScanBudget = continuousScanBudget,
++       _originalRoundBudget = originalRoundBudget,
+        _nativeAvailable =
+            supportsNativeResources ??
+            (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS);
+ 
+   // Keep the UI busy across the brief handoff between automatic rounds.
+-  bool get isScanning => _isScanning || _continuousScanActive;
+-  bool get isContinuousScanning => _continuousScanActive;
++  bool get isScanning =>
++      _isScanning || _continuousScanActive || _continuousOriginalActive;
++  bool get isContinuousScanning =>
++      _continuousScanActive || _continuousOriginalActive;
++  bool get isContinuousOriginalVerification => _continuousOriginalActive;
+   bool get isDeleting => _isDeleting;
+   bool get wasCancelled => _wasCancelled;
+   bool get hasCompletedScan => _hasCompletedScan;
+   double get scanProgress => _scanProgress;
+   ScanPhase get currentPhase => _currentPhase;
+-  ScanResult get scanResult => _scanResult;
++  ScanResult get scanResult =>
++      _hideSnapshotForOriginalAccessRefresh ? ScanResult.empty : _scanResult;
+   String? get lastError => _lastError;
+   int? get availableAssetCount => _availableAssetCount;
+   int get scannedAssetCount => _assets.length;
+@@ -360,6 +371,8 @@ class PhotoScannerService extends ChangeNotifier {
+   int get verifiedHashAssetCount => _verifiedHashCount;
+   int get pendingHashAssetCount => totalPhotoCount - _verifiedHashCount;
+   int get totalPhotoCount => _analyzedCount + _pendingCount;
++  int get freshOriginalAssetCount =>
++      _assets.values.where(_needsFreshOriginalVerification).length;
+   bool get isVerifyingOriginals => _isVerifyingOriginals;
+   bool get nativeOriginalAnalysisAvailable => _nativeAvailable;
+   String? get currentOperation => _currentOperation;
+@@ -382,16 +395,20 @@ class PhotoScannerService extends ChangeNotifier {
+   }
+ 
+   Future<void> startFullScan() =>
+-      _continuousScanActive ? Future<void>.value() : _scan(resume: false);
++      (_continuousScanActive || _continuousOriginalActive)
++      ? Future<void>.value()
++      : _scan(resume: false);
+   Future<void> resumeScan() =>
+-      _continuousScanActive ? Future<void>.value() : _scan(resume: true);
++      (_continuousScanActive || _continuousOriginalActive)
++      ? Future<void>.value()
++      : _scan(resume: true);
+ 
+   /// Continue foreground preview analysis through bounded rounds without
+   /// asking the user to tap Resume after every deadline. Every image is tried
+   /// at most once during this call, including cloud-only and timed-out items.
+   /// A later explicit retry remains possible. Cancel retains the safe snapshot.
+   Future<void> startContinuousScan({bool resume = false}) async {
+-    if (_disposed || _isScanning || _isDeleting || _continuousScanActive) {
++    if (_disposed || isScanning || _isDeleting) {
+       return;
+     }
+     _continuousScanActive = true;
+@@ -480,12 +497,127 @@ class PhotoScannerService extends ChangeNotifier {
+   /// Pause an automatic preview scan and wait until targeted original-resource
+   /// verification is allowed to start. The indexed results remain available.
+   Future<void> pauseContinuousScan() async {
+-    if (!_continuousScanActive) return;
++    if (!_continuousScanActive && !_continuousOriginalActive) return;
+     final stopped = _continuousStopped!.future;
+     cancelScan();
+     await stopped;
+   }
+ 
++  bool _needsFreshOriginalVerification(PhotoAsset asset) =>
++      (!asset.sizeKnown && !_sizeAttempts.containsKey(asset.id)) ||
++      (asset.type == AssetType.image &&
++          asset.hash == null &&
++          !_hashAttempts.containsKey(asset.id));
++
++  /// Verify local originals through bounded rounds. A failed/cloud-only item is
++  /// attempted once per call; the untouched tail continues without repeatedly
++  /// paying for that item. An unchanged Photos scope keeps visible groups in
++  /// place while original sizes and hashes arrive.
++  Future<void> startContinuousOriginalVerification({
++    bool retryUnresolved = false,
++  }) async {
++    if (_disposed || isScanning || _isDeleting || !_nativeAvailable) return;
++    final remaining = <String>{
++      for (final asset in _assets.values)
++        if (_needsFreshOriginalVerification(asset) ||
++            (retryUnresolved && asset.resourceAnalysisPending))
++          asset.id,
++    };
++    if (remaining.isEmpty) return;
++    _continuousOriginalActive = true;
++    _continuousStopRequested = false;
++    _continuousStopped = Completer<void>();
++    final clock = Stopwatch()..start();
++    try {
++      // Permissions can only be changed in Settings while the app is away;
++      // refreshPhotoAccess cancels this session on return. Check every ID and
++      // content version at the start and end, not on every 60-second round.
++      final unchanged = await _canReusePreviewIndex();
++      var usedInPlace = false;
++      if (!_disposed && !_continuousStopRequested && !unchanged) {
++        await _scan(resume: true, originals: true);
++      }
++      while (!_disposed && !_continuousStopRequested && remaining.isNotEmpty) {
++        if (!unchanged) break;
++        usedInPlace = true;
++        final before = remaining.length;
++        await _scanOriginalRoundInPlace(remaining);
++        if (_disposed ||
++            _continuousStopRequested ||
++            _wasCancelled ||
++            permissionDenied ||
++            !_nativeAvailable ||
++            remaining.length == before) {
++          break;
++        }
++        if (clock.elapsed >= _continuousScanBudget) {
++          _lastError = '本次連續掃描已達時間上限；已保留進度，稍後可繼續。';
++          notifyListeners();
++          break;
++        }
++        await Future<void>.delayed(Duration.zero);
++      }
++      if (usedInPlace && !_disposed && !_continuousStopRequested) {
++        final stillUnchanged = await _canReusePreviewIndex();
++        if (!_disposed && !_continuousStopRequested && !stillUnchanged) {
++          // A mid-session edit invalidates hashes and sizes before the user
++          // can delete anything from this now-unproven snapshot.
++          await _scan(resume: true, originals: true);
++        }
++      }
++    } finally {
++      _continuousOriginalActive = false;
++      _continuousStopRequested = false;
++      clock.stop();
++      _continuousStopped?.complete();
++      _continuousStopped = null;
++      if (!_disposed) notifyListeners();
++      _drainPhotoAccessRefresh();
++    }
++  }
++
++  Future<void> _scanOriginalRoundInPlace(Set<String> remaining) async {
++    if (_disposed || _isScanning || _isDeleting || _continuousStopRequested) {
++      return;
++    }
++    final runId = ++_scanRunId;
++    _isScanning = true;
++    _isVerifyingOriginals = true;
++    _originalVerificationTarget = OriginalVerificationTarget.all;
++    _originalRoundTotal = null;
++    _originalRoundProcessed = 0;
++    _wasCancelled = false;
++    _hasCompletedScan = false;
++    _lastError = null;
++    _currentPhase = ScanPhase.computingHashes;
++    _setOperation('驗證本機原始素材');
++    notifyListeners();
++    try {
++      final candidates = <String>{
++        for (final group in _similarGroups)
++          for (final asset in group.assets) asset.id,
++      };
++      await _verifyLocalResources(
++        runId,
++        OriginalVerificationTarget.all,
++        candidates,
++        onceIds: remaining,
++      );
++      await _finish(runId, completed: remaining.isEmpty, refresh: false);
++    } on _RoundBudgetExpired {
++      if (!_active(runId)) return;
++      _cancelNative('$_instanceId:$runId:');
++      _lastError = '本輪原始素材驗證已達 60 秒，結果已保留；再次驗證會先處理未嘗試項目。';
++      await _finish(runId, completed: false, refresh: false);
++    } on _ScanCancelled {
++      // cancelScan already published the stable partial snapshot.
++    } catch (_) {
++      if (!_active(runId)) return;
++      _lastError = '部分相簿讀取中斷，已保留目前結果，可繼續掃描。';
++      await _finish(runId, completed: false, refresh: false);
++    }
++  }
++
+   Future<bool> _canReusePreviewIndex() async {
+     if (_disposed ||
+         _continuousStopRequested ||
+@@ -688,6 +820,30 @@ class PhotoScannerService extends ChangeNotifier {
+   Future<void> refreshPhotoAccess() async {
+     if (_disposed) return;
+     _photoAccessRefreshPending = true;
++    if (_continuousOriginalActive) {
++      // A foreground return may have changed Photos access. Stop verification
++      // and hide the old snapshot until the new scope has been checked.
++      _hideSnapshotForOriginalAccessRefresh = true;
++      final done = _originalAccessRefreshDone ??= Completer<void>();
++      notifyListeners();
++      cancelScan();
++      try {
++        await done.future.timeout(const Duration(seconds: 40));
++      } on TimeoutException {
++        if (!_disposed && identical(_originalAccessRefreshDone, done)) {
++          // A repeatedly superseded or hung permission check must not leave
++          // the user waiting forever or expose the old Photos scope again.
++          _photoScopeChanged = true;
++          _invalidatePhotoScope();
++          _photoAccessRefreshPending = false;
++          _hideSnapshotForOriginalAccessRefresh = false;
++          _originalAccessRefreshDone = null;
++          if (!done.isCompleted) done.complete();
++          notifyListeners();
++        }
++      }
++      return;
++    }
+     if (_continuousScanActive) {
+       // A foreground return can also mean Photos access changed in Settings.
+       // Stop the long-running scan now so a revoked snapshot is not kept on
+@@ -724,7 +880,7 @@ class PhotoScannerService extends ChangeNotifier {
+             state == previous &&
+             (!state.isLimited || await _limitedPhotoScopeMatches(canApply));
+         return (state, unchanged);
+-      })().timeout(const Duration(seconds: 5));
++       })().timeout(const Duration(seconds: 30));
+       if (!canApply()) {
+         if (!_disposed) _photoAccessRefreshPending = true;
+         return;
+@@ -744,7 +900,9 @@ class PhotoScannerService extends ChangeNotifier {
+     } catch (_) {
+       if (!canApply()) {
+         if (!_disposed) _photoAccessRefreshPending = true;
+-      } else if (previous?.isLimited == true) {
++      } else if (previous?.isLimited == true ||
++          (_hideSnapshotForOriginalAccessRefresh &&
++              previous?.hasAccess == true)) {
+         // An incomplete metadata check cannot authorize keeping a stale scope.
+         _photoScopeChanged = true;
+         _invalidatePhotoScope();
+@@ -755,6 +913,13 @@ class PhotoScannerService extends ChangeNotifier {
+       checkAlive = false;
+       _checkingPhotoAccess = false;
+       _drainPhotoAccessRefresh();
++      if (!_photoAccessRefreshPending &&
++          _hideSnapshotForOriginalAccessRefresh) {
++        _hideSnapshotForOriginalAccessRefresh = false;
++        if (!_disposed) notifyListeners();
++        _originalAccessRefreshDone?.complete();
++        _originalAccessRefreshDone = null;
++      }
+       final resumeContinuous =
+           _resumeContinuousAfterAccessRefresh &&
+           mayResumeContinuous &&
+@@ -795,9 +960,9 @@ class PhotoScannerService extends ChangeNotifier {
+     for (
+       var start = 0;
+       start < count && remaining.isNotEmpty;
+-      start += _assetPageSize
++      start += _scopeCheckPageSize
+     ) {
+-      final end = math.min(start + _assetPageSize, count);
++      final end = math.min(start + _scopeCheckPageSize, count);
+       final page = await album.getAssetListRange(start: start, end: end);
+       if (!canApply()) throw StateError('Photo scope check superseded');
+       if (page.length != end - start) return false;
+@@ -863,7 +1028,7 @@ class PhotoScannerService extends ChangeNotifier {
+   /// Re-index first so revoked access or same-ID edits cannot reuse old hashes.
+   Future<void> verifyOriginals({
+     OriginalVerificationTarget target = OriginalVerificationTarget.all,
+-  }) => _continuousScanActive
++  }) => (_continuousScanActive || _continuousOriginalActive)
+       ? Future<void>.value()
+       : _scan(resume: true, originals: true, target: target);
+ 
+@@ -1207,6 +1372,18 @@ class PhotoScannerService extends ChangeNotifier {
+     }
+   }
+ 
++  void _publishOriginalBatch({bool first = false}) {
++    // Original SHA/size results cannot change a pHash candidate. Recompute
++    // exact groups and sizes without repeatedly spawning a 42k-photo visual
++    // grouping isolate during a bounded original-resource round.
++    if (first || _snapshotClock.elapsedMilliseconds >= 2000) {
++      _publish(groups: true);
++      _snapshotClock.reset();
++    } else {
++      notifyListeners();
++    }
++  }
++
+   Future<void> _analyzeLocalPreviews(
+     int runId, {
+     required Set<String>? retryEligibleIds,
+@@ -1475,17 +1652,22 @@ class PhotoScannerService extends ChangeNotifier {
+   Future<void> _verifyLocalResources(
+     int runId,
+     OriginalVerificationTarget target,
+-    Set<String> candidates,
+-  ) async {
++    Set<String> candidates, {
++    Set<String>? onceIds,
++  }) async {
+     if (!_nativeAvailable) return;
+-    final ids = _verificationQueue(target, candidates);
++    final ids = _verificationQueue(
++      target,
++      candidates,
++    ).where((id) => onceIds == null || onceIds.contains(id)).toList();
+     _originalRoundTotal = ids.length;
+     _originalRoundProcessed = 0;
+     notifyListeners();
+-    _startBudget(_resourceRoundBudget);
++    _startBudget(_originalRoundBudget);
+     var processed = 0;
+     for (final id in ids) {
+       _checkRun(runId);
++      onceIds?.remove(id);
+       final previous = _assets[id]!;
+       final includeHash =
+           target != OriginalVerificationTarget.fileSizes &&
+@@ -1582,7 +1764,11 @@ class PhotoScannerService extends ChangeNotifier {
+       processed++;
+       _originalRoundProcessed = processed;
+       _scanProgress = 0.45 + 0.55 * processed / math.max(1, ids.length);
+-      await _publishAnalysisBatch(runId, first: processed == 1);
++      if (onceIds == null) {
++        await _publishAnalysisBatch(runId, first: processed == 1);
++      } else {
++        _publishOriginalBatch(first: processed == 1);
++      }
+       await Future<void>.delayed(Duration.zero);
+       _checkRun(runId);
+     }
+@@ -1935,6 +2121,10 @@ class PhotoScannerService extends ChangeNotifier {
+     if (_disposed) return;
+     final prefix = '$_instanceId:$_scanRunId:';
+     _disposed = true;
++    if (_originalAccessRefreshDone case final pending?) {
++      if (!pending.isCompleted) pending.complete();
++      _originalAccessRefreshDone = null;
++    }
+     _isScanning = false;
+     _stopRound();
+     _scanRunId++;
+diff --git a/lib/views/home/home_view.dart b/lib/views/home/home_view.dart
+index 4f8bfc5..85209e6 100644
+--- a/lib/views/home/home_view.dart
++++ b/lib/views/home/home_view.dart
+@@ -54,8 +54,13 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
+   }
+ 
+   Future<void> _refreshAccessAndPreview() async {
+-    await context.read<PhotoScannerService>().refreshPhotoAccess();
+-    if (mounted) await _startPreviewWithExistingAccess();
++    final scanner = context.read<PhotoScannerService>();
++    await scanner.refreshPhotoAccess();
++    if (!mounted) return;
++    // A later foreground session may continue untouched original resources,
++    // but only after the Photos scope refresh has finished.
++    if (!scanner.isScanning) setState(() => _startedOriginalCheck = false);
++    await _startPreviewWithExistingAccess();
+   }
+ 
+   bool _hasScanState(PhotoScannerService scanner) =>
+@@ -89,8 +94,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
+   }
+ 
+   /// Once every item is indexed, confirm exact duplicates and file sizes from
+-  /// the originals in the background, so Duplicates and "Space to Clean"
+-  /// fill in without the user asking. Runs at most once per launch.
++  /// the originals in bounded background rounds. An unavailable iCloud preview
++  /// must not block verification of the accessible originals.
+   void _maybeCheckOriginals(PhotoScannerService scanner) {
+     if (_startedOriginalCheck ||
+         scanner.isScanning ||
+@@ -103,16 +108,10 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
+     if (total == null || total == 0 || scanner.scannedAssetCount < total) {
+       return;
+     }
+-    // A paused or deadline-limited preview keeps its checkpoint; the user
+-    // continues it explicitly before originals are checked.
+-    if (scanner.pendingAnalysisCount > 0) return;
+-    if (scanner.pendingHashAssetCount <= 0 &&
+-        scanner.pendingSizeAssetCount <= 0) {
+-      return;
+-    }
++    if (scanner.freshOriginalAssetCount <= 0) return;
+     _startedOriginalCheck = true;
+     WidgetsBinding.instance.addPostFrameCallback((_) {
+-      if (mounted) unawaited(scanner.verifyOriginals());
++      if (mounted) unawaited(scanner.startContinuousOriginalVerification());
+     });
+   }
+ 
+@@ -140,8 +139,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
+     _maybeCheckOriginals(scanner);
+     final isPro = context.select<SubscriptionManager, bool>((sub) => sub.isPro);
+     final index = CategoryIndex.of(scanner.scanResult);
+-    final notStarted =
+-        !_hasScanState(scanner) && !scanner.permissionDenied;
++    final suggested = index.suggested;
++    final notStarted = !_hasScanState(scanner) && !scanner.permissionDenied;
+ 
+     return Scaffold(
+       body: SafeArea(
+@@ -150,7 +149,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
+           children: [
+             _Header(isPro: isPro),
+             _SpaceToClean(
+-              bytes: sumBytes(index.suggested),
++              bytes: sumBytes(suggested),
++              suggestedCount: suggested.length,
+               storage: _storage,
+             ),
+             Expanded(
+@@ -194,6 +194,8 @@ bool _isPaused(PhotoScannerService scanner) {
+   if (scanner.scannedAssetCount == 0) return false;
+   final total = scanner.availableAssetCount;
+   return scanner.pendingAnalysisCount > 0 ||
++      scanner.freshOriginalAssetCount > 0 ||
++      scanner.pendingResourceCount > 0 ||
+       (total != null && scanner.scannedAssetCount < total);
+ }
+ 
+@@ -233,36 +235,37 @@ class _Header extends StatelessWidget {
+                 label: l10n.settingsUpgrade,
+                 excludeSemantics: true,
+                 child: InkWell(
+-                key: const ValueKey('home-pro'),
+-                borderRadius: BorderRadius.circular(AppTheme.r50),
+-                onTap: () => PaywallView.showUnlock(context, source: 'home_pro'),
+-                child: Padding(
+-                  padding: const EdgeInsets.symmetric(
+-                    horizontal: 14,
+-                    vertical: 8,
+-                  ),
+-                  child: Row(
+-                    mainAxisSize: MainAxisSize.min,
+-                    children: [
+-                      const Icon(
+-                        Icons.star_rounded,
+-                        color: Colors.white,
+-                        size: 18,
+-                      ),
+-                      const SizedBox(width: 4),
+-                      Text(
+-                        l10n.homeProBadge,
+-                        style: const TextStyle(
++                  key: const ValueKey('home-pro'),
++                  borderRadius: BorderRadius.circular(AppTheme.r50),
++                  onTap: () =>
++                      PaywallView.showUnlock(context, source: 'home_pro'),
++                  child: Padding(
++                    padding: const EdgeInsets.symmetric(
++                      horizontal: 14,
++                      vertical: 8,
++                    ),
++                    child: Row(
++                      mainAxisSize: MainAxisSize.min,
++                      children: [
++                        const Icon(
++                          Icons.star_rounded,
+                           color: Colors.white,
+-                          fontWeight: FontWeight.w700,
+-                          fontSize: 15,
++                          size: 18,
+                         ),
+-                      ),
+-                    ],
++                        const SizedBox(width: 4),
++                        Text(
++                          l10n.homeProBadge,
++                          style: const TextStyle(
++                            color: Colors.white,
++                            fontWeight: FontWeight.w700,
++                            fontSize: 15,
++                          ),
++                        ),
++                      ],
++                    ),
+                   ),
+                 ),
+               ),
+-              ),
+             ),
+           IconButton(
+             key: const ValueKey('home-settings'),
+@@ -285,8 +288,13 @@ class _Header extends StatelessWidget {
+ 
+ // ── "23.7 MB Space to Clean" + usage bar ──
+ class _SpaceToClean extends StatelessWidget {
+-  const _SpaceToClean({required this.bytes, required this.storage});
++  const _SpaceToClean({
++    required this.bytes,
++    required this.suggestedCount,
++    required this.storage,
++  });
+   final int bytes;
++  final int suggestedCount;
+   final StorageInfo storage;
+ 
+   @override
+@@ -306,18 +314,24 @@ class _SpaceToClean extends StatelessWidget {
+             TextSpan(
+               children: [
+                 TextSpan(
+-                  text: formatBytes(bytes),
++                  text: bytes > 0
++                      ? formatBytes(bytes)
++                      : suggestedCount > 0
++                      ? context.l10n.v2PhotoCount(suggestedCount)
++                      : formatBytes(0),
+                   style: const TextStyle(
+                     fontSize: 24,
+                     fontWeight: FontWeight.w700,
+                     color: AppTheme.textTitle,
+                   ),
+                 ),
+-                const TextSpan(text: '  '),
+-                TextSpan(
+-                  text: context.l10n.v2SpaceToClean,
+-                  style: AppTheme.caption,
+-                ),
++                if (bytes > 0 || suggestedCount == 0) ...[
++                  const TextSpan(text: '  '),
++                  TextSpan(
++                    text: context.l10n.v2SpaceToClean,
++                    style: AppTheme.caption,
++                  ),
++                ],
+               ],
+             ),
+           ),
+@@ -348,7 +362,8 @@ class _SpaceToClean extends StatelessWidget {
+                             ),
+                             if (cleanFraction > 0)
+                               PositionedDirectional(
+-                                start: c.maxWidth * (usedFraction - cleanFraction),
++                                start:
++                                    c.maxWidth * (usedFraction - cleanFraction),
+                                 child: Container(
+                                   width: c.maxWidth * cleanFraction,
+                                   height: 8,
+@@ -452,14 +467,19 @@ class _ScanStatus extends StatelessWidget {
+     builder: (context, _) {
+       final total = scanner.availableAssetCount;
+       final verifying = scanner.isVerifyingOriginals;
++      final continuousOriginals = scanner.isContinuousOriginalVerification;
+       final indexing = total == null || scanner.scannedAssetCount < total;
+       // Show the stage that is actually moving: originals, index, analysis.
+-      final done = verifying
++      final done = continuousOriginals
++          ? scanner.attemptedResourceCount
++          : verifying
+           ? scanner.originalRoundProcessed
+           : indexing
+           ? scanner.scannedAssetCount
+           : scanner.attemptedAnalysisCount;
+-      final stageTotal = verifying
++      final stageTotal = continuousOriginals
++          ? scanner.scannedAssetCount
++          : verifying
+           ? scanner.originalRoundTotal
+           : indexing
+           ? total
+@@ -483,7 +503,7 @@ class _ScanStatus extends StatelessWidget {
+                 const SizedBox(width: 8),
+                 Expanded(
+                   child: Text(
+-                    verifying
++                    (verifying || continuousOriginals)
+                         ? context.l10n.v2CheckingDuplicates
+                         : context.l10n.v2Scanning,
+                     style: AppTheme.caption.copyWith(
+@@ -533,10 +553,20 @@ class _ScanPaused extends StatelessWidget {
+   Widget build(BuildContext context) {
+     final total = scanner.availableAssetCount;
+     final indexed = total != null && scanner.scannedAssetCount >= total;
+-    final done = indexed
++    final originalWork =
++        indexed &&
++        scanner.attemptedAnalysisCount >= scanner.totalPhotoCount &&
++        scanner.pendingResourceCount > 0;
++    final done = originalWork
++        ? scanner.attemptedResourceCount
++        : indexed
+         ? scanner.attemptedAnalysisCount
+         : scanner.scannedAssetCount;
+-    final of = indexed ? scanner.totalPhotoCount : total;
++    final of = originalWork
++        ? scanner.scannedAssetCount
++        : indexed
++        ? scanner.totalPhotoCount
++        : total;
+     return Padding(
+       key: const ValueKey('home-scan-paused'),
+       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+@@ -572,7 +602,11 @@ class _ScanPaused extends StatelessWidget {
+             Flexible(
+               child: TextButton(
+                 key: const ValueKey('home-scan-continue'),
+-                onPressed: () => scanner.startContinuousScan(resume: true),
++                onPressed: originalWork
++                    ? () => scanner.startContinuousOriginalVerification(
++                        retryUnresolved: true,
++                      )
++                    : () => scanner.startContinuousScan(resume: true),
+                 child: Text(
+                   context.l10n.v2ContinueScan,
+                   textAlign: TextAlign.end,

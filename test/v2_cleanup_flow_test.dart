@@ -1,3 +1,4 @@
+import 'dart:async' show unawaited;
 import 'dart:ui' show Tristate;
 
 import 'package:cleanup_app/l10n/app_localizations.dart';
@@ -60,6 +61,24 @@ ScanResult _result() {
   );
 }
 
+ScanResult _withModifiedAsset(ScanResult result, String id) => ScanResult(
+  allAssets: [
+    for (final asset in result.allAssets)
+      asset.id == id
+          ? asset.copyWith(modifiedDate: DateTime(2026, 1, 2))
+          : asset,
+  ],
+  duplicateGroups: result.duplicateGroups,
+  similarGroups: result.similarGroups,
+  screenshots: result.screenshots,
+  largeFiles: result.largeFiles,
+  videos: result.videos,
+  blurryPhotos: result.blurryPhotos,
+  darkPhotos: result.darkPhotos,
+  overexposedPhotos: result.overexposedPhotos,
+  totalSavingsEstimate: result.totalSavingsEstimate,
+);
+
 class _Scanner extends PhotoScannerService {
   _Scanner(this.result);
   ScanResult result;
@@ -67,6 +86,7 @@ class _Scanner extends PhotoScannerService {
   bool continuous = false;
   int pauses = 0;
   List<String> requested = const [];
+  final List<List<PhotoAsset>> deleteCalls = [];
   Set<String>? deleteResult;
 
   @override
@@ -86,6 +106,7 @@ class _Scanner extends PhotoScannerService {
   Future<Set<String>> deleteAssetsWithResult(List<PhotoAsset> assets) async {
     // PhotoKit must never be asked while a scan round owns the library.
     expectSync(scanning, isFalse);
+    deleteCalls.add(List<PhotoAsset>.of(assets));
     requested = [for (final a in assets) a.id];
     return deleteResult ?? requested.toSet();
   }
@@ -171,10 +192,7 @@ void main() {
 
     test('Space to Clean counts every suggestion once and never the best', () {
       final index = CategoryIndex.of(_result());
-      expect(
-        index.suggested.map((a) => a.id).toSet(),
-        {'b', 'c', 'shot'},
-      );
+      expect(index.suggested.map((a) => a.id).toSet(), {'b', 'c', 'shot'});
       expect(sumBytes(index.suggested), (4 + 4 + 1) * 1024 * 1024);
     });
 
@@ -185,7 +203,10 @@ void main() {
 
     test('results are memoized per snapshot', () {
       final result = _result();
-      expect(identical(CategoryIndex.of(result), CategoryIndex.of(result)), isTrue);
+      expect(
+        identical(CategoryIndex.of(result), CategoryIndex.of(result)),
+        isTrue,
+      );
     });
   });
 
@@ -205,7 +226,8 @@ void main() {
       expect(find.byType(PaywallView), findsNothing);
       expect(find.byType(CongratulationsView), findsOneWidget);
       expect(
-        tester.widget<CongratulationsView>(find.byType(CongratulationsView))
+        tester
+            .widget<CongratulationsView>(find.byType(CongratulationsView))
             .deletedBytes,
         4 * 1024 * 1024,
       );
@@ -217,8 +239,34 @@ void main() {
       store.dispose();
     });
 
+    testWidgets('a flow abandoned with its screen never blocks later deletes', (
+      tester,
+    ) async {
+      final scanner = _Scanner(_result());
+      final free = _Store();
+      final context = await _host(tester, scanner, free);
+      // The paywall stays open and the screen is torn down underneath it.
+      unawaited(DeleteFlow.run(context, [_photo('c')], source: 'test'));
+      await tester.pumpAndSettle();
+      expect(find.byType(PaywallView), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+
+      final pro = _Store(pro: true);
+      final next = await _host(tester, scanner, pro);
+      final run = DeleteFlow.run(next, [_photo('b')], source: 'test');
+      await tester.pumpAndSettle();
+      expect(scanner.requested, ['b']);
+      await tester.tap(find.byKey(const ValueKey('congrats-great')));
+      await tester.pumpAndSettle();
+      expect(await run, {'b'});
+      await tester.pumpWidget(const SizedBox());
+      scanner.dispose();
+      free.dispose();
+      pro.dispose();
+    });
+
     testWidgets(
-      'free users may close the paywall and finish a limited free cleanup',
+      'closing the paywall cancels deletion and preserves free quota',
       (tester) async {
         final scanner = _Scanner(_result());
         final store = _Store();
@@ -229,40 +277,154 @@ void main() {
         expect(scanner.requested, isEmpty);
         await tester.tap(find.byKey(const ValueKey('paywall-close')));
         await tester.pumpAndSettle();
-        expect(scanner.requested, ['c']);
-        await tester.tap(find.byKey(const ValueKey('congrats-great')));
-        await tester.pumpAndSettle();
-        expect(await run, {'c'});
-        expect(
-          await FreeCleanupQuota.remaining(),
-          AppConstants.maxFreeDeletes - 1,
-        );
+        expect(await run, isEmpty);
+        expect(scanner.deleteCalls, isEmpty);
+        expect(find.byType(CongratulationsView), findsNothing);
+        expect(await FreeCleanupQuota.remaining(), AppConstants.maxFreeDeletes);
         await tester.pumpWidget(const SizedBox());
         scanner.dispose();
         store.dispose();
       },
     );
 
-    testWidgets('with no free cleanups left, closing the paywall deletes nothing', (
+    testWidgets('explicit free continuation deletes and spends one cleanup', (
       tester,
     ) async {
-      SharedPreferences.setMockInitialValues({
-        'v2.freeCleanupsUsed': AppConstants.maxFreeDeletes,
-      });
       final scanner = _Scanner(_result());
       final store = _Store();
       final context = await _host(tester, scanner, store);
-      final run = DeleteFlow.run(context, [_photo('c')], source: 'test');
+      final selected = scanner.scanResult.allAssets.firstWhere(
+        (a) => a.id == 'c',
+      );
+      final run = DeleteFlow.run(context, [selected], source: 'test');
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('paywall-close')));
+      expect(scanner.deleteCalls, isEmpty);
+      await tester.tap(find.byKey(const ValueKey('paywall-continue-free')));
       await tester.pumpAndSettle();
-      expect(await run, isEmpty);
-      expect(scanner.requested, isEmpty);
-      expect(find.byType(CongratulationsView), findsNothing);
+      expect(scanner.requested, ['c']);
+      expect(identical(scanner.deleteCalls.single.single, selected), isTrue);
+      expect(
+        await FreeCleanupQuota.remaining(),
+        AppConstants.maxFreeDeletes - 1,
+      );
+      await tester.tap(find.byKey(const ValueKey('congrats-great')));
+      await tester.pumpAndSettle();
+      expect(await run, {'c'});
       await tester.pumpWidget(const SizedBox());
       scanner.dispose();
       store.dispose();
     });
+
+    testWidgets(
+      'an asset modified while the paywall is open is never deleted',
+      (tester) async {
+        final scanner = _Scanner(_result());
+        final store = _Store();
+        final context = await _host(tester, scanner, store);
+        final selected = scanner.scanResult.allAssets.firstWhere(
+          (a) => a.id == 'c',
+        );
+        final run = DeleteFlow.run(context, [selected], source: 'test');
+        await tester.pumpAndSettle();
+        scanner.result = _withModifiedAsset(scanner.result, 'c');
+        await tester.tap(find.byKey(const ValueKey('paywall-continue-free')));
+        await tester.pumpAndSettle();
+        expect(await run, isEmpty);
+        expect(scanner.deleteCalls, isEmpty);
+        expect(find.byType(CongratulationsView), findsNothing);
+        expect(await FreeCleanupQuota.remaining(), AppConstants.maxFreeDeletes);
+        await tester.pumpWidget(const SizedBox());
+        scanner.dispose();
+        store.dispose();
+      },
+    );
+
+    testWidgets('simultaneous free delete requests spend only one quota', (
+      tester,
+    ) async {
+      final scanner = _Scanner(_result());
+      final store = _Store();
+      final context = await _host(tester, scanner, store);
+      final first = DeleteFlow.run(context, [_photo('b')], source: 'test');
+      final second = DeleteFlow.run(context, [_photo('c')], source: 'test');
+      await tester.pumpAndSettle();
+      expect(await second, isEmpty);
+      expect(scanner.deleteCalls, isEmpty);
+      await tester.tap(find.byKey(const ValueKey('paywall-continue-free')));
+      await tester.pumpAndSettle();
+      expect(scanner.deleteCalls.length, 1);
+      expect(scanner.requested, ['b']);
+      expect(
+        await FreeCleanupQuota.remaining(),
+        AppConstants.maxFreeDeletes - 1,
+      );
+      await tester.tap(find.byKey(const ValueKey('congrats-great')));
+      await tester.pumpAndSettle();
+      expect(await first, {'b'});
+      await tester.pumpWidget(const SizedBox());
+      scanner.dispose();
+      store.dispose();
+    });
+
+    testWidgets('a free user cannot exceed five successful cleanups', (
+      tester,
+    ) async {
+      final scanner = _Scanner(_result());
+      final store = _Store();
+      final context = await _host(tester, scanner, store);
+      for (var i = 0; i < AppConstants.maxFreeDeletes; i++) {
+        final selected = scanner.scanResult.allAssets[i];
+        final run = DeleteFlow.run(context, [selected], source: 'test');
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('paywall-continue-free')));
+        await tester.pumpAndSettle();
+        expect(scanner.deleteCalls.length, i + 1);
+        expect(identical(scanner.deleteCalls.last.single, selected), isTrue);
+        expect(
+          await FreeCleanupQuota.remaining(),
+          AppConstants.maxFreeDeletes - i - 1,
+        );
+        await tester.tap(find.byKey(const ValueKey('congrats-great')));
+        await tester.pumpAndSettle();
+        expect(await run, {selected.id});
+      }
+      final sixth = DeleteFlow.run(context, [
+        scanner.scanResult.allAssets.last,
+      ], source: 'test');
+      await tester.pumpAndSettle();
+      expect(find.byType(PaywallView), findsOneWidget);
+      expect(find.byKey(const ValueKey('paywall-continue-free')), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('paywall-close')));
+      await tester.pumpAndSettle();
+      expect(await sixth, isEmpty);
+      expect(scanner.deleteCalls.length, AppConstants.maxFreeDeletes);
+      expect(await FreeCleanupQuota.remaining(), 0);
+      await tester.pumpWidget(const SizedBox());
+      scanner.dispose();
+      store.dispose();
+    });
+
+    testWidgets(
+      'with no free cleanups left, closing the paywall deletes nothing',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({
+          'v2.freeCleanupsUsed': AppConstants.maxFreeDeletes,
+        });
+        final scanner = _Scanner(_result());
+        final store = _Store();
+        final context = await _host(tester, scanner, store);
+        final run = DeleteFlow.run(context, [_photo('c')], source: 'test');
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('paywall-close')));
+        await tester.pumpAndSettle();
+        expect(await run, isEmpty);
+        expect(scanner.requested, isEmpty);
+        expect(find.byType(CongratulationsView), findsNothing);
+        await tester.pumpWidget(const SizedBox());
+        scanner.dispose();
+        store.dispose();
+      },
+    );
 
     testWidgets('a cancelled system confirmation shows no celebration', (
       tester,
@@ -303,11 +465,12 @@ void main() {
       }
     });
     await tester.pumpAndSettle();
-    bool selected(String id) => tester
-        .getSemantics(find.byKey(ValueKey('group-tile-$id')))
-        .getSemanticsData()
-        .flagsCollection
-        .isSelected ==
+    bool selected(String id) =>
+        tester
+            .getSemantics(find.byKey(ValueKey('group-tile-$id')))
+            .getSemanticsData()
+            .flagsCollection
+            .isSelected ==
         Tristate.isTrue;
     final semantics = tester.ensureSemantics();
     await tester.pump();

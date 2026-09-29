@@ -1659,7 +1659,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Dọn album “Đã xóa gần đây” trên iPhone để giải phóng $size.';
+    return 'Dung lượng tệp gốc ước tính: $size. Hãy kiểm tra Dung lượng iPhone để biết dung lượng thực tế đã giải phóng; mục Đã xóa gần đây vẫn có thể chiếm chỗ.';
   }
 
   @override
@@ -1842,4 +1842,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get v2PauseScan => 'Tạm dừng quét';
+
+  @override
+  String v2ContinueFreeCleanup(int count) {
+    return 'Tiếp tục dọn dẹp miễn phí (còn $count lượt)';
+  }
 }

@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "你已删除",
   "v2CongratsSaved": "{minutes, plural, other{节省约 {minutes} 分钟}}",
   "v2CongratsUsing": "使用 {appName}",
-  "v2CongratsRecentlyDeleted": "清空 iPhone 上的“最近删除”相簿即可释放 {size}。",
+  "v2CongratsRecentlyDeleted": "已删文件的原始大小估计为 {size}；实际释放容量请查看 iPhone 储存空间，“最近删除”可能仍占用空间。",
   "v2Great": "太好了",
   "v2UnlockTitle": "解锁无限制使用",
   "v2UnlockFeature1": "立即找出相似照片",
@@ -476,5 +476,6 @@
   "v2SecretBody": "保护你的私密照片",
   "v2ScanPaused": "扫描已暂停",
   "v2ContinueScan": "继续扫描",
-  "v2PauseScan": "暂停扫描"
+  "v2PauseScan": "暂停扫描",
+  "v2ContinueFreeCleanup": "继续免费清理（剩余 {count} 次）"
 }

@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Has eliminado",
   "v2CongratsSaved": "{minutes, plural, one{Has ahorrado 1 minuto aprox.} other{Has ahorrado unos {minutes} minutos}}",
   "v2CongratsUsing": "con {appName}",
-  "v2CongratsRecentlyDeleted": "Vacía el álbum “Eliminado” de tu iPhone para liberar {size}.",
+  "v2CongratsRecentlyDeleted": "Tamaño original estimado de los archivos: {size}. Consulta Almacenamiento del iPhone para ver el espacio realmente liberado; Eliminado recientemente puede seguir ocupando espacio.",
   "v2Great": "Genial",
   "v2UnlockTitle": "Desbloquea acceso ilimitado",
   "v2UnlockFeature1": "Encuentra fotos parecidas al instante",
@@ -476,5 +476,6 @@
   "v2SecretBody": "Protege tus fotos privadas",
   "v2ScanPaused": "Análisis en pausa",
   "v2ContinueScan": "Continuar",
-  "v2PauseScan": "Pausar análisis"
+  "v2PauseScan": "Pausar análisis",
+  "v2ContinueFreeCleanup": "Continuar limpieza gratuita ({count} restantes)"
 }

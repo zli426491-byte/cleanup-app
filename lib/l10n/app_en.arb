@@ -1089,7 +1089,7 @@
       }
     }
   },
-  "v2CongratsRecentlyDeleted": "Empty the “Recently Deleted” album on your iPhone to free up {size}.",
+  "v2CongratsRecentlyDeleted": "Estimated original file size: {size}. Check iPhone Storage for the space actually freed; Recently Deleted may still use storage.",
   "@v2CongratsRecentlyDeleted": {
     "placeholders": {
       "size": {
@@ -1219,5 +1219,13 @@
   "v2SecretBody": "Protect your private photos",
   "v2ScanPaused": "Scan paused",
   "v2ContinueScan": "Continue",
-  "v2PauseScan": "Pause scan"
+  "v2PauseScan": "Pause scan",
+  "v2ContinueFreeCleanup": "Continue free cleanup ({count} remaining)",
+  "@v2ContinueFreeCleanup": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

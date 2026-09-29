@@ -25,17 +25,28 @@ const _weeklyWithTrial = StoreProduct(
   90,
   'NT\$90',
   'TWD',
-  introductoryPrice: IntroductoryPrice(0, 'NT\$0', 'P1W', 1, PeriodUnit.week, 1),
+  introductoryPrice: IntroductoryPrice(
+    0,
+    'NT\$0',
+    'P1W',
+    1,
+    PeriodUnit.week,
+    1,
+  ),
 );
 
 class _Store extends SubscriptionManager {
-  _Store({required this.eligible});
+  _Store({required this.eligible, this.loading = false});
   final bool eligible;
+  final bool loading;
+  bool pro = false;
 
+  @override
+  bool get isPro => pro;
   @override
   bool get isPlaceholder => false;
   @override
-  bool get isLoading => false;
+  bool get isLoading => loading;
   @override
   bool get isInitializing => false;
   @override
@@ -45,6 +56,12 @@ class _Store extends SubscriptionManager {
   @override
   int? freeTrialDays(StoreProduct product) =>
       eligible && product.introductoryPrice?.price == 0 ? 7 : null;
+  @override
+  Future<bool> purchaseStoreProduct(StoreProduct product) async {
+    pro = true;
+    notifyListeners();
+    return true;
+  }
 }
 
 Future<AppLocalizations> _pump(
@@ -74,6 +91,40 @@ Future<AppLocalizations> _pump(
   );
   await tester.pump();
   return tester.element(find.byType(PaywallView)).l10n;
+}
+
+Future<BuildContext> _pumpUnlockHost(
+  WidgetTester tester,
+  SubscriptionManager store,
+) async {
+  tester.view.physicalSize = const Size(390, 844);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  final scanner = PhotoScannerService();
+  addTearDown(scanner.dispose);
+  late BuildContext host;
+  await tester.pumpWidget(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider<SubscriptionManager>.value(value: store),
+        ChangeNotifierProvider<PhotoScannerService>.value(value: scanner),
+      ],
+      child: MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) {
+            host = context;
+            return const Scaffold(body: SizedBox());
+          },
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
+  return host;
 }
 
 void main() {
@@ -162,8 +213,100 @@ void main() {
       store,
       const PaywallView(freeCleanupsLeft: 3),
     );
-    expect(find.text(l10n.v2FreeCleanupsLeft(3)), findsOneWidget);
+    expect(find.text(l10n.v2ContinueFreeCleanup(3)), findsOneWidget);
+    expect(find.byKey(const ValueKey('paywall-continue-free')), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
+    store.dispose();
+  });
+
+  testWidgets(
+    'closing the unlock offer explicitly cancels the pending action',
+    (tester) async {
+      final store = _Store(eligible: false);
+      final host = await _pumpUnlockHost(tester, store);
+      final result = PaywallView.showUnlock(
+        host,
+        source: 'test',
+        freeCleanupsLeft: 3,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('paywall-close')));
+      await tester.pumpAndSettle();
+      expect(await result, PaywallUnlockResult.cancelled);
+      store.dispose();
+    },
+  );
+
+  testWidgets('using a free cleanup requires its own explicit button', (
+    tester,
+  ) async {
+    final store = _Store(eligible: false);
+    final host = await _pumpUnlockHost(tester, store);
+    final result = PaywallView.showUnlock(
+      host,
+      source: 'test',
+      freeCleanupsLeft: 3,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('paywall-continue-free')));
+    await tester.pumpAndSettle();
+    expect(await result, PaywallUnlockResult.continueFree);
+    store.dispose();
+  });
+
+  testWidgets('free cleanup remains available while the store is loading', (
+    tester,
+  ) async {
+    final store = _Store(eligible: false, loading: true);
+    final host = await _pumpUnlockHost(tester, store);
+    final result = PaywallView.showUnlock(
+      host,
+      source: 'test',
+      freeCleanupsLeft: 2,
+    );
+    // The purchase button has a perpetual loading spinner, so this route
+    // intentionally cannot settle while the store remains unavailable.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+    final button = tester.widget<OutlinedButton>(
+      find.byKey(const ValueKey('paywall-continue-free')),
+    );
+    expect(button.onPressed, isNotNull);
+    await tester.tap(find.byKey(const ValueKey('paywall-continue-free')));
+    await tester.pumpAndSettle();
+    expect(await result, PaywallUnlockResult.continueFree);
+    store.dispose();
+  });
+
+  testWidgets('a successful purchase is distinct from free continuation', (
+    tester,
+  ) async {
+    final store = _Store(eligible: false);
+    final host = await _pumpUnlockHost(tester, store);
+    final result = PaywallView.showUnlock(
+      host,
+      source: 'test',
+      freeCleanupsLeft: 3,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(host.l10n.paywallSubscribeYearly('NT\$990')));
+    await tester.pumpAndSettle();
+    expect(await result, PaywallUnlockResult.purchased);
+    store.dispose();
+  });
+
+  testWidgets('system back also cancels an unlock offer', (tester) async {
+    final store = _Store(eligible: false);
+    final host = await _pumpUnlockHost(tester, store);
+    final result = PaywallView.showUnlock(
+      host,
+      source: 'test',
+      freeCleanupsLeft: 3,
+    );
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(await result, PaywallUnlockResult.cancelled);
     store.dispose();
   });
 }

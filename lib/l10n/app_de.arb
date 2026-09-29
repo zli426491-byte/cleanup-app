@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Du hast gelöscht:",
   "v2CongratsSaved": "{minutes, plural, one{Etwa 1 Minute gespart} other{Etwa {minutes} Minuten gespart}}",
   "v2CongratsUsing": "mit {appName}",
-  "v2CongratsRecentlyDeleted": "Leere das Album „Zuletzt gelöscht“, um {size} freizugeben.",
+  "v2CongratsRecentlyDeleted": "Geschätzte Originalgröße der Dateien: {size}. Den tatsächlich freien Speicher siehst du unter iPhone-Speicher; „Zuletzt gelöscht“ kann weiterhin Platz belegen.",
   "v2Great": "Super",
   "v2UnlockTitle": "Unbegrenzten Zugang freischalten",
   "v2UnlockFeature1": "Ähnliche Fotos sofort finden",
@@ -476,5 +476,6 @@
   "v2SecretBody": "Schütze deine privaten Fotos",
   "v2ScanPaused": "Scan pausiert",
   "v2ContinueScan": "Fortsetzen",
-  "v2PauseScan": "Scan pausieren"
+  "v2PauseScan": "Scan pausieren",
+  "v2ContinueFreeCleanup": "Kostenlose Bereinigung fortsetzen ({count} verbleibend)"
 }

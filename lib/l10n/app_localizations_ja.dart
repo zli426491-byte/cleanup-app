@@ -1590,7 +1590,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return '「最近削除した項目」を空にすると$sizeが解放されます。';
+    return '元のファイルサイズの推定値：$size。実際に空いた容量は「iPhoneストレージ」で確認してください。「最近削除した項目」が容量を使っている場合があります。';
   }
 
   @override
@@ -1768,4 +1768,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get v2PauseScan => 'スキャンを一時停止';
+
+  @override
+  String v2ContinueFreeCleanup(int count) {
+    return '無料クリーニングを続ける（残り$count回）';
+  }
 }

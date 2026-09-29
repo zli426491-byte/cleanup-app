@@ -1721,7 +1721,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Очистите альбом «Недавно удалённые», чтобы освободить $size.';
+    return 'Оценочный исходный размер файлов: $size. Фактически освобождённое место проверьте в хранилище iPhone; «Недавно удалённые» могут всё ещё занимать место.';
   }
 
   @override
@@ -1920,4 +1920,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get v2PauseScan => 'Приостановить';
+
+  @override
+  String v2ContinueFreeCleanup(int count) {
+    return 'Продолжить бесплатную очистку (осталось $count)';
+  }
 }

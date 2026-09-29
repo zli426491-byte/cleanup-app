@@ -21,12 +21,16 @@ import '../v2/ui_kit.dart';
 /// B: when a free user starts a Pro action ("Unlock Unlimited Access").
 enum PaywallVariant { trial, unlock }
 
+/// Explicit result from the in-app unlock offer. Closing the offer is never
+/// consent to continue a pending deletion.
+enum PaywallUnlockResult { cancelled, continueFree, purchased }
+
 class PaywallView extends StatefulWidget {
   final bool fromOnboarding;
   final PaywallVariant variant;
   final String? source;
 
-  /// Free cleanups a user can still finish by closing this page (B only).
+  /// Free cleanups available through the explicit continuation action (B only).
   final int? freeCleanupsLeft;
 
   const PaywallView({
@@ -40,20 +44,22 @@ class PaywallView extends StatefulWidget {
            (fromOnboarding ? PaywallVariant.trial : PaywallVariant.unlock);
 
   /// Presents variant B and completes when it closes.
-  static Future<void> showUnlock(
+  static Future<PaywallUnlockResult> showUnlock(
     BuildContext context, {
     required String source,
     int? freeCleanupsLeft,
-  }) => Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      fullscreenDialog: true,
-      builder: (_) => PaywallView(
-        variant: PaywallVariant.unlock,
-        source: source,
-        freeCleanupsLeft: freeCleanupsLeft,
-      ),
-    ),
-  );
+  }) async =>
+      await Navigator.of(context).push<PaywallUnlockResult>(
+        MaterialPageRoute<PaywallUnlockResult>(
+          fullscreenDialog: true,
+          builder: (_) => PaywallView(
+            variant: PaywallVariant.unlock,
+            source: source,
+            freeCleanupsLeft: freeCleanupsLeft,
+          ),
+        ),
+      ) ??
+      PaywallUnlockResult.cancelled;
 
   @override
   State<PaywallView> createState() => _PaywallViewState();
@@ -220,18 +226,6 @@ class _PaywallViewState extends State<PaywallView> {
                                 style: AppTheme.small.copyWith(fontSize: 11),
                               ),
                             ),
-                          if (widget.freeCleanupsLeft != null &&
-                              widget.freeCleanupsLeft! > 0 &&
-                              !sub.isPro) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              context.l10n.v2FreeCleanupsLeft(
-                                widget.freeCleanupsLeft!,
-                              ),
-                              textAlign: TextAlign.center,
-                              style: AppTheme.small,
-                            ),
-                          ],
                         ],
                       ),
                     ),
@@ -240,6 +234,31 @@ class _PaywallViewState extends State<PaywallView> {
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
                     child: purchaseButton,
                   ),
+                  if (widget.variant == PaywallVariant.unlock &&
+                      widget.freeCleanupsLeft != null &&
+                      widget.freeCleanupsLeft! > 0 &&
+                      !sub.isPro)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          key: const ValueKey('paywall-continue-free'),
+                          onPressed: _isPurchasing || _isDismissing
+                              ? null
+                              : () => _dismiss(
+                                  context,
+                                  result: PaywallUnlockResult.continueFree,
+                                ),
+                          child: Text(
+                            context.l10n.v2ContinueFreeCleanup(
+                              widget.freeCleanupsLeft!,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ),
                   _footer(sub),
                 ],
               ),
@@ -273,10 +292,7 @@ class _PaywallViewState extends State<PaywallView> {
                 context.l10n.paywallRestorePurchases,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppTheme.textMuted,
-                  fontSize: 13,
-                ),
+                style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
               ),
             ),
           ),
@@ -364,10 +380,7 @@ class _PaywallViewState extends State<PaywallView> {
           child: Row(
             children: [
               Expanded(
-                child: Text(
-                  l10n.v2TrialEnabled,
-                  style: AppTheme.heading3,
-                ),
+                child: Text(l10n.v2TrialEnabled, style: AppTheme.heading3),
               ),
               const Icon(Icons.verified_rounded, color: AppTheme.success),
             ],
@@ -449,8 +462,7 @@ class _PaywallViewState extends State<PaywallView> {
       ),
       if (widget.variant == PaywallVariant.trial)
         TextButton(
-          onPressed: () =>
-              launchUrl(Uri.parse(AppConstants.privacyPolicyUrl)),
+          onPressed: () => launchUrl(Uri.parse(AppConstants.privacyPolicyUrl)),
           child: Text(
             context.l10n.paywallPrivacyPolicy,
             style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
@@ -469,23 +481,19 @@ class _PaywallViewState extends State<PaywallView> {
     ];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Wrap(
-        alignment: WrapAlignment.spaceBetween,
-        children: links,
-      ),
+      child: Wrap(alignment: WrapAlignment.spaceBetween, children: links),
     );
   }
 
-  String _priceLine(_PlanOption plan) =>
-      switch (plan.product.identifier) {
-        AppConstants.weeklyProductId => context.l10n.v2PerWeek(
-          plan.product.priceString,
-        ),
-        AppConstants.yearlyProductId => context.l10n.v2PerYear(
-          plan.product.priceString,
-        ),
-        _ => '${_titleFor(plan)} · ${plan.product.priceString}',
-      };
+  String _priceLine(_PlanOption plan) => switch (plan.product.identifier) {
+    AppConstants.weeklyProductId => context.l10n.v2PerWeek(
+      plan.product.priceString,
+    ),
+    AppConstants.yearlyProductId => context.l10n.v2PerYear(
+      plan.product.priceString,
+    ),
+    _ => '${_titleFor(plan)} · ${plan.product.priceString}',
+  };
 
   String _planSubtitle(SubscriptionManager sub, _PlanOption plan) {
     final days = sub.freeTrialDays(plan.product);
@@ -554,7 +562,7 @@ class _PaywallViewState extends State<PaywallView> {
           'pro_unlocked': true,
         },
       );
-      _dismiss(context);
+      _dismiss(context, result: PaywallUnlockResult.purchased);
     } else {
       _showMessage(
         sub.statusMessage.isNotEmpty
@@ -571,7 +579,7 @@ class _PaywallViewState extends State<PaywallView> {
 
     if (restored) {
       _showMessage(context.l10n.paywallRestored);
-      _dismiss(context);
+      _dismiss(context, result: PaywallUnlockResult.purchased);
     } else {
       _showMessage(
         sub.statusMessage.isNotEmpty
@@ -587,7 +595,10 @@ class _PaywallViewState extends State<PaywallView> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _dismiss(BuildContext context) async {
+  Future<void> _dismiss(
+    BuildContext context, {
+    PaywallUnlockResult result = PaywallUnlockResult.cancelled,
+  }) async {
     if (!_pageIsActive) return;
     _isDismissing = true;
     if (!_hasTrackedClose) {
@@ -613,7 +624,7 @@ class _PaywallViewState extends State<PaywallView> {
         }
       } else if (context.mounted &&
           (ModalRoute.of(context)?.isCurrent ?? true)) {
-        Navigator.pop(context);
+        Navigator.pop(context, result);
       }
     } catch (_) {
       if (context.mounted && (ModalRoute.of(context)?.isCurrent ?? true)) {
@@ -690,7 +701,6 @@ class _PaywallViewState extends State<PaywallView> {
           ? context.l10n.paywallWaitingForStore
           : context.l10n.paywallLoadingPlans,
   };
-
 }
 
 class _PlanOption {
@@ -1043,7 +1053,10 @@ class _TrialTimeline extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Flexible(
-          child: Align(alignment: AlignmentDirectional.centerEnd, child: trailing),
+          child: Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: trailing,
+          ),
         ),
       ],
     );

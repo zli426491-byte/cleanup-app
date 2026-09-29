@@ -1,5 +1,10 @@
+import 'dart:async' show unawaited;
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:cleanup_app/l10n/l10n.dart';
+import 'package:photo_manager/photo_manager.dart'
+    show AssetEntity, ThumbnailFormat, ThumbnailOption, ThumbnailSize;
 import 'package:provider/provider.dart';
 
 import '../../models/photo_asset.dart' show formatBytes;
@@ -33,6 +38,10 @@ class _GroupReviewViewState extends State<GroupReviewView> {
   /// Suggestions start selected, but only photos whose preview decoded for
   /// this exact version can be deleted or toggled.
   final Map<String, PhotoAsset> _ready = {};
+  bool _validatingSuggestions = false;
+  int _validationRun = 0;
+  int _validatedCount = 0;
+  int _validationTotal = 0;
 
   bool _isReady(PhotoAsset asset) => identical(_ready[asset.id], asset);
 
@@ -56,6 +65,7 @@ class _GroupReviewViewState extends State<GroupReviewView> {
   void _sync(CategoryIndex index) {
     if (identical(_syncedWith, index.result)) return;
     _syncedWith = index.result;
+    final run = ++_validationRun;
     final present = <String>{};
     for (final section in widget.sections) {
       for (final group in index[section].groups) {
@@ -63,9 +73,172 @@ class _GroupReviewViewState extends State<GroupReviewView> {
         if (_knownGroups.add(group.key)) {
           _selected.addAll(group.others.map((a) => a.id));
         }
+        // A changed scan may choose a different best photo. Never carry a
+        // prior selection forward into an entire group marked for deletion.
+        if (group.assets.every((a) => _selected.contains(a.id))) {
+          _selected.remove(group.bestId);
+        }
       }
     }
     _selected.retainAll(present);
+    final pending = [
+      for (final section in widget.sections)
+        for (final group in index[section].groups)
+          for (final asset in group.assets)
+            if (_selected.contains(asset.id) && !_isReady(asset)) asset,
+    ];
+    _validatingSuggestions = pending.isNotEmpty;
+    _validatedCount = 0;
+    _validationTotal = pending.length;
+    if (pending.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && run == _validationRun) {
+          unawaited(_prepareSuggestions(pending, run));
+        }
+      });
+    }
+  }
+
+  Future<void> _prepareSuggestions(List<PhotoAsset> assets, int run) async {
+    final scanner = context.read<PhotoScannerService>();
+    try {
+      if (scanner.isContinuousScanning) {
+        await scanner.pauseContinuousScan();
+      } else if (scanner.isScanning) {
+        scanner.cancelScan();
+      }
+    } catch (_) {
+      if (mounted && run == _validationRun) {
+        setState(() => _validatingSuggestions = false);
+      }
+      return;
+    }
+    if (!mounted || run != _validationRun) return;
+    if (scanner.isScanning || !identical(_syncedWith, scanner.scanResult)) {
+      // A pause may publish a different version. _sync will queue that
+      // version on the next build rather than certifying these old assets.
+      if (scanner.isScanning) {
+        setState(() => _validatingSuggestions = false);
+      }
+      return;
+    }
+    await _verifySuggestions(assets, run);
+  }
+
+  Future<bool> _verifyPreview(PhotoAsset asset) async {
+    try {
+      var bytes = asset.thumbnail;
+      if (bytes == null) {
+        final entity = await AssetEntity.fromId(
+          asset.id,
+        ).timeout(const Duration(seconds: 30));
+        if (entity == null) return false;
+        bytes = await entity
+            .thumbnailDataWithOption(
+              ThumbnailOption.ios(
+                size: const ThumbnailSize(320, 320),
+                format: ThumbnailFormat.jpeg,
+              ),
+            )
+            .timeout(const Duration(seconds: 30));
+      }
+      if (bytes == null) return false;
+      final codec = await ui
+          .instantiateImageCodec(bytes)
+          .timeout(const Duration(seconds: 30));
+      try {
+        final frame = await codec.getNextFrame().timeout(
+          const Duration(seconds: 30),
+        );
+        frame.image.dispose();
+        return true;
+      } finally {
+        codec.dispose();
+      }
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _retrySelected(Iterable<ReviewGroup> groups) {
+    if (_validatingSuggestions) return;
+    final pending = [
+      for (final group in groups)
+        for (final asset in group.others)
+          if (_selected.contains(asset.id) && !_isReady(asset)) asset,
+    ];
+    if (pending.isEmpty) return;
+    final run = ++_validationRun;
+    setState(() {
+      _validatingSuggestions = true;
+      _validatedCount = 0;
+      _validationTotal = pending.length;
+    });
+    unawaited(_prepareSuggestions(pending, run));
+  }
+
+  Future<void> _verifySuggestions(List<PhotoAsset> assets, int run) async {
+    var next = 0;
+    var completed = 0;
+    Future<void> worker() async {
+      while (mounted && run == _validationRun) {
+        final index = next++;
+        if (index >= assets.length) return;
+        final asset = assets[index];
+        final ready = _isReady(asset) || await _verifyPreview(asset);
+        if (!mounted || run != _validationRun) return;
+        if (ready) _ready[asset.id] = asset;
+        completed++;
+        if (completed % 32 == 0 || completed == assets.length) {
+          setState(() => _validatedCount = completed);
+        }
+      }
+    }
+
+    await Future.wait(List.generate(4, (_) => worker()));
+    if (!mounted || run != _validationRun) return;
+    final versions = {for (final asset in assets) asset.id: asset};
+    setState(() {
+      _validatingSuggestions = false;
+      _validatedCount = completed;
+      _selected.removeWhere(
+        (id) =>
+            versions.containsKey(id) && !identical(_ready[id], versions[id]),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _validationRun++;
+    super.dispose();
+  }
+
+  void _setOthersSelected(Iterable<ReviewGroup> groups, bool selected) {
+    for (final group in groups) {
+      final others = group.others.map((a) => a.id);
+      if (selected) {
+        _selected.remove(group.bestId);
+        _selected.addAll(others);
+      } else {
+        _selected.removeAll(others);
+      }
+    }
+  }
+
+  void _togglePhoto(ReviewGroup group, PhotoAsset asset) {
+    if (_selected.contains(asset.id)) {
+      setState(() => _selected.remove(asset.id));
+      return;
+    }
+    // The user can choose a different keeper, but cannot select the final
+    // unselected photo and accidentally delete the whole comparison group.
+    if (group.assets.every(
+      (member) => member.id == asset.id || _selected.contains(member.id),
+    )) {
+      return;
+    }
+    setState(() => _selected.add(asset.id));
   }
 
   @override
@@ -122,43 +295,67 @@ class _GroupReviewViewState extends State<GroupReviewView> {
                     key: const ValueKey('group-select-all'),
                     icon: Icons.check_circle_outline_rounded,
                     label: allSelected ? l10n.v2DeselectAll : l10n.v2SelectAll,
-                    onPressed: () => setState(() {
-                      if (allSelected) {
-                        _selected.removeAll(allOthers);
-                      } else {
-                        _selected.addAll(allOthers);
-                      }
-                    }),
+                    onPressed: () {
+                      final groups = [
+                        for (final section in widget.sections)
+                          ...index[section].groups,
+                      ];
+                      setState(() => _setOthersSelected(groups, !allSelected));
+                      if (!allSelected) _retrySelected(groups);
+                    },
                   ),
               ],
             ),
             Expanded(
               child: all.isEmpty
                   ? _EmptyGroups(sections: widget.sections)
-                  : ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
-                      children: [
-                        if (!multi) ...[
-                          Text(widget.title, style: AppTheme.largeTitle),
-                          const SizedBox(height: 4),
-                          Text(
-                            [
-                              l10n.v2PhotoCount(all.length),
-                              if (sumBytes(all) > 0) formatBytes(sumBytes(all)),
-                            ].join(' • '),
-                            style: AppTheme.caption,
+                  : CustomScrollView(
+                      slivers: [
+                        if (!multi)
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                            sliver: SliverToBoxAdapter(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    widget.title,
+                                    style: AppTheme.largeTitle,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    [
+                                      l10n.v2PhotoCount(all.length),
+                                      if (sumBytes(all) > 0)
+                                        formatBytes(sumBytes(all)),
+                                    ].join(' • '),
+                                    style: AppTheme.caption,
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                          const SizedBox(height: 16),
-                        ],
                         for (final section in widget.sections)
-                          ..._section(index[section], multi: multi),
+                          ..._sectionSlivers(index[section], multi: multi),
+                        const SliverToBoxAdapter(child: SizedBox(height: 120)),
                       ],
                     ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: selectedAssets.isEmpty
+      bottomNavigationBar: _validatingSuggestions
+          ? BottomAction(
+              child: BigButton(
+                label:
+                    '${l10n.v2SelectAll} • '
+                    '${l10n.v2PhotoCount(_validatedCount)} / '
+                    '${l10n.v2PhotoCount(_validationTotal)}',
+                loading: true,
+                onPressed: null,
+              ),
+            )
+          : selectedAssets.isEmpty
           ? null
           : BottomAction(
               child: BigButton(
@@ -174,7 +371,7 @@ class _GroupReviewViewState extends State<GroupReviewView> {
     );
   }
 
-  List<Widget> _section(CategoryContent content, {required bool multi}) {
+  List<Widget> _sectionSlivers(CategoryContent content, {required bool multi}) {
     final l10n = context.l10n;
     final groups = content.groups;
     final collapsed = _collapsed.contains(content.category);
@@ -185,73 +382,92 @@ class _GroupReviewViewState extends State<GroupReviewView> {
     final sectionSelected = others.isNotEmpty && _selected.containsAll(others);
     return [
       if (multi)
-        InkWell(
-          key: ValueKey('group-section-${content.category.id}'),
-          onTap: groups.isEmpty
-              ? null
-              : () => setState(() {
-                  if (!_collapsed.remove(content.category)) {
-                    _collapsed.add(content.category);
-                  }
-                }),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    content.category.title(context),
-                    style: AppTheme.heading3.copyWith(
-                      color: groups.isEmpty
-                          ? AppTheme.textMuted
-                          : AppTheme.textTitle,
-                    ),
-                  ),
-                ),
-                if (groups.isNotEmpty)
-                  Flexible(
-                    child: TextButton(
-                      onPressed: () => setState(() {
-                        if (sectionSelected) {
-                          _selected.removeAll(others);
-                        } else {
-                          _selected.addAll(others);
-                        }
-                      }),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+          sliver: SliverToBoxAdapter(
+            child: InkWell(
+              key: ValueKey('group-section-${content.category.id}'),
+              onTap: groups.isEmpty
+                  ? null
+                  : () => setState(() {
+                      if (!_collapsed.remove(content.category)) {
+                        _collapsed.add(content.category);
+                      }
+                    }),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Row(
+                  children: [
+                    Expanded(
                       child: Text(
-                        sectionSelected ? l10n.v2DeselectAll : l10n.v2SelectAll,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        content.category.title(context),
+                        style: AppTheme.heading3.copyWith(
+                          color: groups.isEmpty
+                              ? AppTheme.textMuted
+                              : AppTheme.textTitle,
+                        ),
                       ),
                     ),
-                  )
-                else
-                  Flexible(
-                    child: Text(l10n.v2PhotoCount(0), style: AppTheme.small),
-                  ),
-                Icon(
-                  collapsed
-                      ? Icons.keyboard_arrow_down_rounded
-                      : Icons.keyboard_arrow_up_rounded,
-                  color: groups.isEmpty
-                      ? AppTheme.textMuted
-                      : AppTheme.primary,
+                    if (groups.isNotEmpty)
+                      Flexible(
+                        child: TextButton(
+                          onPressed: () {
+                            setState(
+                              () =>
+                                  _setOthersSelected(groups, !sectionSelected),
+                            );
+                            if (!sectionSelected) _retrySelected(groups);
+                          },
+                          child: Text(
+                            sectionSelected
+                                ? l10n.v2DeselectAll
+                                : l10n.v2SelectAll,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      )
+                    else
+                      Flexible(
+                        child: Text(
+                          l10n.v2PhotoCount(0),
+                          style: AppTheme.small,
+                        ),
+                      ),
+                    Icon(
+                      collapsed
+                          ? Icons.keyboard_arrow_down_rounded
+                          : Icons.keyboard_arrow_up_rounded,
+                      color: groups.isEmpty
+                          ? AppTheme.textMuted
+                          : AppTheme.primary,
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
-      if (multi) const Divider(),
-      if (!collapsed)
-        for (final group in groups) ...[
-          const SizedBox(height: 12),
-          _groupCard(group),
-        ],
-      if (multi) const SizedBox(height: 8),
+      if (!collapsed && groups.isNotEmpty)
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          sliver: SliverList.builder(
+            itemCount: groups.length,
+            itemBuilder: (context, index) => Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: _groupCard(
+                groups[index],
+                groupLabel:
+                    '${content.category.title(context)} '
+                    '${MaterialLocalizations.of(context).formatDecimal(index + 1)}',
+              ),
+            ),
+          ),
+        ),
     ];
   }
 
-  Widget _groupCard(ReviewGroup group) {
+  Widget _groupCard(ReviewGroup group, {required String groupLabel}) {
     final l10n = context.l10n;
     final others = group.others.map((a) => a.id).toSet();
     final groupSelected = others.isNotEmpty && _selected.containsAll(others);
@@ -271,13 +487,10 @@ class _GroupReviewViewState extends State<GroupReviewView> {
               ),
               Flexible(
                 child: TextButton(
-                  onPressed: () => setState(() {
-                    if (groupSelected) {
-                      _selected.removeAll(others);
-                    } else {
-                      _selected.addAll(others);
-                    }
-                  }),
+                  onPressed: () {
+                    setState(() => _setOthersSelected([group], !groupSelected));
+                    if (!groupSelected) _retrySelected([group]);
+                  },
                   child: Text(
                     groupSelected ? l10n.v2DeselectAll : l10n.v2SelectAll,
                     maxLines: 1,
@@ -296,8 +509,14 @@ class _GroupReviewViewState extends State<GroupReviewView> {
             crossAxisSpacing: 8,
             childAspectRatio: 0.9,
             children: [
-              for (final asset in group.assets)
-                _groupTile(asset, isBest: asset.id == group.bestId),
+              for (var index = 0; index < group.assets.length; index++)
+                _groupTile(
+                  group,
+                  group.assets[index],
+                  index,
+                  groupLabel: groupLabel,
+                  isBest: group.assets[index].id == group.bestId,
+                ),
             ],
           ),
         ],
@@ -305,7 +524,13 @@ class _GroupReviewViewState extends State<GroupReviewView> {
     );
   }
 
-  Widget _groupTile(PhotoAsset asset, {required bool isBest}) {
+  Widget _groupTile(
+    ReviewGroup group,
+    PhotoAsset asset,
+    int index, {
+    required String groupLabel,
+    required bool isBest,
+  }) {
     final ready = _isReady(asset);
     final selected = ready && _selected.contains(asset.id);
     return Semantics(
@@ -313,15 +538,15 @@ class _GroupReviewViewState extends State<GroupReviewView> {
       button: true,
       selected: selected,
       label: [
+        groupLabel,
+        context.l10n.v2PhotoCount(index + 1),
+        context.l10n.v2PhotoCount(group.assets.length),
         if (isBest) context.l10n.v2Best,
+        MaterialLocalizations.of(context).formatMediumDate(asset.createDate),
         if (asset.sizeKnown) formatBytes(asset.size),
       ].join(', '),
       child: GestureDetector(
-        onTap: ready
-            ? () => setState(() {
-                if (!_selected.remove(asset.id)) _selected.add(asset.id);
-              })
-            : null,
+        onTap: ready ? () => _togglePhoto(group, asset) : null,
         onLongPress: () => showAssetPreview(context, asset),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(AppTheme.r16),
@@ -395,9 +620,23 @@ class _GroupReviewViewState extends State<GroupReviewView> {
     if (_deleteInProgress) return;
     _deleteInProgress = true;
     try {
+      final index = CategoryIndex.of(
+        context.read<PhotoScannerService>().scanResult,
+      );
+      final requestedIds = assets.map((a) => a.id).toSet();
+      for (final section in widget.sections) {
+        for (final group in index[section].groups) {
+          if (group.assets.every((a) => requestedIds.contains(a.id))) {
+            requestedIds.remove(group.bestId);
+          }
+        }
+      }
       final deleted = await DeleteFlow.run(
         context,
-        assets,
+        [
+          for (final asset in assets)
+            if (requestedIds.contains(asset.id)) asset,
+        ],
         source: widget.sections.length > 1
             ? 'optimize_storage'
             : 'category_${widget.sections.single.id}',

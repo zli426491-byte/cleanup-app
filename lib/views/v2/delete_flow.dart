@@ -1,9 +1,8 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart' show AssetType;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cleanup_app/l10n/l10n.dart';
 
 import '../../services/photo_scanner_service.dart';
 import '../../services/subscription_manager.dart';
@@ -28,7 +27,14 @@ class FreeCleanupQuota {
 
   static Future<void> consume() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_key, (prefs.getInt(_key) ?? 0) + 1);
+    final used = (prefs.getInt(_key) ?? 0).clamp(
+      0,
+      AppConstants.maxFreeDeletes,
+    );
+    if (used >= AppConstants.maxFreeDeletes) return;
+    if (!await prefs.setInt(_key, used + 1)) {
+      throw StateError('Could not persist free cleanup usage');
+    }
   }
 }
 
@@ -37,16 +43,26 @@ class FreeCleanupQuota {
 ///
 /// Returns the identifiers PhotoKit actually deleted (empty when the user
 /// cancels at any step).
-/// Callers guard against double activation themselves; no global lock is kept,
-/// so an abandoned flow can never block later deletions.
+/// Only one delete flow may use the shared free quota at a time. The lock is
+/// tied to the screen that started the flow: if that screen is gone (for
+/// example it was removed while the paywall was open and the flow never
+/// resumed), the lock is stale and cannot block later deletions.
 class DeleteFlow {
+  static BuildContext? _owner;
+
   static Future<Set<String>> run(
     BuildContext context,
     List<PhotoAsset> assets, {
     required String source,
   }) async {
-    if (assets.isEmpty) return const {};
-    return _run(context, assets, source: source);
+    final owner = _owner;
+    if (assets.isEmpty || (owner != null && owner.mounted)) return const {};
+    _owner = context;
+    try {
+      return await _run(context, assets, source: source);
+    } finally {
+      if (identical(_owner, context)) _owner = null;
+    }
   }
 
   static Future<Set<String>> _run(
@@ -61,14 +77,21 @@ class DeleteFlow {
     if (!sub.isPro) {
       final remaining = await FreeCleanupQuota.remaining();
       if (!context.mounted) return const {};
-      await PaywallView.showUnlock(
+      final outcome = await PaywallView.showUnlock(
         context,
         source: source,
         freeCleanupsLeft: remaining,
       );
       if (!context.mounted) return const {};
+      if (outcome == PaywallUnlockResult.cancelled) return const {};
+      if (outcome == PaywallUnlockResult.purchased && !sub.isPro) {
+        return const {};
+      }
       if (!sub.isPro) {
-        if (remaining <= 0) return const {};
+        if (outcome != PaywallUnlockResult.continueFree ||
+            await FreeCleanupQuota.remaining() <= 0) {
+          return const {};
+        }
         usesFreeCleanup = true;
       }
     }
@@ -84,19 +107,38 @@ class DeleteFlow {
     }
     if (!context.mounted || scanner.isScanning) return const {};
 
-    // Resolve against the current snapshot so the service's version guard
-    // compares like with like.
-    final wanted = {for (final a in assets) a.id};
-    final current = [
-      for (final a in scanner.scanResult.allAssets)
-        if (wanted.contains(a.id)) a,
-    ];
-    if (current.isEmpty) return const {};
-    final deleted = await scanner.deleteAssetsWithResult(current);
+    // Keep the versions the user actually saw. Never replace them by ID with
+    // newer objects after the paywall or scanner pause. The service repeats
+    // this check just before PhotoKit receives the request.
+    final currentById = {
+      for (final asset in scanner.scanResult.allAssets) asset.id: asset,
+    };
+    final selected = {
+      for (final asset in assets) asset.id: asset,
+    }.values.toList();
+    if (selected.any((asset) {
+      final current = currentById[asset.id];
+      return current == null || !_sameAssetVersion(asset, current);
+    })) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(context.l10n.scanReviewChanged)));
+      }
+      return const {};
+    }
+    final deleted = await scanner.deleteAssetsWithResult(selected);
     if (deleted.isEmpty) return deleted;
-    if (usesFreeCleanup) unawaited(FreeCleanupQuota.consume());
+    if (usesFreeCleanup) {
+      try {
+        await FreeCleanupQuota.consume();
+      } catch (error) {
+        // PhotoKit deletion has already finished; still show the true result.
+        debugPrint('Could not save free cleanup usage: $error');
+      }
+    }
 
-    final removed = current.where((a) => deleted.contains(a.id)).toList();
+    final removed = selected.where((a) => deleted.contains(a.id)).toList();
     if (!context.mounted) return deleted;
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -110,4 +152,12 @@ class DeleteFlow {
     );
     return deleted;
   }
+
+  static bool _sameAssetVersion(PhotoAsset a, PhotoAsset b) =>
+      a.id == b.id &&
+      a.modifiedDate == b.modifiedDate &&
+      a.createDate == b.createDate &&
+      a.width == b.width &&
+      a.height == b.height &&
+      a.type == b.type;
 }

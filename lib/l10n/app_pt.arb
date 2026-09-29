@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Apagou",
   "v2CongratsSaved": "{minutes, plural, one{Poupou cerca de 1 minuto} other{Poupou cerca de {minutes} minutos}}",
   "v2CongratsUsing": "com {appName}",
-  "v2CongratsRecentlyDeleted": "Esvazie o álbum “Apagados” no iPhone para libertar {size}.",
+  "v2CongratsRecentlyDeleted": "Tamanho original estimado dos arquivos: {size}. Consulte Armazenamento do iPhone para ver o espaço realmente liberado; Apagados recentemente ainda pode ocupar espaço.",
   "v2Great": "Ótimo",
   "v2UnlockTitle": "Desbloqueie acesso ilimitado",
   "v2UnlockFeature1": "Encontre fotos parecidas num instante",
@@ -476,5 +476,6 @@
   "v2SecretBody": "Proteja as suas fotos privadas",
   "v2ScanPaused": "Análise em pausa",
   "v2ContinueScan": "Continuar",
-  "v2PauseScan": "Pausar análise"
+  "v2PauseScan": "Pausar análise",
+  "v2ContinueFreeCleanup": "Continuar limpeza gratuita ({count} restantes)"
 }

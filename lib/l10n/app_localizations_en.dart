@@ -1741,7 +1741,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Empty the “Recently Deleted” album on your iPhone to free up $size.';
+    return 'Estimated original file size: $size. Check iPhone Storage for the space actually freed; Recently Deleted may still use storage.';
   }
 
   @override
@@ -1929,4 +1929,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get v2PauseScan => 'Pause scan';
+
+  @override
+  String v2ContinueFreeCleanup(int count) {
+    return 'Continue free cleanup ($count remaining)';
+  }
 }

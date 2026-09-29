@@ -1667,7 +1667,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Kosongkan album “Baru Dihapus” di iPhone Anda untuk membebaskan $size.';
+    return 'Perkiraan ukuran asli file: $size. Periksa Penyimpanan iPhone untuk ruang yang benar-benar kosong; Baru Dihapus mungkin masih memakai ruang.';
   }
 
   @override
@@ -1851,4 +1851,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get v2PauseScan => 'Jeda pemindaian';
+
+  @override
+  String v2ContinueFreeCleanup(int count) {
+    return 'Lanjutkan pembersihan gratis ($count tersisa)';
+  }
 }
