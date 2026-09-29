@@ -16,6 +16,13 @@ import 'congratulations_view.dart';
 class FreeCleanupQuota {
   static const _key = 'v2.freeCleanupsUsed';
 
+  /// Replaces the preference write in tests to simulate a storage failure.
+  @visibleForTesting
+  static Future<bool> Function(String key, int value)? debugSetInt;
+
+  static Future<bool> _write(SharedPreferences prefs, int value) =>
+      debugSetInt?.call(_key, value) ?? prefs.setInt(_key, value);
+
   static Future<int> remaining() async {
     final prefs = await SharedPreferences.getInstance();
     final used = prefs.getInt(_key) ?? 0;
@@ -36,7 +43,7 @@ class FreeCleanupQuota {
         AppConstants.maxFreeDeletes,
       );
       if (used >= AppConstants.maxFreeDeletes) return false;
-      return await prefs.setInt(_key, used + 1);
+      return await _write(prefs, used + 1);
     } catch (error) {
       debugPrint('Could not reserve a free cleanup: $error');
       return false;
@@ -44,14 +51,20 @@ class FreeCleanupQuota {
   }
 
   /// Returns a reservation when nothing was deleted (cancelled or failed).
-  static Future<void> refund() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final used = prefs.getInt(_key) ?? 0;
-      if (used > 0) await prefs.setInt(_key, used - 1);
-    } catch (error) {
-      debugPrint('Could not refund a free cleanup: $error');
+  /// Retries once; returns false when the refund could not be saved, so the
+  /// caller can tell the user instead of silently losing a free cleanup.
+  static Future<bool> refund() async {
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final used = prefs.getInt(_key) ?? 0;
+        if (used <= 0) return true;
+        if (await _write(prefs, used - 1)) return true;
+      } catch (error) {
+        debugPrint('Could not refund a free cleanup: $error');
+      }
     }
+    return false;
   }
 }
 
@@ -154,7 +167,13 @@ class DeleteFlow {
     }
     final deleted = await scanner.deleteAssetsWithResult(selected);
     if (deleted.isEmpty) {
-      if (usesFreeCleanup) await FreeCleanupQuota.refund();
+      if (usesFreeCleanup &&
+          !await FreeCleanupQuota.refund() &&
+          context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.serviceOperationFailed)),
+        );
+      }
       return deleted;
     }
 

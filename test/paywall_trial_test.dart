@@ -64,6 +64,14 @@ class _Store extends SubscriptionManager {
   }
 }
 
+/// Both plans have a trial, with different lengths (yearly 3, weekly 7).
+class _TwoTrialStore extends _Store {
+  _TwoTrialStore() : super(eligible: true);
+  @override
+  int? freeTrialDays(StoreProduct product) =>
+      product.identifier == AppConstants.yearlyProductId ? 3 : 7;
+}
+
 Future<AppLocalizations> _pump(
   WidgetTester tester,
   SubscriptionManager store,
@@ -294,6 +302,25 @@ void main() {
     expect(await result, PaywallUnlockResult.purchased);
     store.dispose();
   });
+
+  testWidgets(
+    'the onboarding teaser promises the trial of the preselected plan',
+    (tester) async {
+      final store = _TwoTrialStore();
+      // The teaser must not advertise the longest trial (7) when the page
+      // preselects the yearly plan with 3 days.
+      expect(PaywallView.leadingTrialDays(store), 3);
+      final l10n = await _pump(
+        tester,
+        store,
+        const PaywallView(fromOnboarding: true),
+      );
+      expect(find.text(l10n.v2DaysFree(3)), findsOneWidget);
+      expect(find.text(l10n.v2DaysFree(7)), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+      store.dispose();
+    },
+  );
 
   testWidgets('system back also cancels an unlock offer', (tester) async {
     final store = _Store(eligible: false);

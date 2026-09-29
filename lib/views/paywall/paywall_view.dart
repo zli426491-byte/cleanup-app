@@ -61,6 +61,16 @@ class PaywallView extends StatefulWidget {
       ) ??
       PaywallUnlockResult.cancelled;
 
+  /// Trial length of the plan this paywall preselects, so a teaser shown
+  /// before it promises exactly what the next page offers.
+  static int? leadingTrialDays(SubscriptionManager sub) {
+    for (final plan in _PaywallViewState._sortedPlans(sub)) {
+      final days = sub.freeTrialDays(plan.product);
+      if (days != null) return days;
+    }
+    return null;
+  }
+
   @override
   State<PaywallView> createState() => _PaywallViewState();
 }

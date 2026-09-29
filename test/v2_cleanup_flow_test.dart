@@ -2,6 +2,7 @@ import 'dart:async' show unawaited;
 import 'dart:ui' show Tristate;
 
 import 'package:cleanup_app/l10n/app_localizations.dart';
+import 'package:cleanup_app/l10n/l10n.dart';
 import 'package:cleanup_app/services/photo_scanner_service.dart';
 import 'package:cleanup_app/services/subscription_manager.dart';
 import 'package:cleanup_app/utils/constants.dart';
@@ -211,6 +212,36 @@ void main() {
   });
 
   group('DeleteFlow', () {
+    tearDown(() => FreeCleanupQuota.debugSetInt = null);
+
+    testWidgets('a refund that cannot be saved is reported to the user', (
+      tester,
+    ) async {
+      final scanner = _Scanner(_result())..deleteResult = {};
+      final store = _Store();
+      final context = await _host(tester, scanner, store);
+      // The reservation (count up) saves; the refund (count down) fails.
+      FreeCleanupQuota.debugSetInt = (key, value) async {
+        if (value <= 0) return false;
+        final prefs = await SharedPreferences.getInstance();
+        return prefs.setInt(key, value);
+      };
+      final selected = scanner.scanResult.allAssets.firstWhere(
+        (a) => a.id == 'c',
+      );
+      final run = DeleteFlow.run(context, [selected], source: 'test');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('paywall-continue-free')));
+      await tester.pumpAndSettle();
+      expect(await run, isEmpty);
+      await tester.pump();
+      final strings = tester.element(find.byType(Scaffold).first).l10n;
+      expect(find.text(strings.serviceOperationFailed), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+      scanner.dispose();
+      store.dispose();
+    });
+
     testWidgets('Pro deletes directly, pausing a running scan first', (
       tester,
     ) async {

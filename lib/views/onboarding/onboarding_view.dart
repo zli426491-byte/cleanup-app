@@ -106,9 +106,8 @@ class _OnboardingViewState extends State<OnboardingView> {
     setState(() => _busy = true);
     AnalyticsManager.instance.track(AnalyticsEvent.onboardingCompleted.name);
     final sub = context.read<SubscriptionManager>();
-    final trialDays = [
-      for (final product in sub.storeProducts) sub.freeTrialDays(product),
-    ].whereType<int>().fold<int?>(null, (a, b) => a == null || b > a ? b : a);
+    // Same plan the paywall preselects, never the longest trial on offer.
+    final trialDays = PaywallView.leadingTrialDays(sub);
     if (trialDays != null) {
       await Navigator.of(context).push(
         PageRouteBuilder<void>(
