@@ -116,7 +116,7 @@ class _Scanner extends PhotoScannerService {
 
 class _Store extends SubscriptionManager {
   _Store({this.pro = false});
-  final bool pro;
+  bool pro;
   @override
   bool get isPro => pro;
   @override
@@ -214,7 +214,7 @@ void main() {
 
   group('DeleteFlow', () {
     tearDown(() {
-      FreeCleanupQuota.debugSetInt = null;
+      FreeCleanupQuota.debugWrite = null;
       FreeCleanupQuota.now = DateTime.now;
     });
 
@@ -225,10 +225,10 @@ void main() {
       final store = _Store();
       final context = await _host(tester, scanner, store);
       // The reservation (count up) saves; the refund (count down) fails.
-      FreeCleanupQuota.debugSetInt = (key, value) async {
-        if (value <= 0) return false;
+      FreeCleanupQuota.debugWrite = (key, value) async {
+        if (value.endsWith(':0')) return false;
         final prefs = await SharedPreferences.getInstance();
-        return prefs.setInt(key, value);
+        return prefs.setString(key, value);
       };
       final selected = scanner.scanResult.allAssets.firstWhere(
         (a) => a.id == 'c',
@@ -423,8 +423,7 @@ void main() {
       (tester) async {
         FreeCleanupQuota.now = () => DateTime(2026, 9, 29, 23, 59);
         SharedPreferences.setMockInitialValues({
-          'v2.freeDeletes.count': AppConstants.maxFreeDeletes,
-          'v2.freeDeletes.day': '2026-09-29',
+          'v2.freeDeletes': '2026-09-29:${AppConstants.maxFreeDeletes}',
         });
         final scanner = _Scanner(_result());
         final store = _Store();
@@ -452,8 +451,7 @@ void main() {
     test('the allowance resets on a new calendar day', () async {
       FreeCleanupQuota.now = () => DateTime(2026, 9, 28, 23, 59);
       SharedPreferences.setMockInitialValues({
-        'v2.freeDeletes.count': AppConstants.maxFreeDeletes,
-        'v2.freeDeletes.day': '2026-09-28',
+        'v2.freeDeletes': '2026-09-28:${AppConstants.maxFreeDeletes}',
       });
       expect(await FreeCleanupQuota.remaining(), 0);
       expect(await FreeCleanupQuota.reserve(1), isFalse);
@@ -464,6 +462,83 @@ void main() {
         await FreeCleanupQuota.remaining(),
         AppConstants.maxFreeDeletes - 2,
       );
+    });
+
+    test('a partial write never mixes one day with another day count', () async {
+      FreeCleanupQuota.now = () => DateTime(2026, 9, 29, 9);
+      SharedPreferences.setMockInitialValues({
+        'v2.freeDeletes': '2026-09-28:${AppConstants.maxFreeDeletes}',
+      });
+      FreeCleanupQuota.debugWrite = (key, value) async => false;
+      expect(await FreeCleanupQuota.reserve(1), isFalse);
+      FreeCleanupQuota.debugWrite = null;
+      // The failed write left yesterday's record, which is not today's.
+      expect(await FreeCleanupQuota.remaining(), AppConstants.maxFreeDeletes);
+    });
+
+    test('a refund after midnight never credits the new day twice', () async {
+      FreeCleanupQuota.now = () => DateTime(2026, 9, 28, 23, 59, 59);
+      SharedPreferences.setMockInitialValues({});
+      expect(await FreeCleanupQuota.reserve(3), isTrue);
+      FreeCleanupQuota.now = () => DateTime(2026, 9, 29, 0, 0, 1);
+      expect(await FreeCleanupQuota.refund(3), isTrue);
+      expect(await FreeCleanupQuota.remaining(), AppConstants.maxFreeDeletes);
+      expect(await FreeCleanupQuota.reserve(AppConstants.maxFreeDeletes), isTrue);
+      expect(await FreeCleanupQuota.remaining(), 0);
+    });
+
+    testWidgets('closing the limit sheet after midnight still deletes nothing', (
+      tester,
+    ) async {
+      FreeCleanupQuota.now = () => DateTime(2026, 9, 29, 23, 59);
+      SharedPreferences.setMockInitialValues({
+        'v2.freeDeletes': '2026-09-29:${AppConstants.maxFreeDeletes}',
+      });
+      final scanner = _Scanner(_result());
+      final store = _Store();
+      final context = await _host(tester, scanner, store);
+      final run = DeleteFlow.run(context, [_photo('c')], source: 'test');
+      await tester.pumpAndSettle();
+      expect(find.byType(DailyLimitSheet), findsOneWidget);
+      FreeCleanupQuota.now = () => DateTime(2026, 9, 30, 0, 1);
+      await tester.tap(find.byKey(const ValueKey('daily-limit-close')));
+      await tester.pumpAndSettle();
+      expect(await run, isEmpty);
+      expect(scanner.deleteCalls, isEmpty);
+      expect(find.byType(PaywallView), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+      scanner.dispose();
+      store.dispose();
+    });
+
+    testWidgets('buying Pro from the limit sheet continues the deletion', (
+      tester,
+    ) async {
+      FreeCleanupQuota.now = () => DateTime(2026, 9, 29, 12);
+      SharedPreferences.setMockInitialValues({
+        'v2.freeDeletes': '2026-09-29:${AppConstants.maxFreeDeletes}',
+      });
+      final scanner = _Scanner(_result());
+      final store = _Store();
+      final context = await _host(tester, scanner, store);
+      final selected = scanner.scanResult.allAssets.firstWhere(
+        (a) => a.id == 'c',
+      );
+      final run = DeleteFlow.run(context, [selected], source: 'test');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('daily-limit-pro')));
+      await tester.pumpAndSettle();
+      expect(find.byType(PaywallView), findsOneWidget);
+      store.pro = true;
+      await tester.tap(find.byKey(const ValueKey('paywall-close')));
+      await tester.pumpAndSettle();
+      expect(scanner.requested, ['c']);
+      await tester.tap(find.byKey(const ValueKey('congrats-great')));
+      await tester.pumpAndSettle();
+      expect(await run, {'c'});
+      await tester.pumpWidget(const SizedBox());
+      scanner.dispose();
+      store.dispose();
     });
 
     testWidgets('a selection larger than the daily allowance is not deleted', (
@@ -479,8 +554,8 @@ void main() {
         source: 'test',
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('paywall-close')));
-      await tester.pumpAndSettle();
+      // It cannot fit, so the limit shows at once instead of the paywall.
+      expect(find.byType(PaywallView), findsNothing);
       final strings = tester.element(find.byType(DailyLimitSheet)).l10n;
       expect(
         find.text(strings.v2DailyLimitRemaining(AppConstants.maxFreeDeletes)),

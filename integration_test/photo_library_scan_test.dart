@@ -296,6 +296,9 @@ void main() {
           tester,
           find.byKey(const ValueKey('home-scan-continue')),
         );
+        // Leave Home right away: once previews finish it would start its own
+        // original check and race the assertions below.
+        await _showTool(tester, scanner, subscription, null);
         await _waitUntil(
           tester,
           () => scanner.isScanning,

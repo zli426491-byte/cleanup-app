@@ -16,12 +16,13 @@ import 'daily_limit_sheet.dart';
 /// (photos and videos together), like the reference app. The count resets at
 /// local midnight.
 class FreeCleanupQuota {
-  static const _countKey = 'v2.freeDeletes.count';
-  static const _dayKey = 'v2.freeDeletes.day';
+  /// One value, "YYYY-MM-DD:used", so the day and its count are always
+  /// written together.
+  static const _key = 'v2.freeDeletes';
 
-  /// Replaces the count write in tests to simulate a storage failure.
+  /// Replaces the stored write in tests to simulate a storage failure.
   @visibleForTesting
-  static Future<bool> Function(String key, int value)? debugSetInt;
+  static Future<bool> Function(String key, String value)? debugWrite;
 
   /// Clock used for the daily reset; tests move it to another day.
   @visibleForTesting
@@ -29,26 +30,30 @@ class FreeCleanupQuota {
 
   static int get dailyLimit => AppConstants.maxFreeDeletes;
 
-  static String _today() {
-    final d = now();
-    return '${d.year}-${d.month.toString().padLeft(2, '0')}-'
-        '${d.day.toString().padLeft(2, '0')}';
+  static String _day(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
+
+  /// Items already used on [day]; anything stored for another day is 0.
+  static int _used(SharedPreferences prefs, String day) {
+    final stored = prefs.getString(_key);
+    if (stored == null) return 0;
+    final split = stored.lastIndexOf(':');
+    if (split <= 0 || stored.substring(0, split) != day) return 0;
+    return (int.tryParse(stored.substring(split + 1)) ?? dailyLimit).clamp(
+      0,
+      dailyLimit,
+    );
   }
 
-  static int _usedToday(SharedPreferences prefs) =>
-      prefs.getString(_dayKey) == _today()
-      ? (prefs.getInt(_countKey) ?? 0).clamp(0, dailyLimit)
-      : 0;
-
-  static Future<bool> _write(SharedPreferences prefs, int used) async {
-    if (!await prefs.setString(_dayKey, _today())) return false;
-    return debugSetInt?.call(_countKey, used) ??
-        prefs.setInt(_countKey, used);
+  static Future<bool> _write(SharedPreferences prefs, String day, int used) {
+    final value = '$day:$used';
+    return debugWrite?.call(_key, value) ?? prefs.setString(_key, value);
   }
 
   static Future<int> remaining() async {
     final prefs = await SharedPreferences.getInstance();
-    return dailyLimit - _usedToday(prefs);
+    return dailyLimit - _used(prefs, _day(now()));
   }
 
   /// Spends [items] of today's allowance *before* PhotoKit is asked, so a
@@ -57,9 +62,10 @@ class FreeCleanupQuota {
   static Future<bool> reserve(int items) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final used = _usedToday(prefs);
+      final day = _day(now());
+      final used = _used(prefs, day);
       if (items <= 0 || used + items > dailyLimit) return false;
-      return await _write(prefs, used + items);
+      return await _write(prefs, day, used + items);
     } catch (error) {
       debugPrint('Could not reserve free deletions: $error');
       return false;
@@ -67,16 +73,19 @@ class FreeCleanupQuota {
   }
 
   /// Returns [items] that were reserved but not deleted (cancelled or failed).
-  /// Retries once; returns false when the refund could not be saved, so the
-  /// caller can tell the user instead of silently losing free deletions.
+  /// Only the day that paid for them is credited: after midnight the new
+  /// day's allowance is already full. Retries once; returns false when the
+  /// refund could not be saved, so the caller can tell the user instead of
+  /// silently losing free deletions.
   static Future<bool> refund(int items) async {
     if (items <= 0) return true;
+    final day = _day(now());
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
         final prefs = await SharedPreferences.getInstance();
-        final used = _usedToday(prefs);
+        final used = _used(prefs, day);
         if (used <= 0) return true;
-        if (await _write(prefs, (used - items).clamp(0, dailyLimit))) {
+        if (await _write(prefs, day, (used - items).clamp(0, dailyLimit))) {
           return true;
         }
       } catch (error) {
@@ -125,24 +134,27 @@ class DeleteFlow {
     final itemCount = {for (final a in assets) a.id}.length;
     var usesFreeCleanup = false;
     if (!sub.isPro) {
-      // Like the reference app: every free delete shows the unlock offer;
-      // closing it continues within today's free allowance.
+      // Like the reference app: a selection that fits today's free allowance
+      // shows the unlock offer, and closing it continues. A selection that
+      // does not fit goes straight to the daily limit instead.
       final remaining = await FreeCleanupQuota.remaining();
       if (!context.mounted) return const {};
-      if (remaining <= 0) {
-        await DailyLimitSheet.show(context, source: source, remaining: 0);
+      if (itemCount > remaining) {
+        await DailyLimitSheet.show(context, source: source, remaining: remaining);
       } else {
         await PaywallView.showUnlock(context, source: source);
         if (!context.mounted) return const {};
+        // Checked again: the allowance may have changed while it was open.
         final left = await FreeCleanupQuota.remaining();
         if (!context.mounted) return const {};
         if (!sub.isPro && itemCount > left) {
           await DailyLimitSheet.show(context, source: source, remaining: left);
-          if (!sub.isPro) return const {};
         }
       }
       if (!context.mounted) return const {};
       if (!sub.isPro) {
+        // Closing the limit sheet never deletes, even if midnight passed.
+        if (itemCount > remaining) return const {};
         if (await FreeCleanupQuota.remaining() < itemCount) return const {};
         usesFreeCleanup = true;
       }
