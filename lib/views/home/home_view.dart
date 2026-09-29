@@ -29,6 +29,11 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   bool _startedInitialPreview = false;
   bool _startedOriginalCheck = false;
 
+  /// Verified hashes + known sizes when the last originals round started.
+  /// A round that adds nothing means the rest are unavailable (for example
+  /// iCloud-only); the next Continue then retries previews instead.
+  int? _originalsProgressAtStart;
+
   @override
   void initState() {
     super.initState();
@@ -113,8 +118,33 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     }
     _startedOriginalCheck = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) unawaited(scanner.verifyOriginals());
+      if (!mounted) return;
+      _originalsProgressAtStart = _originalsProgress(scanner);
+      unawaited(scanner.verifyOriginals());
     });
+  }
+
+  static int _originalsProgress(PhotoScannerService scanner) =>
+      scanner.verifiedHashAssetCount + scanner.knownSizeAssetCount;
+
+  /// Continue the originals check while rounds make progress; otherwise
+  /// retry previews (the originals that are left cannot be read yet).
+  bool _continuesOriginals(PhotoScannerService scanner) =>
+      _originalsPending(scanner) &&
+      _originalsProgressAtStart != _originalsProgress(scanner);
+
+  void _continue(PhotoScannerService scanner) {
+    final originals = _continuesOriginals(scanner);
+    setState(
+      () => _originalsProgressAtStart = originals
+          ? _originalsProgress(scanner)
+          : null,
+    );
+    unawaited(
+      originals
+          ? scanner.verifyOriginals()
+          : scanner.startContinuousScan(resume: true),
+    );
   }
 
   Future<void> _loadStorage() async {
@@ -170,7 +200,13 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                     SliverToBoxAdapter(child: _ScanStatus(scanner))
                   else if (_isPaused(scanner) ||
                       (_startedOriginalCheck && _originalsPending(scanner)))
-                    SliverToBoxAdapter(child: _ScanPaused(scanner)),
+                    SliverToBoxAdapter(
+                      child: _ScanPaused(
+                        scanner,
+                        originals: _continuesOriginals(scanner),
+                        onContinue: () => _continue(scanner),
+                      ),
+                    ),
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                     sliver: SliverToBoxAdapter(
@@ -546,15 +582,21 @@ class _ScanStatus extends StatelessWidget {
 }
 
 class _ScanPaused extends StatelessWidget {
-  const _ScanPaused(this.scanner);
+  const _ScanPaused(
+    this.scanner, {
+    required this.originals,
+    required this.onContinue,
+  });
   final PhotoScannerService scanner;
+
+  /// Continue runs the next originals round (otherwise it retries previews).
+  final bool originals;
+  final VoidCallback onContinue;
 
   @override
   Widget build(BuildContext context) {
     final total = scanner.availableAssetCount;
     final indexed = total != null && scanner.scannedAssetCount >= total;
-    // Once previews are done, "continue" resumes the originals check.
-    final originals = _originalsPending(scanner);
     final hashPending = scanner.pendingHashAssetCount > 0;
     final done = originals
         ? (hashPending
@@ -605,9 +647,7 @@ class _ScanPaused extends StatelessWidget {
             Flexible(
               child: TextButton(
                 key: const ValueKey('home-scan-continue'),
-                onPressed: () => originals
-                    ? scanner.verifyOriginals()
-                    : scanner.startContinuousScan(resume: true),
+                onPressed: onContinue,
                 child: Text(
                   context.l10n.v2ContinueScan,
                   textAlign: TextAlign.end,
@@ -771,7 +811,16 @@ class _WideCategoryCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Text(countLabel, style: AppTheme.small),
+              const SizedBox(width: 8),
+              // Long count labels (e.g. Romanian at 200%) wrap instead of
+              // overflowing the row.
+              Flexible(
+                child: Text(
+                  countLabel,
+                  style: AppTheme.small,
+                  textAlign: TextAlign.end,
+                ),
+              ),
             ],
           ),
         ),

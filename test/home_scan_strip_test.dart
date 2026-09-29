@@ -59,6 +59,9 @@ class _OriginalsScanner extends PhotoScannerService {
   int previewRetries = 0;
   int verified = 700;
 
+  /// Originals that can be read locally; the rest are iCloud-only.
+  int readable = 10007;
+
   @override
   bool get isScanning => false;
   @override
@@ -88,13 +91,15 @@ class _OriginalsScanner extends PhotoScannerService {
     OriginalVerificationTarget target = OriginalVerificationTarget.all,
   }) async {
     verifyCalls++;
-    verified += 800;
+    verified = (verified + 800).clamp(0, readable);
     notifyListeners();
   }
 
   @override
-  Future<void> startContinuousScan({bool resume = false}) async =>
-      previewRetries++;
+  Future<void> startContinuousScan({bool resume = false}) async {
+    previewRetries++;
+    notifyListeners();
+  }
 }
 
 class _PairScanner extends PhotoScannerService {
@@ -282,6 +287,52 @@ void main() {
       expect(scanner.verifyCalls, 2);
       expect(scanner.previewRetries, 0);
       expect(find.text('2300 / 10007'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
+  testWidgets('a round that cannot read more originals retries previews', (
+    tester,
+  ) async {
+    // 30 photos wait for iCloud: neither their previews nor originals are
+    // local, so originals stop at 9977 of 10007.
+    final scanner = _OriginalsScanner(cloudPending: 30)
+      ..verified = 9977
+      ..readable = 9977;
+    await _mount(tester, scanner);
+    await tester.pump();
+    expect(scanner.verifyCalls, 1);
+    final strings = tester.element(find.byType(HomeView)).l10n;
+    // The automatic round added nothing, so Continue retries previews.
+    expect(find.text(strings.v2ScanPaused), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('home-scan-continue')));
+    await tester.pump();
+    expect(scanner.previewRetries, 1);
+    expect(scanner.verifyCalls, 1);
+    // After a preview retry the next Continue checks originals again.
+    expect(find.text(strings.v2CheckPaused), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('home-scan-continue')));
+    await tester.pump();
+    expect(scanner.verifyCalls, 2);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  for (final locale in AppLocalizations.supportedLocales) {
+    testWidgets('the check-paused card fits $locale at 320pt and 200% text', (
+      tester,
+    ) async {
+      // Tall enough that 200% text keeps the card inside the first screen.
+      tester.view.physicalSize = const Size(320, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final scanner = _OriginalsScanner();
+      await _mount(tester, scanner, locale: locale, textScale: 2);
+      await tester.pump();
+      final strings = tester.element(find.byType(HomeView)).l10n;
+      expect(find.text(strings.v2CheckPaused), findsOneWidget);
+      expect(find.byKey(const ValueKey('home-scan-continue')), findsOneWidget);
+      expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
     });
   }
