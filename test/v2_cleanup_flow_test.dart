@@ -454,10 +454,10 @@ void main() {
         'v2.freeDeletes': '2026-09-28:${AppConstants.maxFreeDeletes}',
       });
       expect(await FreeCleanupQuota.remaining(), 0);
-      expect(await FreeCleanupQuota.reserve(1), isFalse);
+      expect(await FreeCleanupQuota.reserve(1), isNull);
       FreeCleanupQuota.now = () => DateTime(2026, 9, 29, 0, 1);
       expect(await FreeCleanupQuota.remaining(), AppConstants.maxFreeDeletes);
-      expect(await FreeCleanupQuota.reserve(2), isTrue);
+      expect(await FreeCleanupQuota.reserve(2), '2026-09-29');
       expect(
         await FreeCleanupQuota.remaining(),
         AppConstants.maxFreeDeletes - 2,
@@ -470,22 +470,60 @@ void main() {
         'v2.freeDeletes': '2026-09-28:${AppConstants.maxFreeDeletes}',
       });
       FreeCleanupQuota.debugWrite = (key, value) async => false;
-      expect(await FreeCleanupQuota.reserve(1), isFalse);
+      expect(await FreeCleanupQuota.reserve(1), isNull);
       FreeCleanupQuota.debugWrite = null;
       // The failed write left yesterday's record, which is not today's.
       expect(await FreeCleanupQuota.remaining(), AppConstants.maxFreeDeletes);
     });
 
-    test('a refund after midnight never credits the new day twice', () async {
+    test('a refund after midnight never credits the new day', () async {
       FreeCleanupQuota.now = () => DateTime(2026, 9, 28, 23, 59, 59);
       SharedPreferences.setMockInitialValues({});
-      expect(await FreeCleanupQuota.reserve(3), isTrue);
+      final yesterday = await FreeCleanupQuota.reserve(1);
+      expect(yesterday, '2026-09-28');
       FreeCleanupQuota.now = () => DateTime(2026, 9, 29, 0, 0, 1);
-      expect(await FreeCleanupQuota.refund(3), isTrue);
-      expect(await FreeCleanupQuota.remaining(), AppConstants.maxFreeDeletes);
-      expect(await FreeCleanupQuota.reserve(AppConstants.maxFreeDeletes), isTrue);
-      expect(await FreeCleanupQuota.remaining(), 0);
+      expect(await FreeCleanupQuota.reserve(1), '2026-09-29');
+      // The unused item from the previous day must not lower today's count.
+      expect(await FreeCleanupQuota.refund(1, day: yesterday!), isTrue);
+      expect(
+        await FreeCleanupQuota.remaining(),
+        AppConstants.maxFreeDeletes - 1,
+      );
     });
+
+    testWidgets(
+      'a limit shown after the paywall still blocks after midnight',
+      (tester) async {
+        FreeCleanupQuota.now = () => DateTime(2026, 9, 29, 23, 58);
+        SharedPreferences.setMockInitialValues({});
+        final scanner = _Scanner(_result());
+        final store = _Store();
+        final context = await _host(tester, scanner, store);
+        final run = DeleteFlow.run(context, [
+          for (final id in ['b', 'c'])
+            scanner.scanResult.allAssets.firstWhere((a) => a.id == id),
+        ], source: 'test');
+        await tester.pumpAndSettle();
+        expect(find.byType(PaywallView), findsOneWidget);
+        // Another screen spends the allowance while the paywall is open.
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+          'v2.freeDeletes',
+          '2026-09-29:${AppConstants.maxFreeDeletes - 1}',
+        );
+        await tester.tap(find.byKey(const ValueKey('paywall-close')));
+        await tester.pumpAndSettle();
+        expect(find.byType(DailyLimitSheet), findsOneWidget);
+        FreeCleanupQuota.now = () => DateTime(2026, 9, 30, 0, 1);
+        await tester.tap(find.byKey(const ValueKey('daily-limit-close')));
+        await tester.pumpAndSettle();
+        expect(await run, isEmpty);
+        expect(scanner.deleteCalls, isEmpty);
+        await tester.pumpWidget(const SizedBox());
+        scanner.dispose();
+        store.dispose();
+      },
+    );
 
     testWidgets('closing the limit sheet after midnight still deletes nothing', (
       tester,

@@ -57,29 +57,29 @@ class FreeCleanupQuota {
   }
 
   /// Spends [items] of today's allowance *before* PhotoKit is asked, so a
-  /// storage failure can never grant unlimited free deletions. Returns false
-  /// when the allowance is too small or the reservation could not be saved.
-  static Future<bool> reserve(int items) async {
+  /// storage failure can never grant unlimited free deletions. Returns the
+  /// day that paid (pass it to [refund]), or null when the allowance is too
+  /// small or the reservation could not be saved.
+  static Future<String?> reserve(int items) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final day = _day(now());
       final used = _used(prefs, day);
-      if (items <= 0 || used + items > dailyLimit) return false;
-      return await _write(prefs, day, used + items);
+      if (items <= 0 || used + items > dailyLimit) return null;
+      return await _write(prefs, day, used + items) ? day : null;
     } catch (error) {
       debugPrint('Could not reserve free deletions: $error');
-      return false;
+      return null;
     }
   }
 
-  /// Returns [items] that were reserved but not deleted (cancelled or failed).
-  /// Only the day that paid for them is credited: after midnight the new
-  /// day's allowance is already full. Retries once; returns false when the
-  /// refund could not be saved, so the caller can tell the user instead of
-  /// silently losing free deletions.
-  static Future<bool> refund(int items) async {
+  /// Returns [items] that were reserved on [day] but not deleted (cancelled
+  /// or failed). Only that day is credited: once another day is stored, its
+  /// count is left alone. Retries once; returns false when the refund could
+  /// not be saved, so the caller can tell the user instead of silently
+  /// losing free deletions.
+  static Future<bool> refund(int items, {required String day}) async {
     if (items <= 0) return true;
-    final day = _day(now());
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
         final prefs = await SharedPreferences.getInstance();
@@ -132,6 +132,7 @@ class DeleteFlow {
     final sub = context.read<SubscriptionManager>();
 
     final itemCount = {for (final a in assets) a.id}.length;
+    String? paidDay;
     var usesFreeCleanup = false;
     if (!sub.isPro) {
       // Like the reference app: a selection that fits today's free allowance
@@ -139,7 +140,9 @@ class DeleteFlow {
       // does not fit goes straight to the daily limit instead.
       final remaining = await FreeCleanupQuota.remaining();
       if (!context.mounted) return const {};
+      var limitShown = false;
       if (itemCount > remaining) {
+        limitShown = true;
         await DailyLimitSheet.show(context, source: source, remaining: remaining);
       } else {
         await PaywallView.showUnlock(context, source: source);
@@ -148,13 +151,14 @@ class DeleteFlow {
         final left = await FreeCleanupQuota.remaining();
         if (!context.mounted) return const {};
         if (!sub.isPro && itemCount > left) {
+          limitShown = true;
           await DailyLimitSheet.show(context, source: source, remaining: left);
         }
       }
       if (!context.mounted) return const {};
       if (!sub.isPro) {
         // Closing the limit sheet never deletes, even if midnight passed.
-        if (itemCount > remaining) return const {};
+        if (limitShown) return const {};
         if (await FreeCleanupQuota.remaining() < itemCount) return const {};
         usesFreeCleanup = true;
       }
@@ -191,7 +195,10 @@ class DeleteFlow {
       }
       return const {};
     }
-    if (usesFreeCleanup && !await FreeCleanupQuota.reserve(selected.length)) {
+    if (usesFreeCleanup) {
+      paidDay = await FreeCleanupQuota.reserve(selected.length);
+    }
+    if (usesFreeCleanup && paidDay == null) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.l10n.serviceOperationFailed)),
@@ -204,7 +211,7 @@ class DeleteFlow {
     final unused = selected.length - deleted.length;
     if (usesFreeCleanup &&
         unused > 0 &&
-        !await FreeCleanupQuota.refund(unused) &&
+        !await FreeCleanupQuota.refund(unused, day: paidDay!) &&
         context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.l10n.serviceOperationFailed)),
