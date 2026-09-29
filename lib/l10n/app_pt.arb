@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Apagou",
   "v2CongratsSaved": "{minutes, plural, one{Poupou cerca de 1 minuto} other{Poupou cerca de {minutes} minutos}}",
   "v2CongratsUsing": "com {appName}",
-  "v2CongratsRecentlyDeleted": "Estes itens ficam 30 dias em “Apagados”. Apague-os aí para libertar cerca de {size} agora.",
+  "v2CongratsRecentlyDeleted": "Estes itens ficam 30 dias em “Apagados”. Apague-os aí para libertar cerca de {size} (estimativa); o “Armazenamento do iPhone” mostra o valor real.",
   "v2Great": "Ótimo",
   "v2UnlockTitle": "Desbloqueie acesso ilimitado",
   "v2UnlockFeature1": "Encontre fotos parecidas num instante",
@@ -453,7 +453,7 @@
   "v2TryFree": "Experimentar grátis",
   "v2CleanYourStorage": "Limpe o armazenamento",
   "v2GetRidOf": "Livre-se do que não precisa",
-  "v2ProFeatures": "Limpeza inteligente, compressão de vídeo, espaço secreto e sem limites.",
+  "v2ProFeatures": "Limpeza inteligente, compressão de vídeo e sem limites.",
   "v2WelcomeTitle": "Bem-vindo à {appName}",
   "v2WelcomeAccess": "{appName} precisa de acesso às Fotos para libertar espaço.",
   "v2WelcomePrivacy": "As fotos são analisadas no dispositivo e nunca são enviadas para os nossos servidores.",
@@ -482,5 +482,6 @@
   "v2DailyLimitBody": "Na versão gratuita pode apagar {limit} itens por dia. Desbloqueie o Pro para remover o limite.",
   "v2DailyLimitRemaining": "{count, plural, one{Hoje ainda pode apagar 1 item grátis. Selecione menos ou desbloqueie o Pro.} other{Hoje ainda pode apagar {count} itens grátis. Selecione menos ou desbloqueie o Pro.}}",
   "v2SeeProOptions": "Ver opções Pro",
-  "v2SelectionOverLimitTitle": "Demasiados itens para hoje"
+  "v2SelectionOverLimitTitle": "Demasiados itens para hoje",
+  "v2CheckPaused": "Verificação de duplicados em pausa"
 }

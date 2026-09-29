@@ -49,6 +49,43 @@ class _PhaseScanner extends PhotoScannerService {
   void cancelScan() => cancels++;
 }
 
+/// Previews are done; a bounded originals round left photos unchecked.
+class _OriginalsScanner extends PhotoScannerService {
+  int verifyCalls = 0;
+  int verified = 700;
+
+  @override
+  bool get isScanning => false;
+  @override
+  bool get nativeOriginalAnalysisAvailable => true;
+  @override
+  ScanResult get scanResult => ScanResult.empty;
+  @override
+  int get scannedAssetCount => 10510;
+  @override
+  int? get availableAssetCount => 10510;
+  @override
+  int get totalPhotoCount => 10007;
+  @override
+  int get pendingAnalysisCount => 0;
+  @override
+  int get verifiedHashAssetCount => verified;
+  @override
+  int get pendingHashAssetCount => totalPhotoCount - verified;
+  @override
+  int get knownSizeAssetCount => 10510;
+  @override
+  int get pendingSizeAssetCount => 0;
+  @override
+  Future<void> verifyOriginals({
+    OriginalVerificationTarget target = OriginalVerificationTarget.all,
+  }) async {
+    verifyCalls++;
+    verified += 800;
+    notifyListeners();
+  }
+}
+
 class _PairScanner extends PhotoScannerService {
   _PairScanner({required this.withExact}) {
     final thumbnail = img.encodePng(img.Image(width: 8, height: 8));
@@ -217,6 +254,24 @@ void main() {
       await tester.pumpWidget(const SizedBox());
     },
   );
+
+  testWidgets('home continues the originals check after a bounded round', (
+    tester,
+  ) async {
+    final scanner = _OriginalsScanner();
+    await _mount(tester, scanner);
+    await tester.pump();
+    // Home starts the first round on its own.
+    expect(scanner.verifyCalls, 1);
+    final strings = tester.element(find.byType(HomeView)).l10n;
+    expect(find.text(strings.v2CheckPaused), findsOneWidget);
+    expect(find.text('1500 / 10007'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('home-scan-continue')));
+    await tester.pump();
+    expect(scanner.verifyCalls, 2);
+    expect(find.text('2300 / 10007'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
 
   for (final withExact in [true, false]) {
     testWidgets(

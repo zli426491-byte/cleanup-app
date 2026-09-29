@@ -1659,7 +1659,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Các mục này nằm trong “Đã xóa gần đây” 30 ngày. Xóa chúng ở đó để giải phóng khoảng $size ngay.';
+    return 'Các mục này nằm trong “Đã xóa gần đây” 30 ngày. Xóa chúng ở đó để giải phóng ước tính $size; dung lượng thực tế hiển thị trong “Dung lượng iPhone”.';
   }
 
   @override
@@ -1758,7 +1758,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get v2ProFeatures =>
-      'Dọn dẹp thông minh, nén video, không gian bí mật và không giới hạn.';
+      'Dọn dẹp thông minh, nén video và không giới hạn.';
 
   @override
   String v2WelcomeTitle(String appName) {
@@ -1872,4 +1872,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get v2SelectionOverLimitTitle => 'Quá nhiều mục cho hôm nay';
+
+  @override
+  String get v2CheckPaused => 'Đã tạm dừng kiểm tra trùng lặp';
 }

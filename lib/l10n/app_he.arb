@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "מחקתם",
   "v2CongratsSaved": "{minutes, plural, one{חסכתם כדקה} two{חסכתם כשתי דקות} other{חסכתם כ־{minutes} דקות}}",
   "v2CongratsUsing": "בעזרת ⁨{appName}⁩",
-  "v2CongratsRecentlyDeleted": "הפריטים נשארים 30 יום ב„נמחקו לאחרונה”. מחקו אותם שם כדי לפנות כעת כ־⁨{size}⁩.",
+  "v2CongratsRecentlyDeleted": "הפריטים נשארים 30 יום ב„נמחקו לאחרונה”. מחקו אותם שם כדי לפנות כ־⁨{size}⁩ (הערכה); „אחסון ה־iPhone” מציג את הנפח בפועל.",
   "v2Great": "מעולה",
   "v2UnlockTitle": "פתחו גישה ללא הגבלה",
   "v2UnlockFeature1": "מציאת תמונות דומות מיד",
@@ -453,7 +453,7 @@
   "v2TryFree": "נסו בחינם",
   "v2CleanYourStorage": "נקו את האחסון",
   "v2GetRidOf": "היפטרו ממה שלא צריך",
-  "v2ProFeatures": "ניקוי חכם, דחיסת סרטונים, מרחב סודי וללא הגבלות.",
+  "v2ProFeatures": "ניקוי חכם, דחיסת סרטונים וללא הגבלות.",
   "v2WelcomeTitle": "ברוכים הבאים ל־⁨{appName}⁩",
   "v2WelcomeAccess": "⁨{appName}⁩ צריכה גישה לתמונות כדי לפנות מקום.",
   "v2WelcomePrivacy": "התמונות מנותחות במכשיר ולעולם לא מועלות לשרתים שלנו.",
@@ -482,5 +482,6 @@
   "v2DailyLimitBody": "בגרסה החינמית אפשר למחוק {limit} פריטים ביום. פתחו את Pro כדי להסיר את המגבלה.",
   "v2DailyLimitRemaining": "{count, plural, one{היום אפשר למחוק בחינם עוד פריט אחד. בחרו פחות פריטים או פתחו את Pro.} two{היום אפשר למחוק בחינם עוד שני פריטים. בחרו פחות פריטים או פתחו את Pro.} other{היום אפשר למחוק בחינם עוד {count} פריטים. בחרו פחות פריטים או פתחו את Pro.}}",
   "v2SeeProOptions": "הצגת אפשרויות Pro",
-  "v2SelectionOverLimitTitle": "יותר מדי פריטים להיום"
+  "v2SelectionOverLimitTitle": "יותר מדי פריטים להיום",
+  "v2CheckPaused": "בדיקת הכפילויות מושהית"
 }

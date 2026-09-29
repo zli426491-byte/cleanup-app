@@ -1670,7 +1670,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Bu ögeler 30 gün boyunca “Son Silinenler”de kalır. Şimdi yaklaşık $size yer açmak için onları orada silin.';
+    return 'Bu ögeler 30 gün boyunca “Son Silinenler”de kalır. Tahmini $size yer açmak için onları orada silin; gerçek miktarı “iPhone Saklama Alanı” gösterir.';
   }
 
   @override
@@ -1769,7 +1769,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get v2ProFeatures =>
-      'Akıllı temizlik, video sıkıştırma, gizli alan ve sınırsız kullanım.';
+      'Akıllı temizlik, video sıkıştırma ve sınırsız kullanım.';
 
   @override
   String v2WelcomeTitle(String appName) {
@@ -1883,4 +1883,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get v2SelectionOverLimitTitle => 'Bugün için çok fazla öge';
+
+  @override
+  String get v2CheckPaused => 'Kopya kontrolü duraklatıldı';
 }

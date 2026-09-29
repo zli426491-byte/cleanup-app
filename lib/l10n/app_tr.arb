@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Sildiğiniz",
   "v2CongratsSaved": "{minutes, plural, other{Yaklaşık {minutes} dakika kazandınız}}",
   "v2CongratsUsing": "{appName} ile",
-  "v2CongratsRecentlyDeleted": "Bu ögeler 30 gün boyunca “Son Silinenler”de kalır. Şimdi yaklaşık {size} yer açmak için onları orada silin.",
+  "v2CongratsRecentlyDeleted": "Bu ögeler 30 gün boyunca “Son Silinenler”de kalır. Tahmini {size} yer açmak için onları orada silin; gerçek miktarı “iPhone Saklama Alanı” gösterir.",
   "v2Great": "Harika",
   "v2UnlockTitle": "Sınırsız erişimin kilidini açın",
   "v2UnlockFeature1": "Benzer fotoğrafları anında bulun",
@@ -453,7 +453,7 @@
   "v2TryFree": "Ücretsiz dene",
   "v2CleanYourStorage": "Depolamanızı temizleyin",
   "v2GetRidOf": "İhtiyacınız olmayandan kurtulun",
-  "v2ProFeatures": "Akıllı temizlik, video sıkıştırma, gizli alan ve sınırsız kullanım.",
+  "v2ProFeatures": "Akıllı temizlik, video sıkıştırma ve sınırsız kullanım.",
   "v2WelcomeTitle": "{appName} uygulamasına hoş geldiniz",
   "v2WelcomeAccess": "{appName}, yer açmak için Fotoğraflar erişimine ihtiyaç duyar.",
   "v2WelcomePrivacy": "Fotoğraflarınız cihazınızda analiz edilir, sunucularımıza asla yüklenmez.",
@@ -482,5 +482,6 @@
   "v2DailyLimitBody": "Ücretsiz sürümde günde {limit} öge silebilirsiniz. Sınırı kaldırmak için Pro’ya geçin.",
   "v2DailyLimitRemaining": "{count, plural, other{Bugün {count} öge daha ücretsiz silebilirsiniz. Daha az seçin veya Pro’ya geçin.}}",
   "v2SeeProOptions": "Pro seçeneklerini gör",
-  "v2SelectionOverLimitTitle": "Bugün için çok fazla öge"
+  "v2SelectionOverLimitTitle": "Bugün için çok fazla öge",
+  "v2CheckPaused": "Kopya kontrolü duraklatıldı"
 }

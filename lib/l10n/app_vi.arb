@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Bạn đã xóa",
   "v2CongratsSaved": "{minutes, plural, other{Tiết kiệm khoảng {minutes} phút}}",
   "v2CongratsUsing": "nhờ {appName}",
-  "v2CongratsRecentlyDeleted": "Các mục này nằm trong “Đã xóa gần đây” 30 ngày. Xóa chúng ở đó để giải phóng khoảng {size} ngay.",
+  "v2CongratsRecentlyDeleted": "Các mục này nằm trong “Đã xóa gần đây” 30 ngày. Xóa chúng ở đó để giải phóng ước tính {size}; dung lượng thực tế hiển thị trong “Dung lượng iPhone”.",
   "v2Great": "Tuyệt",
   "v2UnlockTitle": "Mở khóa truy cập không giới hạn",
   "v2UnlockFeature1": "Tìm ảnh tương tự ngay lập tức",
@@ -453,7 +453,7 @@
   "v2TryFree": "Dùng thử miễn phí",
   "v2CleanYourStorage": "Dọn dẹp dung lượng",
   "v2GetRidOf": "Loại bỏ những gì bạn không cần",
-  "v2ProFeatures": "Dọn dẹp thông minh, nén video, không gian bí mật và không giới hạn.",
+  "v2ProFeatures": "Dọn dẹp thông minh, nén video và không giới hạn.",
   "v2WelcomeTitle": "Chào mừng đến với {appName}",
   "v2WelcomeAccess": "{appName} cần quyền truy cập Ảnh để giải phóng dung lượng.",
   "v2WelcomePrivacy": "Ảnh được phân tích ngay trên thiết bị và không bao giờ được tải lên máy chủ của chúng tôi.",
@@ -482,5 +482,6 @@
   "v2DailyLimitBody": "Bản miễn phí chỉ xóa được {limit} mục mỗi ngày. Mở khóa Pro để bỏ giới hạn.",
   "v2DailyLimitRemaining": "{count, plural, other{Hôm nay bạn còn xóa miễn phí được {count} mục. Hãy chọn ít hơn hoặc mở khóa Pro.}}",
   "v2SeeProOptions": "Xem các gói Pro",
-  "v2SelectionOverLimitTitle": "Quá nhiều mục cho hôm nay"
+  "v2SelectionOverLimitTitle": "Quá nhiều mục cho hôm nay",
+  "v2CheckPaused": "Đã tạm dừng kiểm tra trùng lặp"
 }

@@ -1647,7 +1647,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'รายการเหล่านี้จะอยู่ใน \"ที่เพิ่งลบ\" 30 วัน ลบออกจากที่นั่นเพื่อเพิ่มพื้นที่ประมาณ $size ทันที';
+    return 'รายการเหล่านี้จะอยู่ใน \"ที่เพิ่งลบ\" 30 วัน ลบออกจากที่นั่นเพื่อเพิ่มพื้นที่ประมาณ $size (โดยประมาณ) ดูพื้นที่จริงได้ที่ \"พื้นที่จัดเก็บข้อมูล iPhone\"';
   }
 
   @override
@@ -1745,8 +1745,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get v2GetRidOf => 'กำจัดสิ่งที่ไม่จำเป็น';
 
   @override
-  String get v2ProFeatures =>
-      'ล้างอัจฉริยะ บีบอัดวิดีโอ พื้นที่ลับ และไม่จำกัดการใช้งาน';
+  String get v2ProFeatures => 'ล้างอัจฉริยะ บีบอัดวิดีโอ และไม่จำกัดการใช้งาน';
 
   @override
   String v2WelcomeTitle(String appName) {
@@ -1859,4 +1858,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get v2SelectionOverLimitTitle => 'เลือกเกินจำนวนของวันนี้';
+
+  @override
+  String get v2CheckPaused => 'หยุดตรวจรายการซ้ำชั่วคราว';
 }

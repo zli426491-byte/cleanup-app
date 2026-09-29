@@ -1721,7 +1721,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Эти объекты хранятся в «Недавно удалённых» 30 дней. Удалите их там, чтобы сразу освободить около $size.';
+    return 'Эти объекты хранятся в «Недавно удалённых» 30 дней. Удалите их там, чтобы освободить примерно $size (оценка); точный объём показывает «Хранилище iPhone».';
   }
 
   @override
@@ -1831,8 +1831,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get v2GetRidOf => 'Избавьтесь от лишнего';
 
   @override
-  String get v2ProFeatures =>
-      'Умная очистка, сжатие видео, тайное хранилище и никаких лимитов.';
+  String get v2ProFeatures => 'Умная очистка, сжатие видео и никаких лимитов.';
 
   @override
   String v2WelcomeTitle(String appName) {
@@ -1956,4 +1955,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get v2SelectionOverLimitTitle => 'Слишком много объектов на сегодня';
+
+  @override
+  String get v2CheckPaused => 'Проверка дубликатов приостановлена';
 }

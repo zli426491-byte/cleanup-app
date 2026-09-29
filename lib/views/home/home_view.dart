@@ -134,6 +134,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         scanner.wasCancelled,
         scanner.pendingAnalysisCount,
         scanner.availableAssetCount,
+        scanner.pendingHashAssetCount,
+        scanner.pendingSizeAssetCount,
       ),
     );
     final scanner = context.read<PhotoScannerService>();
@@ -168,7 +170,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                     SliverToBoxAdapter(child: _StartScanCard(scanner))
                   else if (scanner.isScanning)
                     SliverToBoxAdapter(child: _ScanStatus(scanner))
-                  else if (_isPaused(scanner))
+                  else if (_isPaused(scanner) ||
+                      (_startedOriginalCheck && _originalsPending(scanner)))
                     SliverToBoxAdapter(child: _ScanPaused(scanner)),
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -184,6 +187,17 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       ),
     );
   }
+}
+
+/// Previews are complete but some originals still need their exact-copy or
+/// size check (each round is time-bounded on large libraries).
+bool _originalsPending(PhotoScannerService scanner) {
+  if (scanner.isScanning || scanner.isDeleting) return false;
+  if (!scanner.nativeOriginalAnalysisAvailable) return false;
+  final total = scanner.availableAssetCount;
+  if (total == null || scanner.scannedAssetCount < total) return false;
+  if (scanner.pendingAnalysisCount > 0) return false;
+  return scanner.pendingHashAssetCount > 0 || scanner.pendingSizeAssetCount > 0;
 }
 
 /// A cancelled scan, one stopped by its time budget, or a partial index can
@@ -533,10 +547,21 @@ class _ScanPaused extends StatelessWidget {
   Widget build(BuildContext context) {
     final total = scanner.availableAssetCount;
     final indexed = total != null && scanner.scannedAssetCount >= total;
-    final done = indexed
+    // Once previews are done, "continue" resumes the originals check.
+    final originals = _originalsPending(scanner);
+    final hashPending = scanner.pendingHashAssetCount > 0;
+    final done = originals
+        ? (hashPending
+              ? scanner.verifiedHashAssetCount
+              : scanner.knownSizeAssetCount)
+        : indexed
         ? scanner.attemptedAnalysisCount
         : scanner.scannedAssetCount;
-    final of = indexed ? scanner.totalPhotoCount : total;
+    final of = originals
+        ? (hashPending ? scanner.totalPhotoCount : scanner.scannedAssetCount)
+        : indexed
+        ? scanner.totalPhotoCount
+        : total;
     return Padding(
       key: const ValueKey('home-scan-paused'),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -555,7 +580,9 @@ class _ScanPaused extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    context.l10n.v2ScanPaused,
+                    originals
+                        ? context.l10n.v2CheckPaused
+                        : context.l10n.v2ScanPaused,
                     style: AppTheme.caption.copyWith(
                       color: AppTheme.textTitle,
                       fontWeight: FontWeight.w500,
@@ -572,7 +599,9 @@ class _ScanPaused extends StatelessWidget {
             Flexible(
               child: TextButton(
                 key: const ValueKey('home-scan-continue'),
-                onPressed: () => scanner.startContinuousScan(resume: true),
+                onPressed: () => originals
+                    ? scanner.verifyOriginals()
+                    : scanner.startContinuousScan(resume: true),
                 child: Text(
                   context.l10n.v2ContinueScan,
                   textAlign: TextAlign.end,

@@ -59,9 +59,11 @@ void main() {
                 .isSelected,
             Tristate.isFalse,
           );
+          // Extras is hidden until its features are complete.
+          expect(find.byKey(const ValueKey('main-tab-2')), findsNothing);
 
           // Keyboard focus and Enter must switch tabs, not just mouse/touch input.
-          final tab = find.byKey(const ValueKey('main-tab-2'));
+          final tab = find.byKey(const ValueKey('main-tab-1'));
           final label = find
               .descendant(of: tab, matching: find.byType(Text))
               .first;

@@ -8,6 +8,9 @@ import 'package:cleanup_app/services/photo_scanner_service.dart';
 import 'package:cleanup_app/services/subscription_manager.dart';
 import 'package:cleanup_app/utils/app_theme.dart';
 import 'package:cleanup_app/views/home/home_view.dart';
+import 'package:cleanup_app/views/home/main_tab_view.dart';
+import 'package:cleanup_app/views/v2/category_grid_view.dart';
+import 'package:cleanup_app/views/v2/group_review_view.dart';
 import 'package:cleanup_app/views/scanner/smart_clean_view.dart';
 import 'package:cleanup_app/views/components/video_playback_controls.dart';
 import 'package:flutter/material.dart';
@@ -438,6 +441,90 @@ void main() {
           controls.controller.value.duration.inSeconds;
       await _tapVisible(tester, find.text(labels.scanBackToCompare));
 
+      // The same verified library through the real v2 app shell: Home's
+      // category wall -> first-visit intro -> review screens a user reaches.
+      await _mount(tester, scanner, subscription, const MainTabView());
+      await tester.pump(const Duration(milliseconds: 600));
+      var homeContinueChecked = false;
+      final checkPaused = find.text(labels.v2CheckPaused);
+      if (checkPaused.evaluate().isNotEmpty) {
+        final verifiedBefore = scanner.verifiedHashAssetCount;
+        final knownBefore = scanner.knownSizeAssetCount;
+        await _tapVisible(
+          tester,
+          find.byKey(const ValueKey('home-scan-continue')),
+        );
+        await _waitUntil(
+          tester,
+          () => scanner.isScanning,
+          'home originals continue start',
+        );
+        await _waitUntil(
+          tester,
+          () => !scanner.isScanning,
+          'home originals continue end',
+        );
+        expect(
+          scanner.verifiedHashAssetCount,
+          greaterThanOrEqualTo(verifiedBefore),
+        );
+        expect(scanner.knownSizeAssetCount, greaterThanOrEqualTo(knownBefore));
+        homeContinueChecked = true;
+      }
+      if (scanner.isScanning) {
+        // Home may start its own originals round; it must not race the
+        // navigation checks below.
+        scanner.cancelScan();
+        await _waitUntil(tester, () => !scanner.isScanning, 'home round stop');
+      }
+      stages['v2HomeOriginalsContinueChecked'] = homeContinueChecked;
+
+      await _tapVisible(
+        tester,
+        find.byKey(const ValueKey('home-category-duplicates')),
+      );
+      await _tapVisible(tester, find.byKey(const ValueKey('intro-lets-go')));
+      await _waitUntil(
+        tester,
+        () => find.byType(GroupReviewView).evaluate().isNotEmpty,
+        'v2 duplicates review',
+      );
+      for (final id in duplicateIds) {
+        await _waitUntil(
+          tester,
+          () => find
+              .byKey(ValueKey('group-tile-$id'), skipOffstage: false)
+              .evaluate()
+              .isNotEmpty,
+          'v2 duplicate tile $id',
+        );
+      }
+      await _capture(binding, 'photos-$workload-v2-duplicates');
+      Navigator.of(tester.element(find.byType(GroupReviewView))).pop();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      await _tapVisible(
+        tester,
+        find.byKey(const ValueKey('home-category-largeFiles')),
+      );
+      await _tapVisible(tester, find.byKey(const ValueKey('intro-lets-go')));
+      await _waitUntil(
+        tester,
+        () => find.byType(CategoryGridView).evaluate().isNotEmpty,
+        'v2 large files grid',
+      );
+      for (final id in movieIds) {
+        await _waitUntil(
+          tester,
+          () => find
+              .byKey(ValueKey('grid-tile-$id'), skipOffstage: false)
+              .evaluate()
+              .isNotEmpty,
+          'v2 large file tile $id',
+        );
+      }
+      await _capture(binding, 'photos-$workload-v2-large');
+
       // A separate fresh scanner really cancels its first native-resource pass;
       // then resume must recover both real videos without losing fair progress.
       await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
@@ -488,6 +575,7 @@ void main() {
         // directly because v2 Home no longer links to it.
         'usesHomeScanAndToolNavigation': false,
         'usesV2HomeScanStartAndResume': true,
+        'v2NavigationReachesVerifiedResults': true,
         'usesMockChannelsOrFakeSizes': false,
         'exactDuplicatePairDetected': true,
         'differentPhotosNotGroupedWithExactPair': true,
@@ -502,6 +590,8 @@ void main() {
         'screenshotFiles': [
           'photos-$workload-exact.png',
           'photos-$workload-large.png',
+          'photos-$workload-v2-duplicates.png',
+          'photos-$workload-v2-large.png',
         ],
         'stages': stages,
       };

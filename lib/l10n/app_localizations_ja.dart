@@ -1590,7 +1590,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'これらの項目は「最近削除した項目」に30日間残ります。そこで削除すると、今すぐ約$sizeを解放できます。';
+    return 'これらの項目は「最近削除した項目」に30日間残ります。そこで削除すると約$size（推定）を解放できます。実際の容量は「iPhoneストレージ」で確認できます。';
   }
 
   @override
@@ -1687,7 +1687,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get v2GetRidOf => 'いらないものを手放そう';
 
   @override
-  String get v2ProFeatures => 'スマート整理、ビデオ圧縮、シークレットスペース、制限なし。';
+  String get v2ProFeatures => 'スマート整理、ビデオ圧縮、制限なし。';
 
   @override
   String v2WelcomeTitle(String appName) {
@@ -1797,4 +1797,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get v2SelectionOverLimitTitle => '本日の上限を超える選択です';
+
+  @override
+  String get v2CheckPaused => '重複チェックを一時停止中';
 }

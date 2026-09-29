@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Vous avez supprimé",
   "v2CongratsSaved": "{minutes, plural, one{Environ {minutes} minute gagnée} other{Environ {minutes} minutes gagnées}}",
   "v2CongratsUsing": "avec {appName}",
-  "v2CongratsRecentlyDeleted": "Ces éléments restent 30 jours dans « Supprimés récemment ». Supprimez-les là-bas pour libérer environ {size} maintenant.",
+  "v2CongratsRecentlyDeleted": "Ces éléments restent 30 jours dans « Supprimés récemment ». Supprimez-les là-bas pour libérer environ {size} (estimation) ; « Stockage iPhone » indique la valeur réelle.",
   "v2Great": "Super",
   "v2UnlockTitle": "Débloquez l’accès illimité",
   "v2UnlockFeature1": "Trouvez instantanément les photos similaires",
@@ -453,7 +453,7 @@
   "v2TryFree": "Essayer gratuitement",
   "v2CleanYourStorage": "Nettoyez votre stockage",
   "v2GetRidOf": "Débarrassez-vous du superflu",
-  "v2ProFeatures": "Nettoyage intelligent, compression vidéo, espace secret et aucune limite.",
+  "v2ProFeatures": "Nettoyage intelligent, compression vidéo et aucune limite.",
   "v2WelcomeTitle": "Bienvenue dans {appName}",
   "v2WelcomeAccess": "{appName} a besoin d’accéder à vos Photos pour libérer de l’espace.",
   "v2WelcomePrivacy": "Vos photos sont analysées sur l’appareil et ne sont jamais envoyées sur nos serveurs.",
@@ -482,5 +482,6 @@
   "v2DailyLimitBody": "La version gratuite permet de supprimer {limit} éléments par jour. Débloquez Pro pour lever la limite.",
   "v2DailyLimitRemaining": "{count, plural, one{Vous pouvez encore supprimer {count} élément gratuitement aujourd’hui. Sélectionnez-en moins ou débloquez Pro.} other{Vous pouvez encore supprimer {count} éléments gratuitement aujourd’hui. Sélectionnez-en moins ou débloquez Pro.}}",
   "v2SeeProOptions": "Voir les offres Pro",
-  "v2SelectionOverLimitTitle": "Trop d’éléments pour aujourd’hui"
+  "v2SelectionOverLimitTitle": "Trop d’éléments pour aujourd’hui",
+  "v2CheckPaused": "Vérification des doublons en pause"
 }

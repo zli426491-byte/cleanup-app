@@ -1771,7 +1771,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Ces éléments restent 30 jours dans « Supprimés récemment ». Supprimez-les là-bas pour libérer environ $size maintenant.';
+    return 'Ces éléments restent 30 jours dans « Supprimés récemment ». Supprimez-les là-bas pour libérer environ $size (estimation) ; « Stockage iPhone » indique la valeur réelle.';
   }
 
   @override
@@ -1874,7 +1874,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get v2ProFeatures =>
-      'Nettoyage intelligent, compression vidéo, espace secret et aucune limite.';
+      'Nettoyage intelligent, compression vidéo et aucune limite.';
 
   @override
   String v2WelcomeTitle(String appName) {
@@ -1992,4 +1992,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get v2SelectionOverLimitTitle => 'Trop d’éléments pour aujourd’hui';
+
+  @override
+  String get v2CheckPaused => 'Vérification des doublons en pause';
 }

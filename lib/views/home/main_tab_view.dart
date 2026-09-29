@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cleanup_app/l10n/l10n.dart';
 import '../home/home_view.dart';
-import '../v2/extras_view.dart';
 import '../v2/optimize_view.dart';
 import '../../utils/app_theme.dart';
 
@@ -14,7 +13,9 @@ class MainTabView extends StatefulWidget {
 class _MainTabViewState extends State<MainTabView> {
   int _i = 0;
 
-  static const _pages = [HomeView(), OptimizeTabView(), ExtrasView()];
+  // Extras (charging animation, secret space) is hidden until those
+  // features are complete.
+  static const _pages = [HomeView(), OptimizeTabView()];
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +40,6 @@ class _MainTabViewState extends State<MainTabView> {
               children: [
                 _tab(0, Icons.home_rounded, l10n.navHome),
                 _tab(1, Icons.video_library_rounded, l10n.navOptimize),
-                _tab(2, Icons.more_horiz_rounded, l10n.navExtras),
               ],
             ),
           ),

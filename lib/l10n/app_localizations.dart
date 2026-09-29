@@ -2733,7 +2733,7 @@ abstract class AppLocalizations {
   /// No description provided for @v2CongratsRecentlyDeleted.
   ///
   /// In en, this message translates to:
-  /// **'These items stay in “Recently Deleted” for 30 days. Delete them there to free about {size} now.'**
+  /// **'These items stay in “Recently Deleted” for 30 days. Delete them there to free up an estimated {size}; iPhone Storage shows the actual amount.'**
   String v2CongratsRecentlyDeleted(String size);
 
   /// No description provided for @v2Great.
@@ -2853,7 +2853,7 @@ abstract class AppLocalizations {
   /// No description provided for @v2ProFeatures.
   ///
   /// In en, this message translates to:
-  /// **'Smart cleanup, video compression, secret space and no limits.'**
+  /// **'Smart cleanup, video compression and no limits.'**
   String get v2ProFeatures;
 
   /// No description provided for @v2WelcomeTitle.
@@ -3029,6 +3029,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Too many items for today'**
   String get v2SelectionOverLimitTitle;
+
+  /// No description provided for @v2CheckPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Duplicate check paused'**
+  String get v2CheckPaused;
 }
 
 class _AppLocalizationsDelegate

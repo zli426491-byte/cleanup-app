@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Anda telah menghapus",
   "v2CongratsSaved": "{minutes, plural, other{Menghemat sekitar {minutes} menit}}",
   "v2CongratsUsing": "dengan {appName}",
-  "v2CongratsRecentlyDeleted": "Item ini tetap di “Baru Dihapus” selama 30 hari. Hapus di sana untuk membebaskan sekitar {size} sekarang.",
+  "v2CongratsRecentlyDeleted": "Item ini tetap di “Baru Dihapus” selama 30 hari. Hapus di sana untuk membebaskan perkiraan {size}; Penyimpanan iPhone menampilkan jumlah sebenarnya.",
   "v2Great": "Mantap",
   "v2UnlockTitle": "Buka akses tanpa batas",
   "v2UnlockFeature1": "Temukan foto mirip seketika",
@@ -453,7 +453,7 @@
   "v2TryFree": "Coba gratis",
   "v2CleanYourStorage": "Bersihkan penyimpanan",
   "v2GetRidOf": "Singkirkan yang tidak Anda perlukan",
-  "v2ProFeatures": "Pembersihan pintar, kompres video, ruang rahasia, dan tanpa batas.",
+  "v2ProFeatures": "Pembersihan pintar, kompres video, dan tanpa batas.",
   "v2WelcomeTitle": "Selamat datang di {appName}",
   "v2WelcomeAccess": "{appName} memerlukan akses ke Foto untuk mengosongkan ruang.",
   "v2WelcomePrivacy": "Foto dianalisis di perangkat Anda dan tidak pernah diunggah ke server kami.",
@@ -482,5 +482,6 @@
   "v2DailyLimitBody": "Versi gratis dapat menghapus {limit} item per hari. Buka Pro untuk menghapus batas.",
   "v2DailyLimitRemaining": "{count, plural, other{Hari ini Anda masih bisa menghapus {count} item gratis. Pilih lebih sedikit atau buka Pro.}}",
   "v2SeeProOptions": "Lihat opsi Pro",
-  "v2SelectionOverLimitTitle": "Terlalu banyak item untuk hari ini"
+  "v2SelectionOverLimitTitle": "Terlalu banyak item untuk hari ini",
+  "v2CheckPaused": "Pemeriksaan duplikat dijeda"
 }

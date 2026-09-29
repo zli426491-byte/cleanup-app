@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "삭제한 항목",
   "v2CongratsSaved": "{minutes, plural, other{약 {minutes}분 절약}}",
   "v2CongratsUsing": "{appName} 사용",
-  "v2CongratsRecentlyDeleted": "이 항목은 \"최근 삭제된 항목\"에 30일 동안 남아 있습니다. 그곳에서 삭제하면 지금 약 {size}를 확보할 수 있습니다.",
+  "v2CongratsRecentlyDeleted": "이 항목은 \"최근 삭제된 항목\"에 30일 동안 남아 있습니다. 그곳에서 삭제하면 약 {size}(추정)를 확보할 수 있으며, 실제 용량은 \"iPhone 저장 공간\"에서 확인할 수 있습니다.",
   "v2Great": "좋아요",
   "v2UnlockTitle": "무제한 이용 잠금 해제",
   "v2UnlockFeature1": "유사한 사진을 바로 찾기",
@@ -453,7 +453,7 @@
   "v2TryFree": "무료로 체험하기",
   "v2CleanYourStorage": "저장 공간 정리",
   "v2GetRidOf": "필요 없는 것은 비우세요",
-  "v2ProFeatures": "스마트 정리, 동영상 압축, 비밀 공간, 무제한 이용.",
+  "v2ProFeatures": "스마트 정리, 동영상 압축, 무제한 이용.",
   "v2WelcomeTitle": "{appName}에 오신 것을 환영합니다",
   "v2WelcomeAccess": "{appName}이(가) 공간을 확보하려면 사진 접근 권한이 필요합니다.",
   "v2WelcomePrivacy": "사진은 기기에서 분석되며 서버로 업로드되지 않습니다.",
@@ -482,5 +482,6 @@
   "v2DailyLimitBody": "무료 버전은 하루에 {limit}개까지 삭제할 수 있습니다. Pro로 한도를 해제하세요.",
   "v2DailyLimitRemaining": "{count, plural, other{오늘은 {count}개 더 무료로 삭제할 수 있습니다. 선택을 줄이거나 Pro를 이용하세요.}}",
   "v2SeeProOptions": "Pro 옵션 보기",
-  "v2SelectionOverLimitTitle": "오늘 한도를 넘는 선택입니다"
+  "v2SelectionOverLimitTitle": "오늘 한도를 넘는 선택입니다",
+  "v2CheckPaused": "중복 확인 일시 정지됨"
 }

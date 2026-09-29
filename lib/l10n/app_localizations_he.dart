@@ -1672,7 +1672,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'הפריטים נשארים 30 יום ב„נמחקו לאחרונה”. מחקו אותם שם כדי לפנות כעת כ־\u2068$size\u2069.';
+    return 'הפריטים נשארים 30 יום ב„נמחקו לאחרונה”. מחקו אותם שם כדי לפנות כ־\u2068$size\u2069 (הערכה); „אחסון ה־iPhone” מציג את הנפח בפועל.';
   }
 
   @override
@@ -1777,8 +1777,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get v2GetRidOf => 'היפטרו ממה שלא צריך';
 
   @override
-  String get v2ProFeatures =>
-      'ניקוי חכם, דחיסת סרטונים, מרחב סודי וללא הגבלות.';
+  String get v2ProFeatures => 'ניקוי חכם, דחיסת סרטונים וללא הגבלות.';
 
   @override
   String v2WelcomeTitle(String appName) {
@@ -1897,4 +1896,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get v2SelectionOverLimitTitle => 'יותר מדי פריטים להיום';
+
+  @override
+  String get v2CheckPaused => 'בדיקת הכפילויות מושהית';
 }

@@ -1701,7 +1701,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Questi elementi restano 30 giorni in “Eliminati di recente”. Eliminali lì per liberare circa $size ora.';
+    return 'Questi elementi restano 30 giorni in “Eliminati di recente”. Eliminali lì per liberare circa $size (stima); “Spazio iPhone” mostra il valore reale.';
   }
 
   @override
@@ -1804,7 +1804,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get v2ProFeatures =>
-      'Pulizia intelligente, compressione video, spazio segreto e nessun limite.';
+      'Pulizia intelligente, compressione video e nessun limite.';
 
   @override
   String v2WelcomeTitle(String appName) {
@@ -1923,4 +1923,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get v2SelectionOverLimitTitle => 'Troppi elementi per oggi';
+
+  @override
+  String get v2CheckPaused => 'Controllo duplicati in pausa';
 }

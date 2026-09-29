@@ -36,6 +36,7 @@ Future<void> main() async {
           report['usesRealPhotosLibrary'] != true ||
           report['usesRealFlutterScannerAndNativeBridge'] != true ||
           report['usesV2HomeScanStartAndResume'] != true ||
+          report['v2NavigationReachesVerifiedResults'] != true ||
           report['usesMockChannelsOrFakeSizes'] != false ||
           report['exactDuplicatePairDetected'] != true ||
           report['differentPhotosNotGroupedWithExactPair'] != true ||

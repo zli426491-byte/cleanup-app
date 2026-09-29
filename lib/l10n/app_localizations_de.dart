@@ -1747,7 +1747,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Diese Objekte bleiben 30 Tage in „Zuletzt gelöscht“. Lösche sie dort, um jetzt etwa $size freizugeben.';
+    return 'Diese Objekte bleiben 30 Tage in „Zuletzt gelöscht“. Lösche sie dort, um schätzungsweise $size freizugeben; den tatsächlichen Wert zeigt „iPhone-Speicher“.';
   }
 
   @override
@@ -1850,7 +1850,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get v2ProFeatures =>
-      'Smarte Bereinigung, Videokomprimierung, geheimer Bereich und keine Limits.';
+      'Smarte Bereinigung, Videokomprimierung und keine Limits.';
 
   @override
   String v2WelcomeTitle(String appName) {
@@ -1968,4 +1968,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get v2SelectionOverLimitTitle => 'Zu viele Objekte für heute';
+
+  @override
+  String get v2CheckPaused => 'Duplikatprüfung pausiert';
 }

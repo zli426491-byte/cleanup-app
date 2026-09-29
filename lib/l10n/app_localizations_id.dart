@@ -1667,7 +1667,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Item ini tetap di “Baru Dihapus” selama 30 hari. Hapus di sana untuk membebaskan sekitar $size sekarang.';
+    return 'Item ini tetap di “Baru Dihapus” selama 30 hari. Hapus di sana untuk membebaskan perkiraan $size; Penyimpanan iPhone menampilkan jumlah sebenarnya.';
   }
 
   @override
@@ -1766,7 +1766,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get v2ProFeatures =>
-      'Pembersihan pintar, kompres video, ruang rahasia, dan tanpa batas.';
+      'Pembersihan pintar, kompres video, dan tanpa batas.';
 
   @override
   String v2WelcomeTitle(String appName) {
@@ -1881,4 +1881,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get v2SelectionOverLimitTitle => 'Terlalu banyak item untuk hari ini';
+
+  @override
+  String get v2CheckPaused => 'Pemeriksaan duplikat dijeda';
 }

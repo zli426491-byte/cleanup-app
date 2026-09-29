@@ -1714,7 +1714,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'Aceste elemente rămân 30 de zile în „Șterse recent”. Șterge-le de acolo ca să eliberezi acum aproximativ $size.';
+    return 'Aceste elemente rămân 30 de zile în „Șterse recent”. Șterge-le de acolo ca să eliberezi aproximativ $size (estimare); „Stocare iPhone” arată valoarea reală.';
   }
 
   @override
@@ -1821,7 +1821,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get v2ProFeatures =>
-      'Curățare inteligentă, comprimare video, spațiu secret și fără limite.';
+      'Curățare inteligentă, comprimare video și fără limite.';
 
   @override
   String v2WelcomeTitle(String appName) {
@@ -1942,4 +1942,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get v2SelectionOverLimitTitle => 'Prea multe elemente pentru azi';
+
+  @override
+  String get v2CheckPaused => 'Verificarea duplicatelor este în pauză';
 }

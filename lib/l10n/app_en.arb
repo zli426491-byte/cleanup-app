@@ -1089,7 +1089,7 @@
       }
     }
   },
-  "v2CongratsRecentlyDeleted": "These items stay in “Recently Deleted” for 30 days. Delete them there to free about {size} now.",
+  "v2CongratsRecentlyDeleted": "These items stay in “Recently Deleted” for 30 days. Delete them there to free up an estimated {size}; iPhone Storage shows the actual amount.",
   "@v2CongratsRecentlyDeleted": {
     "placeholders": {
       "size": {
@@ -1175,7 +1175,7 @@
   "v2TryFree": "Try Free",
   "v2CleanYourStorage": "Clean your Storage",
   "v2GetRidOf": "Get rid of what you don't need",
-  "v2ProFeatures": "Smart cleanup, video compression, secret space and no limits.",
+  "v2ProFeatures": "Smart cleanup, video compression and no limits.",
   "v2WelcomeTitle": "Welcome to {appName}",
   "@v2WelcomeTitle": {
     "placeholders": {
@@ -1246,5 +1246,6 @@
     }
   },
   "v2SeeProOptions": "See Pro Options",
-  "v2SelectionOverLimitTitle": "Too many items for today"
+  "v2SelectionOverLimitTitle": "Too many items for today",
+  "v2CheckPaused": "Duplicate check paused"
 }

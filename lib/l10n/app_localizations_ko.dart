@@ -1608,7 +1608,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return '이 항목은 \"최근 삭제된 항목\"에 30일 동안 남아 있습니다. 그곳에서 삭제하면 지금 약 $size를 확보할 수 있습니다.';
+    return '이 항목은 \"최근 삭제된 항목\"에 30일 동안 남아 있습니다. 그곳에서 삭제하면 약 $size(추정)를 확보할 수 있으며, 실제 용량은 \"iPhone 저장 공간\"에서 확인할 수 있습니다.';
   }
 
   @override
@@ -1705,7 +1705,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get v2GetRidOf => '필요 없는 것은 비우세요';
 
   @override
-  String get v2ProFeatures => '스마트 정리, 동영상 압축, 비밀 공간, 무제한 이용.';
+  String get v2ProFeatures => '스마트 정리, 동영상 압축, 무제한 이용.';
 
   @override
   String v2WelcomeTitle(String appName) {
@@ -1815,4 +1815,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get v2SelectionOverLimitTitle => '오늘 한도를 넘는 선택입니다';
+
+  @override
+  String get v2CheckPaused => '중복 확인 일시 정지됨';
 }

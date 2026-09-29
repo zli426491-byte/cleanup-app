@@ -433,7 +433,7 @@
   "v2CongratsDeleted": "Ai șters",
   "v2CongratsSaved": "{minutes, plural, one{Ai economisit cam 1 minut} few{Ai economisit cam {minutes} minute} other{Ai economisit cam {minutes} de minute}}",
   "v2CongratsUsing": "cu {appName}",
-  "v2CongratsRecentlyDeleted": "Aceste elemente rămân 30 de zile în „Șterse recent”. Șterge-le de acolo ca să eliberezi acum aproximativ {size}.",
+  "v2CongratsRecentlyDeleted": "Aceste elemente rămân 30 de zile în „Șterse recent”. Șterge-le de acolo ca să eliberezi aproximativ {size} (estimare); „Stocare iPhone” arată valoarea reală.",
   "v2Great": "Grozav",
   "v2UnlockTitle": "Deblochează accesul nelimitat",
   "v2UnlockFeature1": "Găsește instant pozele similare",
@@ -453,7 +453,7 @@
   "v2TryFree": "Încearcă gratuit",
   "v2CleanYourStorage": "Curăță spațiul de stocare",
   "v2GetRidOf": "Scapă de ce nu îți trebuie",
-  "v2ProFeatures": "Curățare inteligentă, comprimare video, spațiu secret și fără limite.",
+  "v2ProFeatures": "Curățare inteligentă, comprimare video și fără limite.",
   "v2WelcomeTitle": "Bun venit în {appName}",
   "v2WelcomeAccess": "{appName} are nevoie de acces la Poze pentru a elibera spațiu.",
   "v2WelcomePrivacy": "Pozele sunt analizate pe dispozitiv și nu ajung niciodată pe serverele noastre.",
@@ -482,5 +482,6 @@
   "v2DailyLimitBody": "Versiunea gratuită permite ștergerea a {limit} elemente pe zi. Deblochează Pro pentru a elimina limita.",
   "v2DailyLimitRemaining": "{count, plural, one{Azi mai poți șterge gratuit 1 element. Selectează mai puține sau deblochează Pro.} few{Azi mai poți șterge gratuit {count} elemente. Selectează mai puține sau deblochează Pro.} other{Azi mai poți șterge gratuit {count} de elemente. Selectează mai puține sau deblochează Pro.}}",
   "v2SeeProOptions": "Vezi opțiunile Pro",
-  "v2SelectionOverLimitTitle": "Prea multe elemente pentru azi"
+  "v2SelectionOverLimitTitle": "Prea multe elemente pentru azi",
+  "v2CheckPaused": "Verificarea duplicatelor este în pauză"
 }

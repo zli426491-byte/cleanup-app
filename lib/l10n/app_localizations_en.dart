@@ -1741,7 +1741,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'These items stay in “Recently Deleted” for 30 days. Delete them there to free about $size now.';
+    return 'These items stay in “Recently Deleted” for 30 days. Delete them there to free up an estimated $size; iPhone Storage shows the actual amount.';
   }
 
   @override
@@ -1843,8 +1843,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get v2GetRidOf => 'Get rid of what you don\'t need';
 
   @override
-  String get v2ProFeatures =>
-      'Smart cleanup, video compression, secret space and no limits.';
+  String get v2ProFeatures => 'Smart cleanup, video compression and no limits.';
 
   @override
   String v2WelcomeTitle(String appName) {
@@ -1961,4 +1960,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get v2SelectionOverLimitTitle => 'Too many items for today';
+
+  @override
+  String get v2CheckPaused => 'Duplicate check paused';
 }

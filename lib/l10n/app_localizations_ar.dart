@@ -1716,7 +1716,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String v2CongratsRecentlyDeleted(String size) {
-    return 'تبقى هذه العناصر في «المحذوفة مؤخرًا» لمدة 30 يومًا. احذفها من هناك لتحرير نحو \u2068$size\u2069 الآن.';
+    return 'تبقى هذه العناصر في «المحذوفة مؤخرًا» لمدة 30 يومًا. احذفها من هناك لتحرير ما يُقدَّر بـ \u2068$size\u2069؛ وتعرض «سعة iPhone» المساحة الفعلية.';
   }
 
   @override
@@ -1833,7 +1833,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get v2GetRidOf => 'تخلّص مما لا تحتاجه';
 
   @override
-  String get v2ProFeatures => 'تنظيف ذكي وضغط الفيديو ومساحة سرية وبلا حدود.';
+  String get v2ProFeatures => 'تنظيف ذكي وضغط الفيديو وبلا حدود.';
 
   @override
   String v2WelcomeTitle(String appName) {
@@ -1958,4 +1958,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get v2SelectionOverLimitTitle => 'عناصر كثيرة جدًا لليوم';
+
+  @override
+  String get v2CheckPaused => 'توقف فحص التكرارات مؤقتًا';
 }

@@ -20,7 +20,6 @@ import 'package:cleanup_app/views/v2/category_grid_view.dart';
 import 'package:cleanup_app/views/v2/category_intro_view.dart';
 import 'package:cleanup_app/views/v2/cleanup_category.dart';
 import 'package:cleanup_app/views/v2/congratulations_view.dart';
-import 'package:cleanup_app/views/v2/extras_view.dart';
 import 'package:cleanup_app/views/v2/group_review_view.dart';
 import 'package:cleanup_app/views/v2/optimize_view.dart';
 import 'package:flutter/material.dart';
@@ -166,7 +165,6 @@ void main() {
             const MainTabView(),
             const HomeView(),
             const OptimizeTabView(),
-            const ExtrasView(),
             const SmartCleanView(),
             const PaywallView(),
             const PaywallView(fromOnboarding: true),
