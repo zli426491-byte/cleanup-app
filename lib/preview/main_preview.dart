@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 import '../l10n/app_localizations.dart';
+import '../l10n/l10n.dart';
 import '../l10n/locale_controller.dart';
 import '../services/photo_scanner_service.dart';
 import '../services/subscription_manager.dart';
@@ -33,31 +34,63 @@ void main() {
   runApp(const _PreviewApp());
 }
 
-Uint8List _swatch(int seed, {int w = 60, int h = 80}) {
-  final rnd = math.Random(seed);
+/// A small drawn landscape (sky, sun, hills, water) so previews and store
+/// screenshots show photo-like thumbnails without using anyone's photos.
+/// Nearby seeds (seed ~/ 3) share a scene with a slight shift, like a burst
+/// of similar shots.
+Uint8List _swatch(int seed, {int w = 180, int h = 240}) {
+  final scene = math.Random(seed ~/ 3 * 7919 + 13);
+  final shift = (seed % 3) * 4;
   final image = img.Image(width: w, height: h);
-  final c1 = [rnd.nextInt(200) + 40, rnd.nextInt(200) + 40, rnd.nextInt(200) + 40];
-  final c2 = [rnd.nextInt(200) + 40, rnd.nextInt(200) + 40, rnd.nextInt(200) + 40];
+  const palettes = [
+    // sky top, sky bottom, far hill, near hill, ground
+    [[70, 130, 220], [180, 215, 245], [95, 140, 120], [55, 110, 80], [60, 120, 70]],
+    [[245, 140, 90], [255, 210, 150], [150, 100, 120], [95, 70, 100], [70, 60, 90]],
+    [[30, 60, 130], [120, 160, 220], [60, 90, 130], [35, 60, 95], [30, 70, 120]],
+    [[120, 190, 235], [225, 240, 250], [170, 180, 190], [120, 130, 140], [210, 200, 170]],
+    [[255, 175, 120], [255, 230, 190], [200, 120, 90], [150, 85, 70], [60, 110, 150]],
+    [[90, 170, 200], [200, 235, 240], [80, 150, 110], [40, 110, 70], [50, 140, 170]],
+  ];
+  final pal = palettes[scene.nextInt(palettes.length)];
+  final horizon = (h * (0.52 + scene.nextDouble() * 0.12)).round();
+  final water = scene.nextBool();
+  int mix(int a, int b, double t) => (a + (b - a) * t).round();
   for (var y = 0; y < h; y++) {
+    final t = (y / horizon).clamp(0.0, 1.0);
     for (var x = 0; x < w; x++) {
-      final t = (x + y) / (w + h);
-      image.setPixelRgb(
-        x,
-        y,
-        (c1[0] * (1 - t) + c2[0] * t).round(),
-        (c1[1] * (1 - t) + c2[1] * t).round(),
-        (c1[2] * (1 - t) + c2[2] * t).round(),
-      );
+      image.setPixelRgb(x, y, mix(pal[0][0], pal[1][0], t),
+          mix(pal[0][1], pal[1][1], t), mix(pal[0][2], pal[1][2], t));
     }
   }
-  // A simple "subject" so similar shots look alike.
-  img.fillCircle(
-    image,
-    x: w ~/ 2 + (seed % 3) - 1,
-    y: h ~/ 2,
-    radius: w ~/ 4,
-    color: img.ColorRgb8(250, 250, 245),
-  );
+  // Sun or moon.
+  img.fillCircle(image,
+      x: (w * (0.2 + scene.nextDouble() * 0.6)).round() + shift,
+      y: (horizon * (0.25 + scene.nextDouble() * 0.3)).round(),
+      radius: (w * 0.09).round(),
+      color: img.ColorRgb8(255, 246, 220));
+  // Two layers of hills.
+  void hills(List<int> c, double base, double amp, double freq, double phase) {
+    for (var x = 0; x < w; x++) {
+      final top = (horizon - base * h +
+              amp * h * math.sin((x + shift) * freq / w * math.pi * 2 + phase))
+          .round();
+      for (var y = top.clamp(0, h); y < h; y++) {
+        image.setPixelRgb(x, y, c[0], c[1], c[2]);
+      }
+    }
+  }
+  hills(pal[2], 0.10, 0.05, 1.3, scene.nextDouble() * 6);
+  hills(pal[3], 0.02, 0.04, 2.1, scene.nextDouble() * 6);
+  // Ground or water with a soft gradient.
+  final g = pal[4];
+  for (var y = horizon; y < h; y++) {
+    final t = (y - horizon) / (h - horizon);
+    for (var x = 0; x < w; x++) {
+      final ripple = water && (y + x ~/ 9) % 7 == 0 ? 18 : 0;
+      image.setPixelRgb(x, y, mix(g[0], g[0] ~/ 2, t) + ripple,
+          mix(g[1], g[1] ~/ 2, t) + ripple, mix(g[2], g[2] ~/ 2, t) + ripple);
+    }
+  }
   return img.encodePng(image);
 }
 
@@ -259,16 +292,20 @@ class _PreviewAppState extends State<_PreviewApp> {
           supportedLocales: LocaleController.supportedLocales,
           localeListResolutionCallback: LocaleController.resolve,
           theme: AppTheme.lightTheme,
-          builder: (context, child) => ColoredBox(
-            color: const Color(0xFFE9ECF2),
-            child: Center(
-              // Phone-sized frame so the layout reads like the iPhone app.
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(28),
-                child: SizedBox(width: 390, height: 844, child: child),
-              ),
-            ),
-          ),
+          // `?shot=...` renders full screen for App Store screenshots;
+          // otherwise a phone-sized frame so the layout reads like the app.
+          builder: (context, child) => Uri.base.queryParameters
+                  .containsKey('shot')
+              ? child!
+              : ColoredBox(
+                  color: const Color(0xFFE9ECF2),
+                  child: Center(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(28),
+                      child: SizedBox(width: 390, height: 844, child: child),
+                    ),
+                  ),
+                ),
           home: _screenFor(Uri.base.fragment),
         ),
       ),
@@ -291,13 +328,24 @@ Widget _screenFor(String fragment) => switch (fragment) {
     deletedCount: 128,
     deletedBytes: 2400 * 1024 * 1024,
   ),
-  'duplicates' => const GroupReviewView(
-    title: '重複照片',
-    sections: [CleanupCategory.duplicates],
+  // Localized titles so store screenshots match each language.
+  'duplicates' => Builder(
+    builder: (context) => GroupReviewView(
+      title: CleanupCategory.duplicates.title(context),
+      sections: const [CleanupCategory.duplicates],
+    ),
   ),
-  'optimize' => const GroupReviewView(
-    title: '最佳化儲存空間',
-    sections: [CleanupCategory.duplicates, CleanupCategory.similars],
+  'similar' => Builder(
+    builder: (context) => GroupReviewView(
+      title: CleanupCategory.similars.title(context),
+      sections: const [CleanupCategory.similars],
+    ),
+  ),
+  'optimize' => Builder(
+    builder: (context) => GroupReviewView(
+      title: context.l10n.v2OptimizeTitle,
+      sections: const [CleanupCategory.duplicates, CleanupCategory.similars],
+    ),
   ),
   'videos' => const CategoryGridView(category: CleanupCategory.videos),
   'other' => const CategoryGridView(category: CleanupCategory.other),
