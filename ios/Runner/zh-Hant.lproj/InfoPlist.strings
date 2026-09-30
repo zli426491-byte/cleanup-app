@@ -1,0 +1,6 @@
+/* Generated from lib/l10n/app_*.arb by scripts/check_localizations.py. */
+"CFBundleDisplayName" = "清理大師";
+"NSPhotoLibraryUsageDescription" = "存取你允許的照片與影片，供預覽、整理及由你確認後刪除。";
+"NSPhotoLibraryAddUsageDescription" = "經你確認後，將壓縮影片副本另存至照片。原片會保留。";
+"NSContactsUsageDescription" = "存取你的聯絡人，以協助整理重複的聯絡資料。";
+"NSUserTrackingUsageDescription" = "允許追蹤，以提供個人化體驗並改善服務。";

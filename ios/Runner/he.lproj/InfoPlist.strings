@@ -1,0 +1,6 @@
+/* Generated from lib/l10n/app_*.arb by scripts/check_localizations.py. */
+"CFBundleDisplayName" = "מומחה הניקוי";
+"NSPhotoLibraryUsageDescription" = "גישה לתמונות ולסרטונים שאישרת כדי לצפות בהם, לסדר אותם ולאשר מה למחוק.";
+"NSPhotoLibraryAddUsageDescription" = "שמירת עותק סרטון דחוס בתמונות לאחר אישורך. המקור נשמר.";
+"NSContactsUsageDescription" = "גישה לאנשי הקשר שלך כדי לעזור לסדר פרטי קשר כפולים.";
+"NSUserTrackingUsageDescription" = "אפשר מעקב כדי להתאים את החוויה שלך ולשפר את השירות.";

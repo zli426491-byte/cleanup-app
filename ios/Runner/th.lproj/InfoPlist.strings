@@ -1,0 +1,6 @@
+/* Generated from lib/l10n/app_*.arb by scripts/check_localizations.py. */
+"CFBundleDisplayName" = "ผู้ช่วยจัดระเบียบ";
+"NSPhotoLibraryUsageDescription" = "เข้าถึงรูปและวิดีโอที่คุณอนุญาต เพื่อให้คุณดูตัวอย่าง จัดระเบียบ และยืนยันสิ่งที่จะลบ";
+"NSPhotoLibraryAddUsageDescription" = "บันทึกสำเนาวิดีโอที่บีบอัดลงแอปรูปภาพเมื่อคุณยืนยัน ต้นฉบับจะถูกเก็บไว้";
+"NSContactsUsageDescription" = "เข้าถึงรายชื่อเพื่อช่วยจัดระเบียบข้อมูลติดต่อที่ซ้ำกัน";
+"NSUserTrackingUsageDescription" = "อนุญาตการติดตามเพื่อปรับประสบการณ์ให้เหมาะกับคุณและปรับปรุงบริการ";

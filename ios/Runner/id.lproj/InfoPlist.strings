@@ -1,0 +1,6 @@
+/* Generated from lib/l10n/app_*.arb by scripts/check_localizations.py. */
+"CFBundleDisplayName" = "Ahli Pembersihan";
+"NSPhotoLibraryUsageDescription" = "Akses foto dan video yang Anda izinkan untuk dipratinjau, dirapikan, dan dikonfirmasi sebelum dihapus.";
+"NSPhotoLibraryAddUsageDescription" = "Simpan salinan video terkompresi ke Foto setelah Anda mengonfirmasi. File asli tetap disimpan.";
+"NSContactsUsageDescription" = "Akses kontak untuk membantu merapikan detail kontak yang duplikat.";
+"NSUserTrackingUsageDescription" = "Izinkan pelacakan untuk menyesuaikan pengalaman Anda dan meningkatkan layanan.";

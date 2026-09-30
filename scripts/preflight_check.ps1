@@ -6,11 +6,17 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
+Write-Host "== Localization coverage and iOS resources =="
+python scripts/check_localizations.py
+if ($LASTEXITCODE -ne 0) { throw "Localization validation failed ($LASTEXITCODE)" }
+
 Write-Host "== Flutter analyze =="
 & $Flutter analyze
+if ($LASTEXITCODE -ne 0) { throw "Flutter analyze failed ($LASTEXITCODE)" }
 
 Write-Host "== Flutter test =="
 & $Flutter test
+if ($LASTEXITCODE -ne 0) { throw "Flutter test failed ($LASTEXITCODE)" }
 
 Write-Host "== iOS Info.plist parse =="
 @'
@@ -21,6 +27,7 @@ plist = Path("ios/Runner/Info.plist")
 data = plistlib.loads(plist.read_bytes())
 required = [
     "NSPhotoLibraryUsageDescription",
+    "NSPhotoLibraryAddUsageDescription",
     "NSUserTrackingUsageDescription",
 ]
 missing = [key for key in required if not data.get(key)]
@@ -28,6 +35,7 @@ if missing:
     raise SystemExit(f"Missing plist keys: {', '.join(missing)}")
 print("OK")
 '@ | python -
+if ($LASTEXITCODE -ne 0) { throw "iOS plist validation failed ($LASTEXITCODE)" }
 
 Write-Host "== Android media permissions =="
 $manifest = Get-Content "android\app\src\main\AndroidManifest.xml" -Raw

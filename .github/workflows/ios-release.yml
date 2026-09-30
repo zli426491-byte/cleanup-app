@@ -8,7 +8,7 @@ on:
 jobs:
   build-ios:
     runs-on: macos-26
-    timeout-minutes: 60
+    timeout-minutes: 90
 
     steps:
       - name: Checkout
@@ -18,16 +18,77 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: '3.41.7'
           cache: true
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Generate and verify all supported languages
+        run: |
+          flutter gen-l10n
+          python3 scripts/check_localizations.py --escape-dart-isolates
+          python3 -m unittest discover -s scripts -p 'test_check*.py'
 
       - name: Analyze
         run: flutter analyze
 
       - name: Test
         run: flutter test
+
+      - name: Identify exact native test product inputs
+        id: native-products-key
+        run: |
+          set -euo pipefail
+          mkdir -p build/native-tests
+          flutter build ios --simulator --debug --no-codesign --config-only --target integration_test/photo_library_scan_test.dart --dart-define=INTEGRATION_TEST_SHOULD_REPORT_RESULTS_TO_NATIVE=false 2>&1 | tee build/native-tests/cache-configuration.log
+          NATIVE_PRODUCTS_KEY="$(bash scripts/native-test-cache-key.sh)"
+          echo "key=$NATIVE_PRODUCTS_KEY" >> "$GITHUB_OUTPUT"
+
+      - name: Restore exact native test products
+        id: native-products-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: build/native-test-derived-data/Build/Products
+          key: ${{ steps.native-products-key.outputs.key }}
+
+      - name: Test native Photos inspection on iOS Simulator
+        id: native-tests
+        timeout-minutes: 30
+        env:
+          NATIVE_TEST_PRODUCTS_CACHE_HIT: ${{ steps.native-products-cache.outputs.cache-hit }}
+        run: bash scripts/test-ios-native.sh
+
+      - name: Save successfully built native test products
+        if: ${{ always() && steps.native-products-key.outcome == 'success' && steps.native-products-cache.outputs.cache-hit != 'true' && hashFiles('build/native-test-derived-data/Build/Products/.cleanup-build-succeeded') != '' }}
+        uses: actions/cache/save@v4
+        with:
+          path: build/native-test-derived-data/Build/Products
+          key: ${{ steps.native-products-key.outputs.key }}
+
+      - name: Upload native test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-native-tests
+          path: build/native-tests
+          if-no-files-found: ignore
+
+      - name: Scan 1000 real Photos fixtures with Flutter
+        timeout-minutes: 30
+        run: bash scripts/test-ios-photo-library.sh 1000
+
+      - name: Scan 10000 real Photos fixtures with Flutter
+        timeout-minutes: 40
+        run: bash scripts/test-ios-photo-library.sh 10000
+
+      - name: Upload real Photos integration evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-photo-library-tests
+          path: build/photo-library-tests
+          if-no-files-found: ignore
 
       - name: Setup App Store Connect API Key
         run: |
@@ -67,16 +128,24 @@ jobs:
           LATEST_BUILD=$(app-store-connect get-latest-testflight-build-number "6764532900" \
             --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
             --key-id "$APP_STORE_CONNECT_KEY_ID" \
-            --private-key "$APP_STORE_CONNECT_PRIVATE_KEY" || echo 0)
-          cd ios
-          agvtool new-version -all $((LATEST_BUILD + 1))
+            --private-key "$APP_STORE_CONNECT_PRIVATE_KEY")
+          case "$LATEST_BUILD" in
+            ''|*[!0-9]*) echo "Cannot determine the latest Apple build number" >&2; exit 1 ;;
+          esac
+          echo "IOS_BUILD_NUMBER=$((LATEST_BUILD + 1))" >> "$GITHUB_ENV"
 
       - name: Build iOS
         run: |
+          test -s "$HOME/export_options.plist"
           flutter build ipa \
             --release \
+            --target lib/main.dart \
+            --build-number="$IOS_BUILD_NUMBER" \
             --dart-define=REVENUECAT_IOS_API_KEY=${{ secrets.REVENUECAT_IOS_API_KEY }} \
-            --export-options-plist=ios/ExportOptions.plist
+            --export-options-plist="$HOME/export_options.plist"
+
+      - name: Verify packaged iOS languages and minimum OS
+        run: python3 scripts/check_ios_ipa.py build/ios/ipa/*.ipa --expected-build "$IOS_BUILD_NUMBER" --report build/ios/ipa-verification.json
 
       - name: Upload to TestFlight
         env:
@@ -95,4 +164,6 @@ jobs:
         if: always()
         with:
           name: ios-ipa
-          path: build/ios/ipa/*.ipa
+          path: |
+            build/ios/ipa/*.ipa
+            build/ios/ipa-verification.json

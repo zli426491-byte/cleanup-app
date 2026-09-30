@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   cupertino_icons: ^1.0.8
 
@@ -63,15 +65,18 @@ dependencies:
 
   # Utilities
   uuid: ^4.5.1                   # Unique IDs for secret space
-  intl: ^0.19.0                  # Localization
+  intl: ^0.20.2                  # Localization (matches the Flutter SDK)
   permission_handler: ^11.3.1    # Unified permissions
   url_launcher: ^6.3.1
   share_plus: ^10.1.4
   in_app_review: ^2.0.10         # Rating prompt
   package_info_plus: ^8.2.1
   device_info_plus: ^11.3.0
+  video_player: ^2.11.1
 
 dev_dependencies:
+  integration_test:
+    sdk: flutter
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0

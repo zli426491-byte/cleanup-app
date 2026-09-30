@@ -10,7 +10,7 @@ workflows:
       vars:
         BUNDLE_ID: com.cleanupapp.cleaner
         APP_STORE_APP_ID: 6764532900
-      flutter: stable
+      flutter: 3.41.7
       xcode: latest
       cocoapods: default
 
@@ -39,14 +39,18 @@ workflows:
 
       - name: Set bundle version
         script: |
-          LATEST_BUILD=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APP_ID" || echo 0)
-          agvtool new-version -all $((LATEST_BUILD + 1))
-        working_directory: ios
+          set -e
+          LATEST_BUILD=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APP_ID")
+          case "$LATEST_BUILD" in
+            ''|*[!0-9]*) echo "Cannot determine the latest Apple build number" >&2; exit 1 ;;
+          esac
+          echo "IOS_BUILD_NUMBER=$((LATEST_BUILD + 1))" >> "$CM_ENV"
 
       - name: Build iOS
         script: |
           flutter build ipa \
             --release \
+            --build-number="$IOS_BUILD_NUMBER" \
             --dart-define=REVENUECAT_IOS_API_KEY=$REVENUECAT_IOS_API_KEY \
             --export-options-plist=/Users/builder/export_options.plist
 
@@ -66,10 +70,22 @@ workflows:
     instance_type: linux_x2
 
     environment:
+      groups:
+        - android_release_credentials
       flutter: stable
       java: 17
 
     scripts:
+      - name: Verify Android release configuration
+        script: python3 -m unittest discover -s scripts -p test_android_release_config.py
+
+      - name: Prepare Android release credentials
+        script: |
+          set -euo pipefail
+          : "${CM_ENV:?Codemagic CM_ENV is required}"
+          keystore_path="$(mktemp "${TMPDIR:-/tmp}/cleanup-android-upload.XXXXXX")"
+          python3 scripts/prepare_android_release.py --keystore "$keystore_path" --env-file "$CM_ENV"
+
       - name: Install dependencies
         script: flutter pub get
 
@@ -79,7 +95,10 @@ workflows:
           flutter test
 
       - name: Build Android APK
-        script: flutter build apk --release --dart-define=REVENUECAT_ANDROID_API_KEY=$REVENUECAT_ANDROID_API_KEY
+        script: |
+          set -euo pipefail
+          export ANDROID_RELEASE_REQUIRE_SIGNING=true
+          flutter build apk --release --dart-define=REVENUECAT_ANDROID_API_KEY="$REVENUECAT_ANDROID_API_KEY"
 
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk

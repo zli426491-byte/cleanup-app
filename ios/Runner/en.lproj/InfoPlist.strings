@@ -1,0 +1,6 @@
+/* Generated from lib/l10n/app_*.arb by scripts/check_localizations.py. */
+"CFBundleDisplayName" = "Cleanup Master";
+"NSPhotoLibraryUsageDescription" = "Access the photos and videos you allow so you can preview, organize, and confirm what to delete.";
+"NSPhotoLibraryAddUsageDescription" = "Save a compressed video copy to Photos when you confirm. The original is kept.";
+"NSContactsUsageDescription" = "Access your contacts to help organize duplicate contact details.";
+"NSUserTrackingUsageDescription" = "Allow tracking to personalize your experience and improve the service.";

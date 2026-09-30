@@ -1,0 +1,6 @@
+/* Generated from lib/l10n/app_*.arb by scripts/check_localizations.py. */
+"CFBundleDisplayName" = "خبير التنظيف";
+"NSPhotoLibraryUsageDescription" = "الوصول إلى الصور والفيديوهات التي تسمح بها لمعاينتها وتنظيمها وتأكيد ما تريد حذفه.";
+"NSPhotoLibraryAddUsageDescription" = "حفظ نسخة فيديو مضغوطة في الصور بعد تأكيدك. يبقى الأصل محفوظًا.";
+"NSContactsUsageDescription" = "الوصول إلى جهات اتصالك للمساعدة في تنظيم التفاصيل المكررة.";
+"NSUserTrackingUsageDescription" = "السماح بالتتبع لتخصيص تجربتك وتحسين الخدمة.";

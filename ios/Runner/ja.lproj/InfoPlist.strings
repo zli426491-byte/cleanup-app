@@ -1,0 +1,6 @@
+/* Generated from lib/l10n/app_*.arb by scripts/check_localizations.py. */
+"CFBundleDisplayName" = "クリーンアップマスター";
+"NSPhotoLibraryUsageDescription" = "許可した写真と動画にアクセスして、プレビュー・整理し、削除するものを確認できます。";
+"NSPhotoLibraryAddUsageDescription" = "確認後、圧縮動画のコピーを「写真」に保存します。オリジナルは残ります。";
+"NSContactsUsageDescription" = "連絡先にアクセスして、重複する連絡先情報の整理をお手伝いします。";
+"NSUserTrackingUsageDescription" = "体験のカスタマイズとサービス改善のためにトラッキングを許可します。";

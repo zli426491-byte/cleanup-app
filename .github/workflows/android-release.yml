@@ -7,10 +7,24 @@ jobs:
   build-android:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Verify Android release configuration
+        run: python3 -m unittest discover -s scripts -p test_android_release_config.py
+
+      - name: Prepare Android release credentials
+        env:
+          REVENUECAT_ANDROID_API_KEY: ${{ secrets.REVENUECAT_ANDROID_API_KEY }}
+          ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          ANDROID_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
+          ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
+          ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
+        run: python3 scripts/prepare_android_release.py --keystore "$RUNNER_TEMP/android-upload.keystore"
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -27,6 +41,12 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Generate and verify all supported languages
+        run: |
+          flutter gen-l10n
+          python3 scripts/check_localizations.py --escape-dart-isolates
+          python3 -m unittest discover -s scripts -p test_check_localizations.py
+
       - name: Analyze
         run: flutter analyze
 
@@ -34,10 +54,22 @@ jobs:
         run: flutter test
 
       - name: Build APK
-        run: flutter build apk --release --dart-define=REVENUECAT_ANDROID_API_KEY=${{ secrets.REVENUECAT_ANDROID_API_KEY }}
+        env:
+          REVENUECAT_ANDROID_API_KEY: ${{ secrets.REVENUECAT_ANDROID_API_KEY }}
+          ANDROID_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
+          ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
+          ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
+          ANDROID_RELEASE_REQUIRE_SIGNING: 'true'
+        run: flutter build apk --release --dart-define=REVENUECAT_ANDROID_API_KEY="$REVENUECAT_ANDROID_API_KEY"
 
       - name: Build AAB
-        run: flutter build appbundle --release --dart-define=REVENUECAT_ANDROID_API_KEY=${{ secrets.REVENUECAT_ANDROID_API_KEY }}
+        env:
+          REVENUECAT_ANDROID_API_KEY: ${{ secrets.REVENUECAT_ANDROID_API_KEY }}
+          ANDROID_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
+          ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
+          ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
+          ANDROID_RELEASE_REQUIRE_SIGNING: 'true'
+        run: flutter build appbundle --release --dart-define=REVENUECAT_ANDROID_API_KEY="$REVENUECAT_ANDROID_API_KEY"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
