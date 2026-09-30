@@ -1933,4 +1933,8 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get v2StillCheckingBody =>
       'I risultati appariranno qui mentre la scansione prosegue nella Home.';
+
+  @override
+  String get v2ContinueOnHome =>
+      'Tocca Continua nella Home per trovarne altri.';
 }

@@ -2000,4 +2000,8 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get v2StillCheckingBody =>
       'Os resultados aparecem aqui à medida que a análise continua no Início.';
+
+  @override
+  String get v2ContinueOnHome =>
+      'Toque em Continuar no Início para encontrar mais.';
 }

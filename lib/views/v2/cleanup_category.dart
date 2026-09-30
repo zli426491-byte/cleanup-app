@@ -237,18 +237,34 @@ class CategoryIndex {
   }
 }
 
-/// True while the scan can still add results: it is running, the index or
-/// previews are unfinished, or originals (exact copies, sizes) remain.
-bool resultsStillComing(PhotoScannerService s) {
-  if (s.isScanning) return true;
-  // Nothing scanned yet: Home asks to start; there is nothing "coming".
-  if (s.scannedAssetCount == 0) return false;
+enum PendingResults { none, running, paused }
+
+/// Whether unfinished scan work can still add results to [category], and
+/// whether that work is running now or waits for Continue on Home.
+PendingResults pendingResults(
+  PhotoScannerService s,
+  CleanupCategory category,
+) {
+  if (s.scannedAssetCount == 0 && !s.isScanning) return PendingResults.none;
   final total = s.availableAssetCount;
-  if (total != null && s.scannedAssetCount < total) return true;
-  if (s.pendingAnalysisCount > 0 &&
-      s.attemptedAnalysisCount < s.totalPhotoCount) {
-    return true;
-  }
-  return s.nativeOriginalAnalysisAvailable &&
-      (s.pendingHashAssetCount > 0 || s.pendingSizeAssetCount > 0);
+  final indexing = total == null || s.scannedAssetCount < total;
+  final previews =
+      s.pendingAnalysisCount > 0 &&
+      s.attemptedAnalysisCount < s.totalPhotoCount;
+  final originals = s.nativeOriginalAnalysisAvailable;
+  final coming = switch (category) {
+    // Metadata only: complete once everything is indexed.
+    CleanupCategory.screenshots || CleanupCategory.videos => indexing,
+    // Preview analysis.
+    CleanupCategory.similars ||
+    CleanupCategory.blurred ||
+    CleanupCategory.other => indexing || previews,
+    // Originals: exact copies and verified sizes.
+    CleanupCategory.duplicates =>
+      indexing || previews || (originals && s.pendingHashAssetCount > 0),
+    CleanupCategory.largeFiles =>
+      indexing || (originals && s.pendingSizeAssetCount > 0),
+  };
+  if (!coming) return PendingResults.none;
+  return s.isScanning ? PendingResults.running : PendingResults.paused;
 }

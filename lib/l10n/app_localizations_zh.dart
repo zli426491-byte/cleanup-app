@@ -1770,6 +1770,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get v2StillCheckingBody => '首页继续扫描时，结果会显示在这里。';
+
+  @override
+  String get v2ContinueOnHome => '在首页点「继续」即可找到更多。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -3538,6 +3541,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get v2StillCheckingBody => '首页继续扫描时，结果会显示在这里。';
+
+  @override
+  String get v2ContinueOnHome => '在首页点「继续」即可找到更多。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5269,4 +5275,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get v2StillCheckingBody => '首頁繼續掃描時，結果會顯示在這裡。';
+
+  @override
+  String get v2ContinueOnHome => '在首頁點「繼續」即可找到更多。';
 }

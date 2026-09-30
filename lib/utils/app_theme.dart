@@ -16,6 +16,8 @@ class AppTheme {
   static const Color warningLight = Color(0xFFFFF6E5);
   static const Color success = Color(0xFF1FA84F); // 保留、試用已啟用
   static const Color successLight = Color(0xFFE6F7EC);
+  // Small green text on light cards (≥4.5:1 on #EEF3FD).
+  static const Color successText = Color(0xFF137A3A);
 
   static const Color bg = Colors.white; // 全局背景
   static const Color cardBg = primaryLight; // 卡片（無陰影、無邊框）

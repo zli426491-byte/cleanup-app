@@ -1968,4 +1968,8 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get v2StillCheckingBody =>
       'تظهر النتائج هنا مع استمرار الفحص في الصفحة الرئيسية.';
+
+  @override
+  String get v2ContinueOnHome =>
+      'اضغط «متابعة» في الصفحة الرئيسية للعثور على المزيد.';
 }

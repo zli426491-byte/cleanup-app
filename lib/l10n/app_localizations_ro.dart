@@ -1952,4 +1952,8 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get v2StillCheckingBody =>
       'Rezultatele apar aici pe măsură ce scanarea continuă în ecranul principal.';
+
+  @override
+  String get v2ContinueOnHome =>
+      'Atinge Continuă în ecranul principal pentru a găsi mai multe.';
 }

@@ -1868,4 +1868,8 @@ class AppLocalizationsTh extends AppLocalizations {
   @override
   String get v2StillCheckingBody =>
       'ผลลัพธ์จะแสดงที่นี่ระหว่างการสแกนที่หน้าหลัก';
+
+  @override
+  String get v2ContinueOnHome =>
+      'แตะดำเนินการต่อที่หน้าหลักเพื่อค้นหาเพิ่มเติม';
 }

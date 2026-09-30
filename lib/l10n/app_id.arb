@@ -485,5 +485,6 @@
   "v2SelectionOverLimitTitle": "Terlalu banyak item untuk hari ini",
   "v2CheckPaused": "Pemeriksaan duplikat dijeda",
   "v2StillChecking": "Masih memeriksa foto Anda",
-  "v2StillCheckingBody": "Hasil akan muncul di sini selama pemindaian berlanjut di Beranda."
+  "v2StillCheckingBody": "Hasil akan muncul di sini selama pemindaian berlanjut di Beranda.",
+  "v2ContinueOnHome": "Ketuk Lanjutkan di Beranda untuk menemukan lebih banyak."
 }

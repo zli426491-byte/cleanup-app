@@ -534,46 +534,9 @@ class _EmptyCategory extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Never call a category clean while the scan can still add to it.
-    final checking = context.select<PhotoScannerService, bool>(
-      resultsStillComing,
+    final pending = context.select<PhotoScannerService, PendingResults>(
+      (s) => pendingResults(s, category),
     );
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              color: AppTheme.primaryLight,
-              borderRadius: BorderRadius.circular(28),
-            ),
-            child: checking
-                ? const Padding(
-                    padding: EdgeInsets.all(40),
-                    child: CircularProgressIndicator(strokeWidth: 3),
-                  )
-                : Icon(category.icon, size: 56, color: AppTheme.primaryMuted),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            checking
-                ? context.l10n.v2StillChecking
-                : context.l10n.v2EmptyCategory,
-            textAlign: TextAlign.center,
-            style: AppTheme.heading2,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            checking
-                ? context.l10n.v2StillCheckingBody
-                : context.l10n.v2EmptyCategoryBody,
-            textAlign: TextAlign.center,
-            style: AppTheme.caption,
-          ),
-        ],
-      ),
-    );
+    return CategoryEmptyState(icon: category.icon, pending: pending);
   }
 }

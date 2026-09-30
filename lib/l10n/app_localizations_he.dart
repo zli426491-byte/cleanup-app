@@ -1906,4 +1906,7 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get v2StillCheckingBody =>
       'התוצאות יופיעו כאן בזמן שהסריקה ממשיכה במסך הבית.';
+
+  @override
+  String get v2ContinueOnHome => 'הקישו „המשך” במסך הבית כדי למצוא עוד.';
 }

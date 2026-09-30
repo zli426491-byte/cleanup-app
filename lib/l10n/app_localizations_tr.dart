@@ -1893,4 +1893,8 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get v2StillCheckingBody =>
       'Tarama Ana Sayfa’da sürdükçe sonuçlar burada görünür.';
+
+  @override
+  String get v2ContinueOnHome =>
+      'Daha fazlasını bulmak için Ana Sayfa’da Devam’a dokunun.';
 }

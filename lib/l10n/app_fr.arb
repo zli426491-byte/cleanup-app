@@ -485,5 +485,6 @@
   "v2SelectionOverLimitTitle": "Trop d’éléments pour aujourd’hui",
   "v2CheckPaused": "Vérification des doublons en pause",
   "v2StillChecking": "Vérification de vos photos en cours",
-  "v2StillCheckingBody": "Les résultats s’affichent ici à mesure que l’analyse se poursuit sur l’accueil."
+  "v2StillCheckingBody": "Les résultats s’affichent ici à mesure que l’analyse se poursuit sur l’accueil.",
+  "v2ContinueOnHome": "Touchez Continuer sur l’accueil pour en trouver davantage."
 }

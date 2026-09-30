@@ -1965,4 +1965,8 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get v2StillCheckingBody =>
       'Результаты появятся здесь по мере сканирования на главном экране.';
+
+  @override
+  String get v2ContinueOnHome =>
+      'Нажмите «Продолжить» на главном экране, чтобы найти больше.';
 }

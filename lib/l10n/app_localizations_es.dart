@@ -1987,4 +1987,7 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get v2StillCheckingBody =>
       'Los resultados aparecerán aquí mientras el análisis continúa en Inicio.';
+
+  @override
+  String get v2ContinueOnHome => 'Toca Continuar en Inicio para encontrar más.';
 }

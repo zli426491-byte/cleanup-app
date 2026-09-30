@@ -485,5 +485,6 @@
   "v2SelectionOverLimitTitle": "Prea multe elemente pentru azi",
   "v2CheckPaused": "Verificarea duplicatelor este în pauză",
   "v2StillChecking": "Încă verificăm fotografiile",
-  "v2StillCheckingBody": "Rezultatele apar aici pe măsură ce scanarea continuă în ecranul principal."
+  "v2StillCheckingBody": "Rezultatele apar aici pe măsură ce scanarea continuă în ecranul principal.",
+  "v2ContinueOnHome": "Atinge Continuă în ecranul principal pentru a găsi mai multe."
 }

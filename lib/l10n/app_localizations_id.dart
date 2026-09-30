@@ -1891,4 +1891,8 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get v2StillCheckingBody =>
       'Hasil akan muncul di sini selama pemindaian berlanjut di Beranda.';
+
+  @override
+  String get v2ContinueOnHome =>
+      'Ketuk Lanjutkan di Beranda untuk menemukan lebih banyak.';
 }

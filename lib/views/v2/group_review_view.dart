@@ -652,50 +652,15 @@ class _EmptyGroups extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final checking = context.select<PhotoScannerService, bool>(
-      resultsStillComing,
-    );
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              color: AppTheme.primaryLight,
-              borderRadius: BorderRadius.circular(28),
-            ),
-            child: checking
-                ? const Padding(
-                    padding: EdgeInsets.all(40),
-                    child: CircularProgressIndicator(strokeWidth: 3),
-                  )
-                : Icon(
-                    sections.first.icon,
-                    size: 56,
-                    color: AppTheme.primaryMuted,
-                  ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            checking
-                ? context.l10n.v2StillChecking
-                : context.l10n.v2EmptyCategory,
-            textAlign: TextAlign.center,
-            style: AppTheme.heading2,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            checking
-                ? context.l10n.v2StillCheckingBody
-                : context.l10n.v2EmptyCategoryBody,
-            textAlign: TextAlign.center,
-            style: AppTheme.caption,
-          ),
-        ],
-      ),
-    );
+    final pending = context.select<PhotoScannerService, PendingResults>((s) {
+      final states = [for (final c in sections) pendingResults(s, c)];
+      if (states.contains(PendingResults.running)) {
+        return PendingResults.running;
+      }
+      return states.contains(PendingResults.paused)
+          ? PendingResults.paused
+          : PendingResults.none;
+    });
+    return CategoryEmptyState(icon: sections.first.icon, pending: pending);
   }
 }

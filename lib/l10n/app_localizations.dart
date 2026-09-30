@@ -3047,6 +3047,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Results appear here as the scan continues on Home.'**
   String get v2StillCheckingBody;
+
+  /// No description provided for @v2ContinueOnHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap Continue on Home to find more.'**
+  String get v2ContinueOnHome;
 }
 
 class _AppLocalizationsDelegate

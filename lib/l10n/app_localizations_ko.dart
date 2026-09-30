@@ -1824,4 +1824,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get v2StillCheckingBody => '홈에서 스캔이 진행되면 여기에 결과가 표시됩니다.';
+
+  @override
+  String get v2ContinueOnHome => '홈에서 계속을 눌러 더 찾아보세요.';
 }

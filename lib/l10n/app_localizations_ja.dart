@@ -1806,4 +1806,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get v2StillCheckingBody => 'ホームでスキャンが進むと、ここに結果が表示されます。';
+
+  @override
+  String get v2ContinueOnHome => 'ホームの「続ける」をタップすると、さらに見つかります。';
 }

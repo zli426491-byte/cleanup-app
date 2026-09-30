@@ -1249,5 +1249,6 @@
   "v2SelectionOverLimitTitle": "Too many items for today",
   "v2CheckPaused": "Duplicate check paused",
   "v2StillChecking": "Still checking your photos",
-  "v2StillCheckingBody": "Results appear here as the scan continues on Home."
+  "v2StillCheckingBody": "Results appear here as the scan continues on Home.",
+  "v2ContinueOnHome": "Tap Continue on Home to find more."
 }

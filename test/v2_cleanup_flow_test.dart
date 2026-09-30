@@ -694,6 +694,21 @@ void main() {
     store.dispose();
   });
 
+  test('pending results follow the work each category needs', () {
+    final scanner = _Scanner(_result());
+    // Nothing scanned yet (the fake reports no indexed items).
+    expect(
+      pendingResults(scanner, CleanupCategory.screenshots),
+      PendingResults.none,
+    );
+    scanner.scanning = true;
+    expect(
+      pendingResults(scanner, CleanupCategory.duplicates),
+      PendingResults.running,
+    );
+    scanner.dispose();
+  });
+
   testWidgets('group review keeps the best shot and preselects the rest', (
     tester,
   ) async {

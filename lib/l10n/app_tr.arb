@@ -485,5 +485,6 @@
   "v2SelectionOverLimitTitle": "Bugün için çok fazla öge",
   "v2CheckPaused": "Kopya kontrolü duraklatıldı",
   "v2StillChecking": "Fotoğraflarınız hâlâ kontrol ediliyor",
-  "v2StillCheckingBody": "Tarama Ana Sayfa’da sürdükçe sonuçlar burada görünür."
+  "v2StillCheckingBody": "Tarama Ana Sayfa’da sürdükçe sonuçlar burada görünür.",
+  "v2ContinueOnHome": "Daha fazlasını bulmak için Ana Sayfa’da Devam’a dokunun."
 }

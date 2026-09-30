@@ -1978,4 +1978,8 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get v2StillCheckingBody =>
       'Ergebnisse erscheinen hier, während der Scan auf der Startseite weiterläuft.';
+
+  @override
+  String get v2ContinueOnHome =>
+      'Tippe auf der Startseite auf „Fortsetzen“, um mehr zu finden.';
 }

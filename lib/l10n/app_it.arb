@@ -485,5 +485,6 @@
   "v2SelectionOverLimitTitle": "Troppi elementi per oggi",
   "v2CheckPaused": "Controllo duplicati in pausa",
   "v2StillChecking": "Stiamo ancora controllando le foto",
-  "v2StillCheckingBody": "I risultati appariranno qui mentre la scansione prosegue nella Home."
+  "v2StillCheckingBody": "I risultati appariranno qui mentre la scansione prosegue nella Home.",
+  "v2ContinueOnHome": "Tocca Continua nella Home per trovarne altri."
 }

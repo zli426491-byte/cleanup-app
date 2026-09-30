@@ -1882,4 +1882,7 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get v2StillCheckingBody =>
       'Kết quả sẽ hiện ở đây khi quá trình quét tiếp tục ở Trang chủ.';
+
+  @override
+  String get v2ContinueOnHome => 'Chạm Tiếp tục ở Trang chủ để tìm thêm.';
 }

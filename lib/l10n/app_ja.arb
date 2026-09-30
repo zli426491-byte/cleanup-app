@@ -485,5 +485,6 @@
   "v2SelectionOverLimitTitle": "本日の上限を超える選択です",
   "v2CheckPaused": "重複チェックを一時停止中",
   "v2StillChecking": "写真をまだ確認しています",
-  "v2StillCheckingBody": "ホームでスキャンが進むと、ここに結果が表示されます。"
+  "v2StillCheckingBody": "ホームでスキャンが進むと、ここに結果が表示されます。",
+  "v2ContinueOnHome": "ホームの「続ける」をタップすると、さらに見つかります。"
 }

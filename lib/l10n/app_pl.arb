@@ -485,5 +485,6 @@
   "v2SelectionOverLimitTitle": "Za dużo elementów na dziś",
   "v2CheckPaused": "Sprawdzanie duplikatów wstrzymane",
   "v2StillChecking": "Wciąż sprawdzamy zdjęcia",
-  "v2StillCheckingBody": "Wyniki pojawią się tutaj, gdy skanowanie na ekranie głównym będzie trwać."
+  "v2StillCheckingBody": "Wyniki pojawią się tutaj, gdy skanowanie na ekranie głównym będzie trwać.",
+  "v2ContinueOnHome": "Stuknij Kontynuuj na ekranie głównym, aby znaleźć więcej."
 }

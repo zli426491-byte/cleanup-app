@@ -1954,4 +1954,8 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get v2StillCheckingBody =>
       'Wyniki pojawią się tutaj, gdy skanowanie na ekranie głównym będzie trwać.';
+
+  @override
+  String get v2ContinueOnHome =>
+      'Stuknij Kontynuuj na ekranie głównym, aby znaleźć więcej.';
 }

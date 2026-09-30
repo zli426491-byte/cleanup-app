@@ -177,13 +177,22 @@ class _Welcome extends StatelessWidget {
                 const SizedBox(height: 36),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    // Unknown capacity shows an empty, neutral bar.
-                    value: known ? storage.usedPercentage : 0,
-                    minHeight: 16,
-                    color: AppTheme.danger,
-                    backgroundColor: AppTheme.primaryLight,
-                  ),
+                  // Unknown capacity: a neutral bar with no progress value,
+                  // so VoiceOver never reads a made-up percentage.
+                  child: known
+                      ? LinearProgressIndicator(
+                          value: storage.usedPercentage,
+                          minHeight: 16,
+                          color: AppTheme.danger,
+                          backgroundColor: AppTheme.primaryLight,
+                        )
+                      : const ExcludeSemantics(
+                          child: SizedBox(
+                            height: 16,
+                            width: double.infinity,
+                            child: ColoredBox(color: AppTheme.primaryLight),
+                          ),
+                        ),
                 ),
                 const SizedBox(height: 14),
                 if (known)

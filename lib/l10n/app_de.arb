@@ -485,5 +485,6 @@
   "v2SelectionOverLimitTitle": "Zu viele Objekte für heute",
   "v2CheckPaused": "Duplikatprüfung pausiert",
   "v2StillChecking": "Deine Fotos werden noch geprüft",
-  "v2StillCheckingBody": "Ergebnisse erscheinen hier, während der Scan auf der Startseite weiterläuft."
+  "v2StillCheckingBody": "Ergebnisse erscheinen hier, während der Scan auf der Startseite weiterläuft.",
+  "v2ContinueOnHome": "Tippe auf der Startseite auf „Fortsetzen“, um mehr zu finden."
 }

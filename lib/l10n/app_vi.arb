@@ -485,5 +485,6 @@
   "v2SelectionOverLimitTitle": "Quá nhiều mục cho hôm nay",
   "v2CheckPaused": "Đã tạm dừng kiểm tra trùng lặp",
   "v2StillChecking": "Vẫn đang kiểm tra ảnh của bạn",
-  "v2StillCheckingBody": "Kết quả sẽ hiện ở đây khi quá trình quét tiếp tục ở Trang chủ."
+  "v2StillCheckingBody": "Kết quả sẽ hiện ở đây khi quá trình quét tiếp tục ở Trang chủ.",
+  "v2ContinueOnHome": "Chạm Tiếp tục ở Trang chủ để tìm thêm."
 }

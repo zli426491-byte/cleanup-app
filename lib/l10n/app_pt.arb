@@ -485,5 +485,6 @@
   "v2SelectionOverLimitTitle": "Demasiados itens para hoje",
   "v2CheckPaused": "Verificação de duplicados em pausa",
   "v2StillChecking": "Ainda estamos a verificar as fotos",
-  "v2StillCheckingBody": "Os resultados aparecem aqui à medida que a análise continua no Início."
+  "v2StillCheckingBody": "Os resultados aparecem aqui à medida que a análise continua no Início.",
+  "v2ContinueOnHome": "Toque em Continuar no Início para encontrar mais."
 }

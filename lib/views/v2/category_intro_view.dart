@@ -238,8 +238,15 @@ class _DirectionLabel extends StatelessWidget {
   final String action;
   final Color color;
 
+  // Swipes are physical, so the label (and its arrow, which Flutter would
+  // otherwise mirror in Arabic and Hebrew) is laid out left-to-right.
   @override
-  Widget build(BuildContext context) => Column(
+  Widget build(BuildContext context) => Directionality(
+    textDirection: TextDirection.ltr,
+    child: _column(),
+  );
+
+  Widget _column() => Column(
     crossAxisAlignment: arrowLeft
         ? CrossAxisAlignment.end
         : CrossAxisAlignment.start,

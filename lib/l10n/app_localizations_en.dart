@@ -1970,4 +1970,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get v2StillCheckingBody =>
       'Results appear here as the scan continues on Home.';
+
+  @override
+  String get v2ContinueOnHome => 'Tap Continue on Home to find more.';
 }

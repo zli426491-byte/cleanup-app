@@ -165,7 +165,7 @@ class _SettingsViewState extends State<SettingsView> {
                         icon: Icons.check_circle_rounded,
                         title: l10n.settingsStorageAvailable,
                         value: storage.freeSpaceFormatted,
-                        valueColor: AppTheme.success,
+                        valueColor: AppTheme.successText,
                       ),
                     ],
                   ),

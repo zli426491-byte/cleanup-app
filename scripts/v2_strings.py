@@ -1282,6 +1282,26 @@ s('v2StillCheckingBody',
   zh_Hans='首页继续扫描时，结果会显示在这里。',
   zh_Hant='首頁繼續掃描時，結果會顯示在這裡。')
 
+s('v2ContinueOnHome', en='Tap Continue on Home to find more.',
+  ar='اضغط «متابعة» في الصفحة الرئيسية للعثور على المزيد.',
+  de='Tippe auf der Startseite auf „Fortsetzen“, um mehr zu finden.',
+  es='Toca Continuar en Inicio para encontrar más.',
+  fr='Touchez Continuer sur l’accueil pour en trouver davantage.',
+  he='הקישו „המשך” במסך הבית כדי למצוא עוד.',
+  id='Ketuk Lanjutkan di Beranda untuk menemukan lebih banyak.',
+  it='Tocca Continua nella Home per trovarne altri.',
+  ja='ホームの「続ける」をタップすると、さらに見つかります。',
+  ko='홈에서 계속을 눌러 더 찾아보세요.',
+  pl='Stuknij Kontynuuj na ekranie głównym, aby znaleźć więcej.',
+  pt='Toque em Continuar no Início para encontrar mais.',
+  ro='Atinge Continuă în ecranul principal pentru a găsi mai multe.',
+  ru='Нажмите «Продолжить» на главном экране, чтобы найти больше.',
+  th='แตะดำเนินการต่อที่หน้าหลักเพื่อค้นหาเพิ่มเติม',
+  tr='Daha fazlasını bulmak için Ana Sayfa’da Devam’a dokunun.',
+  vi='Chạm Tiếp tục ở Trang chủ để tìm thêm.',
+  zh_Hans='在首页点「继续」即可找到更多。',
+  zh_Hant='在首頁點「繼續」即可找到更多。')
+
 
 RTL = {'ar', 'he'}
 FSI, PDI = '⁨', '⁩'

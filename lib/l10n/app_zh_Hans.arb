@@ -485,5 +485,6 @@
   "v2SelectionOverLimitTitle": "超过今日可免费删除的数量",
   "v2CheckPaused": "重复项检查已暂停",
   "v2StillChecking": "仍在检查你的照片",
-  "v2StillCheckingBody": "首页继续扫描时，结果会显示在这里。"
+  "v2StillCheckingBody": "首页继续扫描时，结果会显示在这里。",
+  "v2ContinueOnHome": "在首页点「继续」即可找到更多。"
 }

@@ -2002,4 +2002,8 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get v2StillCheckingBody =>
       'Les résultats s’affichent ici à mesure que l’analyse se poursuit sur l’accueil.';
+
+  @override
+  String get v2ContinueOnHome =>
+      'Touchez Continuer sur l’accueil pour en trouver davantage.';
 }

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'package:cleanup_app/l10n/l10n.dart';
+
 import '../../utils/app_theme.dart';
+import 'cleanup_category.dart' show PendingResults;
 
 /// Full-width blue action pinned to the bottom of a page
 /// (Let's go / Delete N / Great / Try Free).
@@ -231,8 +234,8 @@ class SquareIconButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         onTap: onPressed,
         child: SizedBox(
-          width: 40,
-          height: 40,
+          width: 44,
+          height: 44,
           child: Icon(icon, color: AppTheme.textTitle, size: 22),
         ),
       ),
@@ -340,6 +343,64 @@ class PageTopBar extends StatelessWidget {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Empty category: clean, still being checked, or waiting for Continue.
+class CategoryEmptyState extends StatelessWidget {
+  const CategoryEmptyState({
+    super.key,
+    required this.icon,
+    required this.pending,
+  });
+
+  final IconData icon;
+  final PendingResults pending;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final (title, body) = switch (pending) {
+      PendingResults.running => (l10n.v2StillChecking, l10n.v2StillCheckingBody),
+      PendingResults.paused => (l10n.v2ScanPaused, l10n.v2ContinueOnHome),
+      PendingResults.none => (l10n.v2EmptyCategory, l10n.v2EmptyCategoryBody),
+    };
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryLight,
+              borderRadius: BorderRadius.circular(28),
+            ),
+            child: switch (pending) {
+              PendingResults.running => const Padding(
+                padding: EdgeInsets.all(40),
+                child: CircularProgressIndicator(strokeWidth: 3),
+              ),
+              PendingResults.paused => const Icon(
+                Icons.pause_circle_filled_rounded,
+                size: 56,
+                color: AppTheme.primaryMuted,
+              ),
+              PendingResults.none => Icon(
+                icon,
+                size: 56,
+                color: AppTheme.primaryMuted,
+              ),
+            },
+          ),
+          const SizedBox(height: 20),
+          Text(title, textAlign: TextAlign.center, style: AppTheme.heading2),
+          const SizedBox(height: 6),
+          Text(body, textAlign: TextAlign.center, style: AppTheme.caption),
         ],
       ),
     );
