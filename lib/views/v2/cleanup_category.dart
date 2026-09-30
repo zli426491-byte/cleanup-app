@@ -245,12 +245,17 @@ PendingResults pendingResults(
   PhotoScannerService s,
   CleanupCategory category,
 ) {
-  if (s.scannedAssetCount == 0 && !s.isScanning) return PendingResults.none;
+  if (s.scannedAssetCount == 0 && !s.isScanning) {
+    // Not scanned yet (or stopped before the first page): never "clean",
+    // unless a finished scan found an empty library.
+    return s.hasCompletedScan && s.availableAssetCount == 0
+        ? PendingResults.none
+        : PendingResults.paused;
+  }
   final total = s.availableAssetCount;
   final indexing = total == null || s.scannedAssetCount < total;
-  final previews =
-      s.pendingAnalysisCount > 0 &&
-      s.attemptedAnalysisCount < s.totalPhotoCount;
+  // Previews that wait for iCloud can still be retried from Home.
+  final previews = s.pendingAnalysisCount > 0;
   final originals = s.nativeOriginalAnalysisAvailable;
   final coming = switch (category) {
     // Metadata only: complete once everything is indexed.

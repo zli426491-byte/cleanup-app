@@ -696,10 +696,10 @@ void main() {
 
   test('pending results follow the work each category needs', () {
     final scanner = _Scanner(_result());
-    // Nothing scanned yet (the fake reports no indexed items).
+    // Nothing scanned yet: never reported as already clean.
     expect(
       pendingResults(scanner, CleanupCategory.screenshots),
-      PendingResults.none,
+      PendingResults.paused,
     );
     scanner.scanning = true;
     expect(
